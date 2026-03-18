@@ -1,0 +1,95 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Fields:
+//   - displayName: string (required)
+//   - role: string (required, enum: ['user', 'contributor', 'admin'])
+//   - contributions: number (required)
+//
+// Collection: entries
+// Fields:
+//   - title: string (required)
+//   - type: string (required, enum: ['character', 'map', 'mechanic', 'guide'])
+//   - contentMode: string (required, enum: ['text', 'template'])
+//   - currentRevisionId: string
+//   - authorId: string (required)
+//   - tags: list (strings)
+//   - lastUpdated: timestamp
+//
+// Collection: revisions
+// Fields:
+//   - entryId: string (required)
+//   - authorId: string (required)
+//   - content: map (required)
+//   - timestamp: timestamp (required)
+//   - status: string (required, enum: ['pending', 'approved', 'rejected'])
+//   - changeSummary: string
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "wmglimpser@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isContributor() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['contributor', 'admin'] ||
+         (request.auth.token.email == "wmglimpser@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidCharacter(data) {
+      return data.keys().hasAll(['name', 'title', 'role']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.role in ['Survivor', 'Hunter'];
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && request.resource.data.role == 'user';
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+
+    // Entries Collection
+    match /entries/{entryId} {
+      allow read: if true; // Wiki is public
+      allow create: if isContributor();
+      allow update: if isContributor();
+      allow delete: if isAdmin();
+    }
+
+    // Revisions Collection
+    match /revisions/{revId} {
+      allow read: if true;
+      allow create: if isContributor();
+      allow update: if isAdmin(); // Only admins can approve/reject
+      allow delete: if isAdmin();
+    }
+
+    // Characters Collection
+    match /characters/{charId} {
+      allow read: if true;
+      allow create: if isContributor() && isValidCharacter(request.resource.data);
+      allow update: if isContributor() && isValidCharacter(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,688 @@
+import React, { useState, useEffect } from 'react';
+import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Character, CharacterTraitCategory } from '../constants';
+
+interface Props {
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  initialData?: Character | null;
+}
+
+export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
+  const [importMode, setImportMode] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importError, setImportError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    title: '',
+    role: 'Survivor' as 'Survivor' | 'Hunter',
+    type: '',
+    imageUrl: '',
+    description: '',
+    skills: [] as { name: string; description: string }[],
+    traits: [] as CharacterTraitCategory[],
+    mechanics: [] as { title: string; content: string }[],
+  });
+
+  const SURVIVOR_TRAITS_TEMPLATE = [
+    {
+      category: '移动',
+      items: [
+        { label: '跑动速度', value: '' },
+        { label: '走路速度', value: '' },
+        { label: '蹲走速度', value: '' },
+        { label: '爬行速度', value: '' }
+      ]
+    },
+    {
+      category: '破译',
+      items: [
+        { label: '密码机破译时长', value: '' },
+        { label: '破译完美判定额外增长进度', value: '' },
+        { label: '破译触电回退进度', value: '' },
+        { label: '破译触电无法破译时长', value: '' },
+        { label: '大门开启时长', value: '' }
+      ]
+    },
+    {
+      category: '交互',
+      items: [
+        { label: '放板时间', value: '' },
+        { label: '快速翻板时长', value: '' },
+        { label: '中速翻板时长', value: '' },
+        { label: '慢速翻板时长', value: '' },
+        { label: '快速翻窗时长', value: '' },
+        { label: '慢速翻窗时长', value: '' },
+        { label: '箱子翻找时长', value: '' }
+      ]
+    },
+    {
+      category: '治疗',
+      items: [
+        { label: '治疗受伤求生者时长', value: '' },
+        { label: '受伤被他人治疗时间', value: '' },
+        { label: '倒地自我治疗时间', value: '' }
+      ]
+    },
+    {
+      category: '其他',
+      items: [
+        { label: '脚印持续时长', value: '' },
+        { label: '受击加速时长', value: '' },
+        { label: '被背负时挣扎掉落时长', value: '' },
+        { label: '狂欢之椅起飞时长', value: '' },
+        { label: '椅上被救援时长', value: '' }
+      ]
+    }
+  ];
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        title: initialData.title || '',
+        role: initialData.role || 'Survivor',
+        type: initialData.type || '',
+        imageUrl: initialData.imageUrl || '',
+        description: initialData.description || '',
+        skills: initialData.skills || [],
+        traits: initialData.traits || [],
+        mechanics: initialData.mechanics || [],
+      });
+    } else {
+      // Initialize with fixed categories if it's a new survivor
+      if (formData.role === 'Survivor') {
+        setFormData(prev => ({
+          ...prev,
+          traits: JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE))
+        }));
+      }
+    }
+  }, [initialData]);
+
+  // Handle role change to update fixed categories
+  useEffect(() => {
+    if (!initialData && formData.role === 'Survivor') {
+      setFormData(prev => {
+        if (prev.traits.length > 0) return prev;
+        return {
+          ...prev,
+          traits: JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE))
+        };
+      });
+    }
+  }, [formData.role, initialData]);
+
+  const addSkill = () => {
+    setFormData(prev => ({
+      ...prev,
+      skills: [...prev.skills, { name: '', description: '' }]
+    }));
+  };
+
+  const removeSkill = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      skills: prev.skills.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateSkill = (index: number, field: 'name' | 'description', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      skills: prev.skills.map((s, i) => i === index ? { ...s, [field]: value } : s)
+    }));
+  };
+
+  const addTraitCategory = () => {
+    setFormData(prev => ({
+      ...prev,
+      traits: [...prev.traits, { category: '', items: [{ label: '', value: '' }] }]
+    }));
+  };
+
+  const removeTraitCategory = (catIndex: number) => {
+    const cat = formData.traits[catIndex];
+    const fixedCategories = SURVIVOR_TRAITS_TEMPLATE.map(t => t.category);
+    if (formData.role === 'Survivor' && fixedCategories.includes(cat.category)) {
+      alert('求生者的基础数值分类（移动、破译、交互、治疗、其他）为固定项，不可删除。');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      traits: prev.traits.filter((_, i) => i !== catIndex)
+    }));
+  };
+
+  const updateTraitCategoryName = (catIndex: number, name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      traits: prev.traits.map((cat, i) => i === catIndex ? { ...cat, category: name } : cat)
+    }));
+  };
+
+  const addTraitItem = (catIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      traits: prev.traits.map((cat, i) => i === catIndex ? { ...cat, items: [...cat.items, { label: '', value: '' }] } : cat)
+    }));
+  };
+
+  const removeTraitItem = (catIndex: number, itemIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      traits: prev.traits.map((cat, i) => i === catIndex ? { ...cat, items: cat.items.filter((_, j) => j !== itemIndex) } : cat)
+    }));
+  };
+
+  const updateTraitItem = (catIndex: number, itemIndex: number, field: 'label' | 'value', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      traits: prev.traits.map((cat, i) => i === catIndex ? { 
+        ...cat, 
+        items: cat.items.map((item, j) => j === itemIndex ? { ...item, [field]: value } : item) 
+      } : cat)
+    }));
+  };
+
+  const addMechanic = () => {
+    setFormData(prev => ({
+      ...prev,
+      mechanics: [...prev.mechanics, { title: '', content: '' }]
+    }));
+  };
+
+  const removeMechanic = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      mechanics: prev.mechanics.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateMechanic = (index: number, field: 'title' | 'content', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      mechanics: prev.mechanics.map((m, i) => i === index ? { ...m, [field]: value } : m)
+    }));
+  };
+
+  const parseSmartText = (text: string) => {
+    const data: any = {
+      skills: [],
+      traits: [],
+      mechanics: []
+    };
+
+    // Basic fields
+    const nameMatch = text.match(/(?:姓名|角色|名字)[:：]\s*(.*)/i);
+    if (nameMatch) data.name = nameMatch[1].trim();
+
+    const titleMatch = text.match(/(?:称号|职业|称号)[:：]\s*(.*)/i);
+    if (titleMatch) data.title = titleMatch[1].trim();
+
+    const roleMatch = text.match(/(?:阵营|角色类型)[:：]\s*(求生者|监管者|Survivor|Hunter)/i);
+    if (roleMatch) {
+      const roleStr = roleMatch[1].trim();
+      data.role = (roleStr === '监管者' || roleStr.toLowerCase() === 'hunter') ? 'Hunter' : 'Survivor';
+    }
+
+    const typeMatch = text.match(/(?:定位|类型|定位类型)[:：]\s*(.*)/i);
+    if (typeMatch) data.type = typeMatch[1].trim();
+
+    const descMatch = text.match(/(?:描述|背景|简介)[:：]\s*([\s\S]*?)(?=\n\n|\n[^\n]*[:：]|$)/i);
+    if (descMatch) data.description = descMatch[1].trim();
+
+    // Skills (External Traits)
+    const skillsSection = text.match(/(?:外在特质|技能)[:：]\s*([\s\S]*?)(?=\n\n\n|\n[^\n]*[:：]|$)/i);
+    if (skillsSection) {
+      const skillsText = skillsSection[1];
+      const skillBlocks = skillsText.split(/\n(?=[^\s])/);
+      skillBlocks.forEach(block => {
+        const [name, ...descParts] = block.split(/[:：]/);
+        if (name && descParts.length > 0) {
+          data.skills.push({ name: name.trim(), description: descParts.join(':').trim() });
+        }
+      });
+    }
+
+    // Traits (Numerical) - Automatic Categorization with Fixed Template
+    const traitsSection = text.match(/(?:特质详情|数值|属性)[:：]\s*([\s\S]*?)(?=\n\n\n|\n[^\n]*[:：]|$)/i);
+    if (traitsSection) {
+      const traitsText = traitsSection[1];
+      const lines = traitsText.trim().split('\n');
+      
+      const template = JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE));
+      
+      lines.forEach(line => {
+        const parts = line.split(/[:：\s]+/).filter(Boolean);
+        if (parts.length >= 2) {
+          const label = parts[0];
+          const value = parts.slice(1).join(' ');
+          
+          // Try to find a match in the template
+          let matched = false;
+          for (const cat of template) {
+            for (const item of cat.items) {
+              if (label.includes(item.label) || item.label.includes(label)) {
+                item.value = value;
+                matched = true;
+                break;
+              }
+            }
+            if (matched) break;
+          }
+          
+          // If no match, add to "其他"
+          if (!matched) {
+            const otherCat = template.find((c: any) => c.category === '其他');
+            if (otherCat) {
+              otherCat.items.push({ label, value });
+            }
+          }
+        }
+      });
+
+      data.traits = template.filter((cat: any) => cat.items.some((item: any) => item.value !== '') || cat.category !== '其他');
+    }
+
+    return data;
+  };
+
+  const handleBulkImport = async () => {
+    try {
+      const trimmedText = importText.trim();
+      let charactersToSave: any[] = [];
+
+      if (trimmedText.startsWith('[') || trimmedText.startsWith('{')) {
+        // JSON Import
+        const parsed = JSON.parse(trimmedText);
+        charactersToSave = Array.isArray(parsed) ? parsed : [parsed];
+      } else {
+        // Smart Text Import (Split by '---' for multiple characters)
+        const blocks = trimmedText.split(/\n---\n|\n===\n/).filter(b => b.trim());
+        charactersToSave = blocks.map(block => parseSmartText(block.trim()));
+      }
+
+      if (charactersToSave.length === 0) throw new Error('未检测到有效的角色数据');
+      
+      // Validate at least one character has a name
+      if (!charactersToSave.some(c => c.name || c.title)) {
+        throw new Error('无法识别角色姓名或称号，请检查格式');
+      }
+
+      // If it's a single character, we can just update the form
+      if (charactersToSave.length === 1) {
+        const parsed = charactersToSave[0];
+        setFormData({
+          ...formData,
+          ...parsed,
+          skills: parsed.skills?.length ? parsed.skills : formData.skills,
+          traits: parsed.traits?.length ? parsed.traits : formData.traits,
+          mechanics: parsed.mechanics?.length ? parsed.mechanics : formData.mechanics,
+        });
+        setImportMode(false);
+      } else {
+        // If multiple, save them all immediately via onSave
+        setSaving(true);
+        await onSave(charactersToSave);
+        setSaving(false);
+        setImportMode(false);
+      }
+      
+      setImportError('');
+    } catch (e: any) {
+      setImportError(`导入失败: ${e.message}`);
+      setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name) return alert('请输入角色姓名');
+    setSaving(true);
+    try {
+      await onSave(formData);
+    } catch (err) {
+      console.error("Save error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto bg-card/50 cyber-border p-8 shadow-2xl animate-in zoom-in-95 duration-500">
+      <div className="flex justify-between items-center mb-8 border-b border-border pb-4">
+        <h2 className="text-3xl font-serif text-accent cyber-glow-text">
+          {initialData ? '修改档案_UPDATE' : '录入新档案_CREATE'}
+        </h2>
+        <button 
+          onClick={() => setImportMode(!importMode)}
+          className="flex items-center gap-2 text-[10px] font-mono text-accent hover:text-primary transition-colors uppercase tracking-widest"
+        >
+          {importMode ? <FileText className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+          {importMode ? '手动填写_MANUAL' : '文档一键导入_IMPORT'}
+        </button>
+      </div>
+
+      {importMode ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-bg/50 p-4 border border-border">
+            <div className="flex justify-between items-start mb-4">
+              <p className="text-[10px] text-muted font-mono">请粘贴 JSON 格式或自然语言描述的角色数据：</p>
+              <div className="text-[9px] font-mono text-accent/50 text-right">
+                支持识别：姓名、称号、阵营、定位、描述、外在特质、数值等关键词<br/>
+                <span className="text-primary">支持一键导入多个角色，请使用 "---" 作为角色之间的分隔符</span>
+              </div>
+            </div>
+            
+            <div className="mb-4 p-3 bg-card/30 border border-border/50 text-[9px] font-mono text-muted">
+              <p className="mb-1 text-accent">JSON 示例：</p>
+              <code className="block mb-2">
+                [{"{ \"name\": \"艾玛\", \"title\": \"园丁\", \"role\": \"Survivor\" }"}]
+              </code>
+              <p className="mb-1 text-accent">智能文本示例：</p>
+              <code>
+                姓名：艾玛·伍兹<br/>
+                称号：园丁<br/>
+                阵营：求生者<br/>
+                ---<br/>
+                姓名：里奥·贝克<br/>
+                称号：厂长<br/>
+                阵营：监管者
+              </code>
+            </div>
+
+            <textarea 
+              rows={15}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              disabled={saving}
+              className="w-full bg-bg border border-border text-accent p-4 rounded-none focus:border-accent outline-none font-mono text-xs resize-none disabled:opacity-50"
+              placeholder={`示例格式：\n姓名：艾玛·伍兹\n称号：园丁\n...\n---\n姓名：里奥·贝克\n称号：厂长\n...`}
+            />
+            {importError && (
+              <div className="mt-4 flex items-center gap-2 text-primary text-[10px] font-mono">
+                <AlertCircle className="w-4 h-4" /> {importError}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-4">
+            <button 
+              onClick={() => setImportMode(false)}
+              disabled={saving}
+              className="px-6 py-2 text-muted font-mono text-xs disabled:opacity-50"
+            >
+              取消_CANCEL
+            </button>
+            <button 
+              onClick={handleBulkImport}
+              disabled={saving || !importText.trim()}
+              className="px-8 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-bg border-t-transparent rounded-full animate-spin" />
+                  正在同步至云端...
+                </>
+              ) : (
+                '执行导入_EXECUTE'
+              )}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form className="space-y-8" onSubmit={handleSubmit}>
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">角色姓名</label>
+                  <input 
+                    type="text" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    placeholder="艾玛·伍兹"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">职业称号</label>
+                  <input 
+                    type="text" 
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    placeholder="园丁"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">阵营</label>
+                  <select 
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value as 'Survivor' | 'Hunter'})}
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                  >
+                    <option value="Survivor">求生者</option>
+                    <option value="Hunter">监管者</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">定位类型</label>
+                  <input 
+                    type="text" 
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    placeholder="牵制/辅助"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] text-muted uppercase tracking-widest font-mono">头像 URL</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                    className="flex-1 bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs"
+                    placeholder="https://..."
+                  />
+                  <div className="w-12 h-12 bg-bg border border-border flex items-center justify-center text-muted">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-[10px] text-muted uppercase tracking-widest font-mono">角色描述 (SUMMARY)</label>
+              <textarea 
+                rows={6}
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors resize-none font-mono text-sm"
+                placeholder="输入角色的核心玩法或背景摘要..."
+              />
+            </div>
+          </div>
+
+          {/* Trait Details */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-accent font-mono text-xs border-l-2 border-primary pl-3 uppercase tracking-widest">特质详情 (TRAITS)</h3>
+              <button 
+                type="button"
+                onClick={addTraitCategory}
+                className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+              >
+                <Plus className="w-3 h-3" /> 添加分类
+              </button>
+            </div>
+            <div className="space-y-6">
+              {formData.traits.map((cat, catIndex) => (
+                <div key={catIndex} className="p-4 bg-bg/50 border border-border relative group">
+                  <button 
+                    type="button"
+                    onClick={() => removeTraitCategory(catIndex)}
+                    className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                  <div className="flex items-center gap-4 mb-4">
+                    <input 
+                      type="text"
+                      value={cat.category}
+                      onChange={(e) => updateTraitCategoryName(catIndex, e.target.value)}
+                      placeholder="分类名称（如：移动 MOVEMENT）"
+                      className="flex-1 bg-transparent border-b border-border text-accent font-bold outline-none focus:border-accent py-1 font-mono text-sm"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => addTraitItem(catIndex)}
+                      className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+                    >
+                      <Plus className="w-3 h-3" /> 添加属性
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {cat.items.map((item, itemIndex) => (
+                      <div key={itemIndex} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
+                        <input 
+                          type="text"
+                          value={item.label}
+                          onChange={(e) => updateTraitItem(catIndex, itemIndex, 'label', e.target.value)}
+                          placeholder="标签"
+                          className="w-24 bg-transparent text-[10px] text-muted outline-none border-r border-border/30 pr-2"
+                        />
+                        <input 
+                          type="text"
+                          value={item.value}
+                          onChange={(e) => updateTraitItem(catIndex, itemIndex, 'value', e.target.value)}
+                          placeholder="数值"
+                          className="flex-1 bg-transparent text-[10px] text-accent outline-none"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => removeTraitItem(catIndex, itemIndex)}
+                          className="text-muted hover:text-primary"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* External Traits (Skills) */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-accent font-mono text-xs border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
+              <button 
+                type="button"
+                onClick={addSkill}
+                className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+              >
+                <Plus className="w-3 h-3" /> 添加特质
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formData.skills.map((skill, index) => (
+                <div key={index} className="p-4 bg-bg/50 border border-border relative group">
+                  <button 
+                    type="button"
+                    onClick={() => removeSkill(index)}
+                    className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                  <input 
+                    type="text"
+                    value={skill.name}
+                    onChange={(e) => updateSkill(index, 'name', e.target.value)}
+                    placeholder="特质名称"
+                    className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
+                  />
+                  <textarea 
+                    rows={2}
+                    value={skill.description}
+                    onChange={(e) => updateSkill(index, 'description', e.target.value)}
+                    placeholder="特质描述..."
+                    className="w-full bg-transparent text-xs text-muted outline-none resize-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mechanics */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-accent font-mono text-xs border-l-2 border-primary pl-3 uppercase tracking-widest">进阶机制 (MECHANICS)</h3>
+              <button 
+                type="button"
+                onClick={addMechanic}
+                className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+              >
+                <Plus className="w-3 h-3" /> 添加机制
+              </button>
+            </div>
+            <div className="space-y-4">
+              {formData.mechanics.map((mech, index) => (
+                <div key={index} className="p-4 bg-bg/50 border border-border relative group">
+                  <button 
+                    type="button"
+                    onClick={() => removeMechanic(index)}
+                    className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                  <input 
+                    type="text"
+                    value={mech.title}
+                    onChange={(e) => updateMechanic(index, 'title', e.target.value)}
+                    placeholder="机制标题（如：博弈技巧）"
+                    className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
+                  />
+                  <textarea 
+                    rows={2}
+                    value={mech.content}
+                    onChange={(e) => updateMechanic(index, 'content', e.target.value)}
+                    placeholder="机制详细解析..."
+                    className="w-full bg-transparent text-xs text-muted outline-none resize-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-6 pt-6 border-t border-border">
+            <button 
+              type="button"
+              onClick={onCancel}
+              className="px-8 py-2 text-muted hover:text-text transition-colors font-mono text-xs tracking-widest"
+            >
+              取消_CANCEL
+            </button>
+            <button 
+              type="submit"
+              disabled={saving}
+              className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 shadow-[0_0_20px_rgba(255,0,60,0.3)] font-mono text-xs tracking-widest disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" /> {saving ? '正在同步...' : '写入数据_SAVE'}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+};

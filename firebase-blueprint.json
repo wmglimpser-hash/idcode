@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "WikiEntry": {
+      "title": "Wiki Entry",
+      "description": "A core entry in the strategy hub (character, map, etc.)",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the entry" },
+        "type": { "type": "string", "enum": ["character", "map", "mechanic", "guide"] },
+        "contentMode": { "type": "string", "enum": ["text", "template"] },
+        "currentRevisionId": { "type": "string", "description": "ID of the active revision" },
+        "authorId": { "type": "string", "description": "UID of the creator" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "contentMode", "authorId"]
+    },
+    "Revision": {
+      "title": "Entry Revision",
+      "description": "A specific version of a wiki entry",
+      "type": "object",
+      "properties": {
+        "entryId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "content": { "type": "object", "description": "The actual content data" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "changeSummary": { "type": "string" }
+      },
+      "required": ["entryId", "authorId", "content", "status"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account data and permissions",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "contributor", "admin"] },
+        "contributions": { "type": "integer" }
+      },
+      "required": ["displayName", "role"]
+    },
+    "Character": {
+      "title": "Character",
+      "description": "A survivor or hunter character",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "role": { "type": "string", "enum": ["Survivor", "Hunter"] },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "skills": { "type": "array" },
+        "traits": { "type": "array" },
+        "mechanics": { "type": "array" },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the character record was last updated."
+        }
+      },
+      "required": ["name", "title", "role"]
+    }
+  },
+  "firestore": {
+    "entries": {
+      "schema": "WikiEntry",
+      "description": "Main wiki entries"
+    },
+    "revisions": {
+      "schema": "Revision",
+      "description": "History of all edits"
+    },
+    "users": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "characters": {
+      "schema": "Character",
+      "description": "Character database"
+    }
+  }
+}
