@@ -1,14 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { Character, CharacterTraitCategory } from '../constants';
-import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw } from 'lucide-react';
 
 interface Props {
   characters: Character[];
+  onRefresh?: () => void;
+  isAdmin?: boolean;
 }
 
-export const Leaderboard = ({ characters }: Props) => {
+export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
   const [role, setRole] = useState<'Survivor' | 'Hunter'>('Survivor');
   const [selectedTrait, setSelectedTrait] = useState<{ category: string, label: string } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    setIsRefreshing(true);
+    await onRefresh();
+    // Small delay to show the animation
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
 
   const baseInfo = useMemo(() => {
     const id = role === 'Survivor' ? 'base_survivor' : 'base_hunter';
@@ -72,19 +83,31 @@ export const Leaderboard = ({ characters }: Props) => {
           <p className="text-muted text-xs font-mono mt-2 uppercase tracking-widest">Neural Leaderboard System v2.1</p>
         </div>
 
-        <div className="flex bg-card border border-border p-1 cyber-border">
-          <button
-            onClick={() => { setRole('Survivor'); setSelectedTrait(null); }}
-            className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Survivor' ? 'bg-primary text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]' : 'text-muted hover:text-text'}`}
-          >
-            求生者 SURVIVORS
-          </button>
-          <button
-            onClick={() => { setRole('Hunter'); setSelectedTrait(null); }}
-            className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Hunter' ? 'bg-primary text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]' : 'text-muted hover:text-text'}`}
-          >
-            监管者 HUNTERS
-          </button>
+        <div className="flex items-center gap-4">
+          {isAdmin && onRefresh && (
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`p-2 border border-border bg-card/50 text-muted hover:text-accent hover:border-accent transition-all group ${isRefreshing ? 'opacity-50' : ''}`}
+              title="同步并刷新排序"
+            >
+              <RefreshCcw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            </button>
+          )}
+          <div className="flex bg-card border border-border p-1 cyber-border">
+            <button
+              onClick={() => { setRole('Survivor'); setSelectedTrait(null); }}
+              className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Survivor' ? 'bg-primary text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]' : 'text-muted hover:text-text'}`}
+            >
+              求生者 SURVIVORS
+            </button>
+            <button
+              onClick={() => { setRole('Hunter'); setSelectedTrait(null); }}
+              className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Hunter' ? 'bg-primary text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]' : 'text-muted hover:text-text'}`}
+            >
+              监管者 HUNTERS
+            </button>
+          </div>
         </div>
       </div>
 
@@ -104,16 +127,13 @@ export const Leaderboard = ({ characters }: Props) => {
                 <>
                   {baseInfo.traits.map((cat, i) => (
                     <div key={i} className="space-y-3">
-                      <div className="text-[10px] text-primary font-bold uppercase tracking-widest border-b border-primary/20 pb-1">
+                      <div className="text-xs text-primary font-bold uppercase tracking-widest border-b border-primary/20 pb-1">
                         {cat.category}
                       </div>
-                      <div className="grid grid-cols-1 gap-2">
+                      <div className="grid grid-cols-1 gap-1">
                         {cat.items.map((item, j) => (
-                          <div key={j} className="flex justify-between items-center bg-bg/40 p-3 border border-border/50 group hover:border-accent/50 transition-all">
-                            <div className="flex flex-col">
-                              <span className="text-[10px] text-muted font-mono">{item.label}</span>
-                              <span className="text-sm font-bold text-text">{item.value}</span>
-                            </div>
+                          <div key={j} className="flex justify-between items-center bg-bg/20 p-2 border border-border/30 group hover:border-accent/50 transition-all">
+                            <span className="text-sm font-mono text-text/80">{item.label}</span>
                             <button
                               onClick={() => setSelectedTrait({ category: cat.category, label: item.label })}
                               className={`flex items-center gap-2 px-3 py-1 text-[9px] font-mono tracking-tighter border transition-all ${
@@ -155,36 +175,40 @@ export const Leaderboard = ({ characters }: Props) => {
                 {groupedRankedData.map((group) => (
                   <div 
                     key={group.rank} 
-                    className={`flex items-center gap-4 p-4 border transition-all ${
+                    className={`flex items-center gap-6 p-4 border transition-all ${
                       group.rank === 1 ? 'bg-gold/10 border-gold/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]' : 
                       group.rank === 2 ? 'bg-accent/5 border-accent/30' :
                       group.rank === 3 ? 'bg-primary/5 border-primary/30' :
                       'bg-bg/40 border-border/50'
                     }`}
                   >
-                    <div className="w-8 text-center font-mono font-bold flex-shrink-0">
-                      {group.rank === 1 ? <span className="text-gold text-xl">1st</span> :
-                       group.rank === 2 ? <span className="text-accent text-lg">2nd</span> :
-                       group.rank === 3 ? <span className="text-primary text-base">3rd</span> :
-                       <span className="text-muted">{group.rank}</span>}
+                    {/* Rank */}
+                    <div className="w-12 text-center font-mono font-bold flex-shrink-0">
+                      {group.rank === 1 ? <span className="text-gold text-2xl">1</span> :
+                       group.rank === 2 ? <span className="text-accent text-xl">2</span> :
+                       group.rank === 3 ? <span className="text-primary text-lg">3</span> :
+                       <span className="text-muted text-lg">{group.rank}</span>}
                     </div>
                     
-                    <div className="flex flex-wrap gap-2 flex-grow">
+                    {/* Characters (Parallel) */}
+                    <div className="flex flex-wrap gap-4 flex-grow">
                       {group.characters.map(char => (
-                        <div key={char.id} className="flex items-center gap-3 bg-bg/20 p-1 pr-3 border border-border/30 hover:border-accent/50 transition-all group">
-                          <div className="w-10 h-10 cyber-border overflow-hidden flex-shrink-0">
+                        <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[140px]">
+                          <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
                             <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
                           </div>
                           <div className="flex flex-col">
                             <div className="text-xs font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
+                            <div className="text-[10px] text-muted font-mono">{char.name}</div>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-lg font-mono font-bold text-accent">{group.value}</div>
-                      {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest">庄园最强</div>}
+                    {/* Value */}
+                    <div className="text-right flex-shrink-0 min-w-[80px]">
+                      <div className="text-xl font-mono font-bold text-accent">{group.value}</div>
+                      {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest">TOP RANK</div>}
                     </div>
                   </div>
                 ))}

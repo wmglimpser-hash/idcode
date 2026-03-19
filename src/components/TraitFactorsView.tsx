@@ -1,0 +1,399 @@
+import React, { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { TraitFactor, CharacterTraitItem, COLORS, Character } from '../constants';
+import { Plus, Trash2, ArrowLeft, Info, AlertCircle, CheckCircle2, Activity, Zap } from 'lucide-react';
+
+interface Props {
+  characterId: string;
+  characterName: string;
+  category: string;
+  allCharacters?: Character[];
+  baseItems: CharacterTraitItem[];
+  onBack: () => void;
+}
+
+export const TraitFactorsView = ({ characterId, characterName, category, allCharacters, baseItems, onBack }: Props) => {
+  const [factors, setFactors] = useState<TraitFactor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const character = allCharacters?.find(c => c.id === characterId);
+  const baseCharacter = allCharacters?.find(c => 
+    c.id === (character?.role === 'Survivor' ? 'base_survivor' : 'base_hunter')
+  );
+  
+  // Form state
+  const [newName, setNewName] = useState('');
+  const [newEffect, setNewEffect] = useState('');
+  const [newSource, setNewSource] = useState('');
+  const [newType, setNewType] = useState<'positive' | 'negative' | 'neutral'>('neutral');
+  const [newTargetStat, setNewTargetStat] = useState('');
+  const [newModifier, setNewModifier] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const calculateModifiedValue = (baseValue: string, itemFactors: TraitFactor[]) => {
+    if (!itemFactors.length) return baseValue;
+
+    // Extract numerical value and unit
+    const match = baseValue.match(/([\d.]+)([^\d]*)/);
+    if (!match) return baseValue;
+
+    let value = parseFloat(match[1]);
+    const unit = match[2];
+
+    itemFactors.forEach(f => {
+      if (!f.modifier) return;
+      
+      const modMatch = f.modifier.match(/([+\-x])([\d.]+)(%?)/);
+      if (!modMatch) return;
+
+      const op = modMatch[1];
+      const modVal = parseFloat(modMatch[2]);
+      const isPercent = modMatch[3] === '%';
+
+      if (op === '+') {
+        if (isPercent) value += value * (modVal / 100);
+        else value += modVal;
+      } else if (op === '-') {
+        if (isPercent) value -= value * (modVal / 100);
+        else value -= modVal;
+      } else if (op === 'x') {
+        value *= modVal;
+      }
+    });
+
+    // Format back to string with 2 decimal places if needed
+    const formattedValue = Number.isInteger(value) ? value.toString() : value.toFixed(2);
+    return `${formattedValue}${unit}`;
+  };
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'trait_factors'),
+      where('characterId', '==', characterId),
+      where('category', '==', category),
+      orderBy('updatedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as TraitFactor[];
+      setFactors(data);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error fetching factors:", err);
+      setError('无法加载影响因素数据。');
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [characterId, category]);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName || !newEffect) return;
+
+    setAdding(true);
+    try {
+      await addDoc(collection(db, 'trait_factors'), {
+        characterId,
+        category,
+        name: newName,
+        effect: newEffect,
+        source: newSource || '未知来源',
+        type: newType,
+        targetStat: newTargetStat,
+        modifier: newModifier,
+        updatedAt: serverTimestamp()
+      });
+      setNewName('');
+      setNewEffect('');
+      setNewSource('');
+      setNewType('neutral');
+      setNewTargetStat('');
+      setNewModifier('');
+    } catch (err) {
+      console.error("Error adding factor:", err);
+      alert('添加失败，请重试。');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('确定要删除这个影响因素吗？')) return;
+    try {
+      await deleteDoc(doc(db, 'trait_factors', id));
+    } catch (err) {
+      console.error("Error deleting factor:", err);
+      alert('删除失败。');
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 text-muted hover:text-accent transition-colors font-mono text-sm uppercase tracking-widest"
+        >
+          <ArrowLeft className="w-4 h-4" /> 返回详情_BACK
+        </button>
+        <div className="text-right">
+          <h2 className="text-xl font-serif text-accent cyber-glow-text">{category}</h2>
+          <p className="text-xs text-muted font-mono uppercase tracking-tighter">影响因素分析_FACTORS FOR {characterName}</p>
+        </div>
+      </div>
+
+      {/* Base Stats Display */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 space-y-4">
+          <div className="bg-card/30 border border-border p-6 cyber-border h-full">
+            <h3 className="text-sm font-bold text-accent font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+              <Activity className="w-4 h-4" /> 基础数值_BASE_STATS
+            </h3>
+            <div className="space-y-3">
+              {baseItems.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
+                  <span className="text-muted text-xs font-mono">{item.label}</span>
+                  <span className="text-text font-bold font-mono">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-card/30 border border-border p-6 cyber-border h-full">
+            <h3 className="text-sm font-bold text-primary font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+              <Zap className="w-4 h-4" /> 动态修正预览_DYNAMIC_MODIFIERS
+            </h3>
+            <div className="space-y-4">
+              {baseItems.map((item, idx) => {
+                const relevantFactors = factors.filter(f => 
+                  f.targetStat === item.label ||
+                  (!f.targetStat && (
+                    f.effect.includes(item.label) || 
+                    item.label.includes(f.name) ||
+                    (category.includes('破译') && f.effect.includes('破译')) ||
+                    (category.includes('移动') && f.effect.includes('速度'))
+                  ))
+                );
+
+                const modifiedValue = calculateModifiedValue(item.value, relevantFactors);
+                const hasChange = modifiedValue !== item.value;
+
+                const baseCat = baseCharacter?.traits?.find(bc => 
+                  bc.category.split(' ')[0] === category.split(' ')[0]
+                );
+                const baseItem = baseCat?.items.find(bi => bi.label === item.label);
+                const isBaseDifferent = baseItem && baseItem.value !== item.value;
+
+                return (
+                  <div key={idx} className={`p-4 bg-bg/50 border transition-colors group ${isBaseDifferent ? 'border-primary/30 bg-primary/5' : 'border-border/50 hover:border-accent/50'}`}>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-text uppercase tracking-widest">{item.label}</span>
+                        {isBaseDifferent && baseItem && (
+                          <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-mono ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>初始: {item.value}</span>
+                        {hasChange && (
+                          <>
+                            <span className="text-muted text-[10px]">→</span>
+                            <span className="text-xs font-bold text-accent font-mono">修正后: {modifiedValue}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {relevantFactors.length > 0 ? (
+                        relevantFactors.map(f => (
+                          <div key={f.id} className="flex items-center gap-2 text-[11px] font-mono">
+                            <span className={`px-1.5 py-0.5 rounded-none text-[10px] ${
+                              f.type === 'positive' ? 'bg-emerald-500/10 text-emerald-500' : 
+                              f.type === 'negative' ? 'bg-primary/10 text-primary' : 
+                              'bg-muted/10 text-muted'
+                            }`}>
+                              {f.type === 'positive' ? '▲' : f.type === 'negative' ? '▼' : '●'}
+                            </span>
+                            <span className="text-text/70">{f.name}:</span>
+                            <span className="text-accent">{f.effect}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-muted italic">暂无特定修正因素</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Add Form */}
+      <section className="bg-card/30 border border-border p-6 cyber-border">
+        <h3 className="text-sm font-bold text-text font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+          <Plus className="w-4 h-4" /> 录入新因素_INPUT_NEW_FACTOR
+        </h3>
+        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">因素名称 NAME</label>
+            <input 
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="例如：庄园老友"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">影响效果 EFFECT</label>
+            <input 
+              type="text"
+              value={newEffect}
+              onChange={(e) => setNewEffect(e.target.value)}
+              placeholder="例如：受击加速延长2秒"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源 SOURCE</label>
+            <input 
+              type="text"
+              value={newSource}
+              onChange={(e) => setNewSource(e.target.value)}
+              placeholder="例如：外在特质"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">目标属性 TARGET_STAT</label>
+            <select 
+              value={newTargetStat}
+              onChange={(e) => setNewTargetStat(e.target.value)}
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+            >
+              <option value="">自动匹配 (模糊搜索)</option>
+              {baseItems.map(item => (
+                <option key={item.label} value={item.label}>{item.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">修正值 MODIFIER (e.g. +10%, -2, x1.1)</label>
+            <input 
+              type="text"
+              value={newModifier}
+              onChange={(e) => setNewModifier(e.target.value)}
+              placeholder="例如：+2 或 -10% 或 x1.1"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+            />
+          </div>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 space-y-2">
+              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">类型 TYPE</label>
+              <select 
+                value={newType}
+                onChange={(e) => setNewType(e.target.value as any)}
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              >
+                <option value="positive">正面 (+)</option>
+                <option value="negative">负面 (-)</option>
+                <option value="neutral">中性 (=)</option>
+              </select>
+            </div>
+            <button 
+              type="submit"
+              disabled={adding}
+              className="bg-primary text-white px-4 py-2 hover:bg-primary/80 transition-all disabled:opacity-50 flex items-center justify-center h-[38px]"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Factors Table */}
+      <section className="bg-card/30 border border-border overflow-hidden cyber-border">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left font-mono text-sm">
+            <thead>
+              <tr className="bg-bg/80 border-b border-border">
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">因素名称_NAME</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">目标属性_TARGET</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">修正值_MOD</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">影响效果_EFFECT</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">来源_SOURCE</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">类型_TYPE</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest w-20">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted animate-pulse">
+                    正在扫描数据模块... SCANNING_DATA_MODULES
+                  </td>
+                </tr>
+              ) : factors.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted">
+                    <div className="flex flex-col items-center gap-2">
+                      <Info className="w-8 h-8 opacity-20" />
+                      <p className="uppercase tracking-widest text-xs">暂无影响因素记录_NO_FACTORS_FOUND</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                factors.map((factor) => (
+                  <tr key={factor.id} className="hover:bg-white/5 transition-colors group">
+                    <td className="px-6 py-4 font-bold text-text">{factor.name}</td>
+                    <td className="px-6 py-4 text-accent text-xs">{factor.targetStat || '自动匹配'}</td>
+                    <td className="px-6 py-4 font-mono text-xs">{factor.modifier || '-'}</td>
+                    <td className="px-6 py-4 text-text/80">{factor.effect}</td>
+                    <td className="px-6 py-4 text-muted">{factor.source}</td>
+                    <td className="px-6 py-4">
+                      {factor.type === 'positive' && (
+                        <span className="flex items-center gap-1 text-emerald-500 text-xs">
+                          <CheckCircle2 className="w-3 h-3" /> 正面
+                        </span>
+                      )}
+                      {factor.type === 'negative' && (
+                        <span className="flex items-center gap-1 text-primary text-xs">
+                          <AlertCircle className="w-3 h-3" /> 负面
+                        </span>
+                      )}
+                      {factor.type === 'neutral' && (
+                        <span className="flex items-center gap-1 text-muted text-xs">
+                          <Info className="w-3 h-3" /> 中性
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button 
+                        onClick={() => handleDelete(factor.id)}
+                        className="text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+};

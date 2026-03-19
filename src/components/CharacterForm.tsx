@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { Character, CharacterTraitCategory } from '../constants';
+import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE } from '../constants';
 
 interface Props {
   onSave: (data: any) => void;
   onCancel: () => void;
+  onDelete?: (char: Character) => void;
   initialData?: Character | null;
+  nextSurvivorOrder?: number;
+  nextHunterOrder?: number;
 }
 
-export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
+export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSurvivorOrder, nextHunterOrder }: Props) => {
   const [importMode, setImportMode] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     title: '',
     role: 'Survivor' as 'Survivor' | 'Hunter',
+    order: 0,
     type: '',
     imageUrl: '',
     description: '',
@@ -26,64 +31,13 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
     mechanics: [] as { title: string; content: string }[],
   });
 
-  const SURVIVOR_TRAITS_TEMPLATE = [
-    {
-      category: '移动',
-      items: [
-        { label: '跑动速度', value: '' },
-        { label: '走路速度', value: '' },
-        { label: '蹲走速度', value: '' },
-        { label: '爬行速度', value: '' }
-      ]
-    },
-    {
-      category: '破译',
-      items: [
-        { label: '密码机破译时长', value: '' },
-        { label: '破译完美判定额外增长进度', value: '' },
-        { label: '破译触电回退进度', value: '' },
-        { label: '破译触电无法破译时长', value: '' },
-        { label: '大门开启时长', value: '' }
-      ]
-    },
-    {
-      category: '交互',
-      items: [
-        { label: '放板时间', value: '' },
-        { label: '快速翻板时长', value: '' },
-        { label: '中速翻板时长', value: '' },
-        { label: '慢速翻板时长', value: '' },
-        { label: '快速翻窗时长', value: '' },
-        { label: '慢速翻窗时长', value: '' },
-        { label: '箱子翻找时长', value: '' }
-      ]
-    },
-    {
-      category: '治疗',
-      items: [
-        { label: '治疗受伤求生者时长', value: '' },
-        { label: '受伤被他人治疗时间', value: '' },
-        { label: '倒地自我治疗时间', value: '' }
-      ]
-    },
-    {
-      category: '其他',
-      items: [
-        { label: '脚印持续时长', value: '' },
-        { label: '受击加速时长', value: '' },
-        { label: '被背负时挣扎掉落时长', value: '' },
-        { label: '狂欢之椅起飞时长', value: '' },
-        { label: '椅上被救援时长', value: '' }
-      ]
-    }
-  ];
-
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name || '',
         title: initialData.title || '',
         role: initialData.role || 'Survivor',
+        order: initialData.order || 0,
         type: initialData.type || '',
         imageUrl: initialData.imageUrl || '',
         description: initialData.description || '',
@@ -93,27 +47,31 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
       });
     } else {
       // Initialize with fixed categories if it's a new survivor
-      if (formData.role === 'Survivor') {
-        setFormData(prev => ({
-          ...prev,
-          traits: JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE))
-        }));
-      }
+      setFormData(prev => ({
+        ...prev,
+        order: prev.role === 'Survivor' ? (nextSurvivorOrder || 0) : (nextHunterOrder || 0),
+        traits: prev.role === 'Survivor' ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) : prev.traits
+      }));
     }
-  }, [initialData]);
+  }, [initialData, nextSurvivorOrder, nextHunterOrder]);
 
-  // Handle role change to update fixed categories
+  // Handle role change to update fixed categories and order
   useEffect(() => {
-    if (!initialData && formData.role === 'Survivor') {
+    if (!initialData) {
       setFormData(prev => {
-        if (prev.traits.length > 0) return prev;
+        const newOrder = prev.role === 'Survivor' ? (nextSurvivorOrder || 0) : (nextHunterOrder || 0);
+        const newTraits = (prev.role === 'Survivor' && prev.traits.length === 0) 
+          ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
+          : prev.traits;
+        
         return {
           ...prev,
-          traits: JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE))
+          order: newOrder,
+          traits: newTraits
         };
       });
     }
-  }, [formData.role, initialData]);
+  }, [formData.role, initialData, nextSurvivorOrder, nextHunterOrder]);
 
   const addSkill = () => {
     setFormData(prev => ({
@@ -147,7 +105,7 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
     const cat = formData.traits[catIndex];
     const fixedCategories = SURVIVOR_TRAITS_TEMPLATE.map(t => t.category);
     if (formData.role === 'Survivor' && fixedCategories.includes(cat.category)) {
-      alert('求生者的基础数值分类（移动、破译、交互、治疗、其他）为固定项，不可删除。');
+      alert('求生者的基础数值分类（移动 MOVEMENT、破译 DECODING、交互 INTERACTION、治疗 HEALING、其他 OTHERS）为固定项，不可删除。');
       return;
     }
     setFormData(prev => ({
@@ -227,6 +185,9 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
       const roleStr = roleMatch[1].trim();
       data.role = (roleStr === '监管者' || roleStr.toLowerCase() === 'hunter') ? 'Hunter' : 'Survivor';
     }
+
+    const orderMatch = text.match(/(?:角色ID|排序|ID)[:：]\s*(\d+)/i);
+    if (orderMatch) data.order = parseInt(orderMatch[1]);
 
     const typeMatch = text.match(/(?:定位|类型|定位类型)[:：]\s*(.*)/i);
     if (typeMatch) data.type = typeMatch[1].trim();
@@ -370,14 +331,14 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="bg-bg/50 p-4 border border-border">
             <div className="flex justify-between items-start mb-4">
-              <p className="text-[10px] text-muted font-mono">请粘贴 JSON 格式或自然语言描述的角色数据：</p>
-              <div className="text-[9px] font-mono text-accent/50 text-right">
+              <p className="text-xs text-muted font-mono">请粘贴 JSON 格式或自然语言描述的角色数据：</p>
+              <div className="text-[11px] font-mono text-accent/50 text-right">
                 支持识别：姓名、称号、阵营、定位、描述、外在特质、数值等关键词<br/>
                 <span className="text-primary">支持一键导入多个角色，请使用 "---" 作为角色之间的分隔符</span>
               </div>
             </div>
             
-            <div className="mb-4 p-3 bg-card/30 border border-border/50 text-[9px] font-mono text-muted">
+            <div className="mb-4 p-3 bg-card/30 border border-border/50 text-[11px] font-mono text-muted">
               <p className="mb-1 text-accent">JSON 示例：</p>
               <code className="block mb-2">
                 [{"{ \"name\": \"艾玛\", \"title\": \"园丁\", \"role\": \"Survivor\" }"}]
@@ -403,7 +364,7 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
               placeholder={`示例格式：\n姓名：艾玛·伍兹\n称号：园丁\n...\n---\n姓名：里奥·贝克\n称号：厂长\n...`}
             />
             {importError && (
-              <div className="mt-4 flex items-center gap-2 text-primary text-[10px] font-mono">
+              <div className="mt-4 flex items-center gap-2 text-primary text-xs font-mono">
                 <AlertCircle className="w-4 h-4" /> {importError}
               </div>
             )}
@@ -439,7 +400,7 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">角色姓名</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-mono">角色姓名</label>
                   <input 
                     type="text" 
                     value={formData.name}
@@ -449,7 +410,7 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">职业称号</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-mono">职业称号</label>
                   <input 
                     type="text" 
                     value={formData.title}
@@ -459,21 +420,20 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">阵营</label>
-                  <select 
-                    value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value as 'Survivor' | 'Hunter'})}
+                  <label className="text-xs text-muted uppercase tracking-widest font-mono">角色 ID</label>
+                  <input 
+                    type="number" 
+                    value={formData.order}
+                    onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})}
                     className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
-                  >
-                    <option value="Survivor">求生者</option>
-                    <option value="Hunter">监管者</option>
-                  </select>
+                    placeholder="1"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-mono">定位类型</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-mono">定位类型</label>
                   <input 
                     type="text" 
                     value={formData.type}
@@ -483,9 +443,23 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
                   />
                 </div>
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs text-muted uppercase tracking-widest font-mono">阵营</label>
+                  <select 
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value as 'Survivor' | 'Hunter'})}
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                  >
+                    <option value="Survivor">求生者</option>
+                    <option value="Hunter">监管者</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-mono">头像 URL</label>
+                <label className="text-xs text-muted uppercase tracking-widest font-mono">头像 URL</label>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
@@ -502,7 +476,7 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
             </div>
 
             <div className="space-y-4">
-              <label className="text-[10px] text-muted uppercase tracking-widest font-mono">角色描述 (SUMMARY)</label>
+              <label className="text-xs text-muted uppercase tracking-widest font-mono">角色描述 (SUMMARY)</label>
               <textarea 
                 rows={6}
                 value={formData.description}
@@ -516,11 +490,11 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
           {/* Trait Details */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-xs border-l-2 border-primary pl-3 uppercase tracking-widest">特质详情 (TRAITS)</h3>
+              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">特质详情 (TRAITS)</h3>
               <button 
                 type="button"
                 onClick={addTraitCategory}
-                className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
               >
                 <Plus className="w-3 h-3" /> 添加分类
               </button>
@@ -546,7 +520,7 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
                     <button 
                       type="button"
                       onClick={() => addTraitItem(catIndex)}
-                      className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+                      className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
                     >
                       <Plus className="w-3 h-3" /> 添加属性
                     </button>
@@ -559,14 +533,14 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
                           value={item.label}
                           onChange={(e) => updateTraitItem(catIndex, itemIndex, 'label', e.target.value)}
                           placeholder="标签"
-                          className="w-24 bg-transparent text-[10px] text-muted outline-none border-r border-border/30 pr-2"
+                          className="w-24 bg-transparent text-xs text-muted outline-none border-r border-border/30 pr-2"
                         />
                         <input 
                           type="text"
                           value={item.value}
                           onChange={(e) => updateTraitItem(catIndex, itemIndex, 'value', e.target.value)}
                           placeholder="数值"
-                          className="flex-1 bg-transparent text-[10px] text-accent outline-none"
+                          className="flex-1 bg-transparent text-xs text-accent outline-none"
                         />
                         <button 
                           type="button"
@@ -586,11 +560,11 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
           {/* External Traits (Skills) */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-xs border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
+              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
               <button 
                 type="button"
                 onClick={addSkill}
-                className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
               >
                 <Plus className="w-3 h-3" /> 添加特质
               </button>
@@ -627,11 +601,11 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
           {/* Mechanics */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-xs border-l-2 border-primary pl-3 uppercase tracking-widest">进阶机制 (MECHANICS)</h3>
+              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">进阶机制 (MECHANICS)</h3>
               <button 
                 type="button"
                 onClick={addMechanic}
-                className="flex items-center gap-1 text-[9px] font-mono text-accent hover:text-primary"
+                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
               >
                 <Plus className="w-3 h-3" /> 添加机制
               </button>
@@ -665,23 +639,66 @@ export const CharacterForm = ({ onSave, onCancel, initialData }: Props) => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-6 pt-6 border-t border-border">
-            <button 
-              type="button"
-              onClick={onCancel}
-              className="px-8 py-2 text-muted hover:text-text transition-colors font-mono text-xs tracking-widest"
-            >
-              取消_CANCEL
-            </button>
-            <button 
-              type="submit"
-              disabled={saving}
-              className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 shadow-[0_0_20px_rgba(255,0,60,0.3)] font-mono text-xs tracking-widest disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" /> {saving ? '正在同步...' : '写入数据_SAVE'}
-            </button>
+          <div className="flex justify-between items-center pt-6 border-t border-border">
+            <div>
+              {initialData && onDelete && (
+                <button 
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-6 py-2 text-primary hover:text-white hover:bg-primary/20 border border-primary/30 transition-all font-mono text-xs tracking-widest flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" /> 删除档案_DELETE
+                </button>
+              )}
+            </div>
+            <div className="flex gap-6">
+              <button 
+                type="button"
+                onClick={onCancel}
+                className="px-8 py-2 text-muted hover:text-text transition-colors font-mono text-xs tracking-widest"
+              >
+                取消_CANCEL
+              </button>
+              <button 
+                type="submit"
+                disabled={saving}
+                className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 shadow-[0_0_20px_rgba(255,0,60,0.3)] font-mono text-xs tracking-widest disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" /> {saving ? '正在同步...' : '写入数据_SAVE'}
+              </button>
+            </div>
           </div>
         </form>
+      )}
+
+      {showDeleteConfirm && initialData && (
+        <div className="fixed inset-0 bg-bg/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+          <div className="bg-card border border-primary p-8 max-w-md w-full cyber-border animate-in zoom-in-95 duration-300">
+            <h3 className="text-xl font-serif text-primary mb-4 flex items-center gap-3">
+              <Trash2 className="w-6 h-6" /> 确认删除档案？
+            </h3>
+            <p className="text-muted text-sm font-mono mb-8 leading-relaxed">
+              您正在尝试删除角色 <span className="text-accent font-bold">{initialData.title} ({initialData.name})</span> 的档案。此操作不可逆，所有关联数据将被永久移除。
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 border border-border text-muted hover:text-text hover:border-text transition-all font-mono text-xs tracking-widest"
+              >
+                取消_CANCEL
+              </button>
+              <button 
+                onClick={() => {
+                  onDelete?.(initialData);
+                  setShowDeleteConfirm(false);
+                }}
+                className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-xs tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)]"
+              >
+                确认删除_CONFIRM
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

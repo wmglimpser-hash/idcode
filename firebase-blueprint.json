@@ -61,6 +61,23 @@
         }
       },
       "required": ["name", "title", "role"]
+    },
+    "TraitFactor": {
+      "title": "Trait Factor",
+      "description": "A factor that influences a specific trait category for a character",
+      "type": "object",
+      "properties": {
+        "characterId": { "type": "string" },
+        "category": { "type": "string" },
+        "name": { "type": "string" },
+        "effect": { "type": "string" },
+        "source": { "type": "string" },
+        "type": { "type": "string", "enum": ["positive", "negative", "neutral"] },
+        "targetStat": { "type": "string" },
+        "modifier": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["characterId", "category", "name", "effect", "type"]
     }
   },
   "firestore": {
@@ -79,6 +96,10 @@
     "characters": {
       "schema": "Character",
       "description": "Character database"
+    },
+    "trait_factors": {
+      "schema": "TraitFactor",
+      "description": "Factors influencing character traits"
     }
   }
 }

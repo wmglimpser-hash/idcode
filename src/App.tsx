@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Character, MOCK_CHARACTERS, WikiEntry } from './constants';
+import { useEffect, useState, useRef } from 'react';
+import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE } from './constants';
 import { CharacterForm } from './components/CharacterForm';
 import { CharacterDetail } from './components/CharacterDetail';
+import { TraitFactorsView } from './components/TraitFactorsView';
 import { WikiEditor } from './components/WikiEditor';
 import { WikiEntryView } from './components/WikiEntryView';
-import { WikiModeration } from './components/WikiModeration';
-import { batchImportSurvivors } from './utils/batchImport';
 import { Leaderboard } from './components/Leaderboard';
 import { MapList } from './components/MapList';
 import { WikiSearch } from './components/WikiSearch';
@@ -19,13 +18,14 @@ import {
   doc, 
   getDoc, 
   setDoc,
-  updateDoc
+  updateDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy } from 'lucide-react';
+import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
 
-type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'moderation';
+type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard';
 
 enum OperationType {
   CREATE = 'create',
@@ -82,6 +82,7 @@ export default function App() {
   const [characters, setCharacters] = useState<Character[]>(MOCK_CHARACTERS);
   const [activeTab, setActiveTab] = useState<Tab>('wiki');
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [viewingFactors, setViewingFactors] = useState<{ characterId: string; characterName: string; category: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isEditingCharacter, setIsEditingCharacter] = useState(false);
   
@@ -98,6 +99,16 @@ export default function App() {
     const saved = localStorage.getItem('theme');
     return saved ? saved === 'dark' : true;
   });
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, clientWidth } = scrollContainerRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth * 0.8 : scrollLeft + clientWidth * 0.8;
+      scrollContainerRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     if (isDarkMode) {
@@ -161,6 +172,65 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (selectedCharacter) {
+      const updated = characters.find(c => c.id === selectedCharacter.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedCharacter)) {
+        setSelectedCharacter(updated);
+      }
+    }
+  }, [characters, selectedCharacter]);
+
+  const handleSyncCharacterOrders = async (silent = true) => {
+    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
+    if (!isAdminUser || characters.length === 0) return;
+
+    const updates: { id: string, order: number }[] = [];
+
+    for (const char of characters) {
+      let targetOrder = char.order;
+      // Derive order from ID if it follows sX or hX pattern
+      if (char.id.startsWith('s')) {
+        const num = parseInt(char.id.substring(1));
+        if (!isNaN(num)) targetOrder = num;
+      } else if (char.id.startsWith('h')) {
+        const num = parseInt(char.id.substring(1));
+        if (!isNaN(num)) targetOrder = 99 + num;
+      }
+
+      if (targetOrder !== char.order) {
+        updates.push({ id: char.id, order: targetOrder });
+      }
+    }
+
+    if (updates.length === 0) {
+      if (!silent) alert("数据已是最新，无需同步排序。");
+      return;
+    }
+
+    if (!silent && !window.confirm(`检测到 ${updates.length} 个角色的排序 ID 需要同步，是否继续？`)) {
+      return;
+    }
+
+    console.log("Syncing character IDs...", updates.length, "updates pending");
+    for (const update of updates) {
+      try {
+        await updateDoc(doc(db, 'characters', update.id), {
+          order: update.order,
+          lastUpdated: serverTimestamp()
+        });
+      } catch (e) {
+        // Likely mock character or permission issue
+      }
+    }
+    if (!silent) alert("同步完成！所有角色已按 ID 重新排序。");
+  };
+
+  // Hidden Auto-Sync for Admin to fix character IDs/orders
+  useEffect(() => {
+    handleSyncCharacterOrders(true);
+  }, [user, userProfile, characters]);
+
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -172,8 +242,12 @@ export default function App() {
 
   const handleLogout = () => signOut(auth);
 
-  const survivors = characters.filter(c => c.role === 'Survivor');
-  const hunters = characters.filter(c => c.role === 'Hunter');
+  const survivors = characters
+    .filter(c => c.role === 'Survivor')
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const hunters = characters
+    .filter(c => c.role === 'Hunter')
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const navItems = [
     { id: 'wiki', label: '庄园秘典', icon: <Book className="w-4 h-4" /> },
@@ -181,7 +255,6 @@ export default function App() {
     { id: 'survivors', label: '求生者', icon: <ShieldCheck className="w-4 h-4" /> },
     { id: 'hunters', label: '监管者', icon: <Swords className="w-4 h-4" /> },
     { id: 'maps', label: '地图档案', icon: <MapIcon className="w-4 h-4" /> },
-    ...(userProfile?.role === 'admin' ? [{ id: 'moderation', label: '审判庭', icon: <Settings className="w-4 h-4" /> }] : []),
   ];
 
   const handleSaveCharacter = async (charData: any) => {
@@ -250,11 +323,65 @@ export default function App() {
       
       setShowForm(false);
       setIsEditingCharacter(false);
-      setSelectedCharacter(null);
+      // Keep selectedCharacter if we were editing it
+      if (!isEditingCharacter) {
+        setSelectedCharacter(null);
+      }
     } catch (error: any) {
       console.error("Error saving character:", error);
       alert(error.message || "保存失败，请检查数据格式。");
       throw error;
+    }
+  };
+
+  const handleDeleteCharacter = async (char: Character) => {
+    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
+    if (!isAdminUser) {
+      alert("只有管理员可以删除档案。");
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'characters', char.id));
+      setSelectedCharacter(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `characters/${char.id}`);
+    }
+  };
+
+  const handleSyncSurvivorTraits = async () => {
+    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
+    if (!isAdminUser) {
+      alert("只有管理员可以同步数据。");
+      return;
+    }
+
+    if (!window.confirm("确定要将所有求生者的特质详情同步为标准格式吗？这可能会覆盖现有的自定义数值。")) {
+      return;
+    }
+
+    try {
+      const survivorsToSync = characters.filter(c => c.role === 'Survivor' && !c.id.startsWith('base_'));
+      const modernIds = Array.from({ length: 26 }, (_, i) => `s${i + 23}`); // s23 to s48
+      
+      for (const survivor of survivorsToSync) {
+        const template = modernIds.includes(survivor.id) 
+          ? SURVIVOR_TRAITS_MODERN_TEMPLATE 
+          : SURVIVOR_TRAITS_TEMPLATE;
+          
+        try {
+          await updateDoc(doc(db, 'characters', survivor.id), {
+            traits: JSON.parse(JSON.stringify(template)),
+            lastUpdated: serverTimestamp()
+          });
+        } catch (e) {
+          console.log(`Skipping sync for ${survivor.name} (likely mock character)`);
+        }
+      }
+      alert("同步完成！所有求生者的特质详情已更新为标准格式。");
+    } catch (err) {
+      console.error("Sync error:", err);
+      alert("同步过程中出现错误。");
     }
   };
 
@@ -277,7 +404,7 @@ export default function App() {
                 <h1 className="text-2xl font-serif font-bold tracking-tighter text-accent cyber-glow-text">
                   庄园秘典 <span className="text-primary">CODEX</span>
                 </h1>
-                <div className="text-[8px] font-mono text-muted tracking-[0.5em] uppercase">神经连接接口 v5.0.0</div>
+                <div className="text-[11px] font-mono text-muted tracking-[0.5em] uppercase">神经连接接口 v5.0.0</div>
               </div>
             </div>
             
@@ -293,8 +420,8 @@ export default function App() {
               {user ? (
                 <div className="flex items-center gap-4 bg-bg/50 border border-border px-4 py-2">
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] font-bold text-accent">{userProfile?.displayName}</span>
-                    <span className="text-[8px] text-muted uppercase tracking-widest">{userProfile?.role}</span>
+                    <span className="text-xs font-bold text-accent">{userProfile?.displayName}</span>
+                    <span className="text-[10px] text-muted uppercase tracking-widest">{userProfile?.role}</span>
                   </div>
                   <button onClick={handleLogout} className="text-muted hover:text-primary transition-colors">
                     <LogOut className="w-4 h-4" />
@@ -303,7 +430,7 @@ export default function App() {
               ) : (
                 <button 
                   onClick={handleLogin}
-                  className="flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/50 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/50 text-accent text-xs font-mono hover:bg-accent hover:text-bg transition-all"
                 >
                   <LogIn className="w-4 h-4" /> 接入系统_LOGIN
                 </button>
@@ -321,6 +448,7 @@ export default function App() {
                     setShowForm(false);
                     setIsEditingWiki(false);
                     setSelectedWikiEntry(null);
+                    setViewingFactors(null);
                   }}
                   className={`px-8 py-2 flex items-center gap-3 transition-all duration-300 relative group overflow-hidden ${
                     activeTab === item.id 
@@ -334,7 +462,7 @@ export default function App() {
                   <div className={`${activeTab === item.id ? 'text-accent' : 'text-muted group-hover:text-primary'} transition-colors`}>
                     {item.icon}
                   </div>
-                  <span className="text-xs font-bold tracking-widest">{item.label}</span>
+                  <span className="text-sm font-bold tracking-widest">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -369,7 +497,7 @@ export default function App() {
                 <div className="flex justify-center gap-6 pt-8">
                   <button 
                     onClick={() => setIsEditingWiki(true)}
-                    className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-xs tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)] hover:scale-105 transition-all"
+                    className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-sm tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)] hover:scale-105 transition-all"
                   >
                     <Plus className="w-4 h-4" /> 创建新词条_NEW
                   </button>
@@ -392,7 +520,7 @@ export default function App() {
               <div className="space-y-6">
                 <button 
                   onClick={() => setSelectedWikiEntry(null)}
-                  className="text-muted hover:text-accent flex items-center gap-2 text-[10px] font-mono tracking-widest transition-colors"
+                  className="text-muted hover:text-accent flex items-center gap-2 text-xs font-mono tracking-widest transition-colors"
                 >
                   ← 返回搜索_BACK
                 </button>
@@ -405,63 +533,83 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'moderation' && userProfile?.role === 'admin' && (
-          <div className="space-y-8 relative z-10">
-            <div className="flex items-center justify-between border-b border-border pb-6">
-              <div>
-                <h2 className="text-3xl font-serif text-primary cyber-glow-text">审判庭_MODERATION</h2>
-                <p className="text-muted text-xs font-mono mt-2">管理员专用：审核社区提交的修订内容。</p>
-              </div>
-              <button 
-                onClick={async () => {
-                  if (confirm('确定要批量导入48名求生者吗？这将在数据库中创建大量文档。')) {
-                    try {
-                      const results = await batchImportSurvivors();
-                      alert(`成功导入 ${results.length} 名求生者！`);
-                    } catch (error: any) {
-                      alert(`导入失败: ${error.message}`);
-                    }
-                  }
-                }}
-                className="px-4 py-2 bg-primary/10 border border-primary/50 text-primary text-[10px] font-mono hover:bg-primary hover:text-white transition-all flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" /> 批量导入求生者_BATCH_IMPORT
-              </button>
-            </div>
-            <WikiModeration />
-          </div>
-        )}
-
         {(activeTab === 'survivors' || activeTab === 'hunters') && (
           <div className="space-y-12 relative z-10">
-            <div className="flex flex-wrap gap-4 border-b border-border/50 pb-8 items-center">
-              {(activeTab === 'survivors' ? survivors : hunters).map(char => (
-                <button
-                  key={char.id}
-                  onClick={() => {
-                    setSelectedCharacter(char);
-                    setShowForm(false);
-                  }}
-                  className={`group relative w-20 h-20 transition-all duration-500 ${
-                    selectedCharacter?.id === char.id && !showForm
-                      ? 'scale-110 z-20' 
-                      : 'opacity-40 hover:opacity-100 grayscale hover:grayscale-0'
-                  }`}
-                >
-                  <div className={`absolute inset-0 cyber-border border-2 ${selectedCharacter?.id === char.id && !showForm ? 'border-accent shadow-[0_0_20px_rgba(0,243,255,0.4)]' : 'border-border'}`} />
-                  <img src={char.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-accent/80 text-[9px] font-bold text-bg py-1 text-center">
-                    {char.title}
-                  </div>
-                </button>
-              ))}
-              
+            <div className="relative group/nav pb-8">
               <button 
-                onClick={() => setShowForm(true)}
-                className={`w-20 h-20 border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted hover:text-accent hover:border-accent transition-all ${showForm ? 'border-accent text-accent bg-accent/5' : ''}`}
+                onClick={() => scroll('left')}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100 shadow-xl"
               >
-                <Plus className="w-6 h-6" />
-                <span className="text-[10px] font-bold">添加{activeTab === 'survivors' ? '求生者' : '监管者'}</span>
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              
+              <div 
+                ref={scrollContainerRef}
+                className="flex flex-nowrap gap-4 items-center overflow-x-auto no-scrollbar scroll-smooth px-2"
+              >
+                {(activeTab === 'survivors' ? survivors : hunters).map(char => (
+                  <button
+                    key={char.id}
+                    onClick={() => {
+                      setSelectedCharacter(char);
+                      setShowForm(false);
+                      setIsEditingCharacter(false);
+                      setViewingFactors(null);
+                    }}
+                    className={`group relative w-20 h-20 flex-shrink-0 transition-all duration-200 ${
+                      selectedCharacter?.id === char.id && !showForm && !isEditingCharacter
+                        ? 'scale-110 z-20' 
+                        : 'hover:scale-105'
+                    }`}
+                  >
+                    <div className={`absolute inset-0 border transition-colors duration-200 ${
+                      selectedCharacter?.id === char.id && !showForm && !isEditingCharacter 
+                        ? 'border-accent' 
+                        : 'border-border/20'
+                    }`} />
+                    <div className="absolute inset-0 overflow-hidden">
+                      <img 
+                        src={char.imageUrl} 
+                        className={`w-full h-full object-contain transition-all duration-200 ${
+                          selectedCharacter?.id === char.id && !showForm && !isEditingCharacter
+                            ? 'brightness-100' 
+                            : 'brightness-0 opacity-50 group-hover:brightness-100 group-hover:opacity-100'
+                        }`} 
+                        referrerPolicy="no-referrer" 
+                      />
+                    </div>
+                    <div className="absolute -bottom-5 left-0 right-0 text-[9px] font-mono font-bold text-muted group-hover:text-accent transition-colors text-center truncate uppercase tracking-tighter">
+                      {char.title}
+                    </div>
+                  </button>
+                ))}
+                
+                {(userProfile?.role === 'admin' || user?.email === 'wmglimpser@gmail.com') && (
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <button 
+                      onClick={() => setShowForm(true)}
+                      className={`w-20 h-20 border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted hover:text-accent hover:border-accent transition-all ${showForm ? 'border-accent text-accent bg-accent/5' : ''}`}
+                    >
+                      <Plus className="w-6 h-6" />
+                      <span className="text-xs font-bold">添加{activeTab === 'survivors' ? '求生者' : '监管者'}</span>
+                    </button>
+                    {activeTab === 'survivors' && (
+                      <button 
+                        onClick={handleSyncSurvivorTraits}
+                        className="text-[9px] font-mono text-accent/50 hover:text-accent transition-colors uppercase tracking-tighter text-center"
+                      >
+                        [同步标准特质]
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => scroll('right')}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100 shadow-xl"
+              >
+                <ChevronRight className="w-6 h-6" />
               </button>
             </div>
 
@@ -472,13 +620,32 @@ export default function App() {
                   setShowForm(false);
                   setIsEditingCharacter(false);
                 }} 
+                onDelete={handleDeleteCharacter}
                 initialData={isEditingCharacter ? selectedCharacter || undefined : undefined}
+                nextSurvivorOrder={Math.max(...characters.filter(c => c.role === 'Survivor').map(c => c.order || 0), 0) + 1}
+                nextHunterOrder={Math.max(...characters.filter(c => c.role === 'Hunter').map(c => c.order || 0), 99) + 1}
+              />
+            ) : viewingFactors ? (
+              <TraitFactorsView 
+                characterId={viewingFactors.characterId}
+                characterName={viewingFactors.characterName}
+                category={viewingFactors.category}
+                allCharacters={characters}
+                baseItems={selectedCharacter?.traits?.find(t => t.category === viewingFactors.category)?.items || []}
+                onBack={() => setViewingFactors(null)}
               />
             ) : (
               selectedCharacter && (
                 <CharacterDetail 
                   character={selectedCharacter} 
-                  onEdit={() => setIsEditingCharacter(true)}
+                  allCharacters={characters}
+                  onEdit={(userProfile?.role === 'admin' || user?.email === 'wmglimpser@gmail.com') ? () => setIsEditingCharacter(true) : undefined}
+                  onDelete={(userProfile?.role === 'admin' || user?.email === 'wmglimpser@gmail.com') ? handleDeleteCharacter : undefined}
+                  onViewFactors={(category) => setViewingFactors({ 
+                    characterId: selectedCharacter.id, 
+                    characterName: selectedCharacter.name, 
+                    category 
+                  })}
                 />
               )
             )}
@@ -486,7 +653,11 @@ export default function App() {
         )}
 
         {activeTab === 'leaderboard' && (
-          <Leaderboard characters={characters} />
+          <Leaderboard 
+            characters={characters} 
+            onRefresh={() => handleSyncCharacterOrders(false)}
+            isAdmin={user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin'}
+          />
         )}
 
         {activeTab === 'maps' && <MapList />}
@@ -509,10 +680,10 @@ export default function App() {
             <a href="#" className="text-muted hover:text-accent transition-colors">地图侦察</a>
           </div>
           <div className="text-right space-y-4">
-            <div className="inline-block px-4 py-2 border border-primary text-primary text-[10px] font-mono cyber-glitch">
+            <div className="inline-block px-4 py-2 border border-primary text-primary text-xs font-mono cyber-glitch">
               系统状态: 正常运行
             </div>
-            <p className="text-[10px] text-muted font-mono uppercase tracking-[0.2em]">
+            <p className="text-xs text-muted font-mono uppercase tracking-[0.2em]">
               © 2026 NEURAL_MANOR_OS. 保留所有权利。
             </p>
           </div>
