@@ -12,6 +12,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
   const [role, setRole] = useState<'Survivor' | 'Hunter'>('Survivor');
   const [selectedTrait, setSelectedTrait] = useState<{ category: string, label: string } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const handleRefresh = async () => {
     if (!onRefresh) return;
@@ -32,8 +33,9 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
 
   // Helper to extract numeric value for sorting
   const extractValue = (valStr: string): number => {
+    if (!valStr || valStr === 'N/A') return -Infinity;
     const match = valStr.match(/(-?\d+(\.\d+)?)/);
-    return match ? parseFloat(match[1]) : 0;
+    return match ? parseFloat(match[1]) : -Infinity;
   };
 
   const groupedRankedData = useMemo(() => {
@@ -41,8 +43,9 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
 
     const data = factionCharacters
       .map(char => {
-        const category = char.traits?.find(t => t.category === selectedTrait.category);
-        const item = category?.items.find(i => i.label === selectedTrait.label);
+        // Find item by label across all categories to avoid category name mismatch
+        const item = char.traits?.flatMap(t => t.items).find(i => i.label === selectedTrait.label);
+        
         return {
           id: char.id,
           name: char.name,
@@ -52,25 +55,46 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
           numericValue: item ? extractValue(item.value) : -Infinity
         };
       })
-      .sort((a, b) => b.numericValue - a.numericValue);
+      .sort((a, b) => {
+        if (a.numericValue === b.numericValue) return 0;
+        // Always put N/A (-Infinity) at the bottom regardless of sort order
+        if (a.numericValue === -Infinity) return 1;
+        if (b.numericValue === -Infinity) return -1;
+        
+        return sortOrder === 'asc' ? a.numericValue - b.numericValue : b.numericValue - a.numericValue;
+      });
 
     const groups: { rank: number, value: string, numericValue: number, characters: typeof data }[] = [];
     
+    let currentRank = 1;
     data.forEach((item, index) => {
+      // Skip characters with N/A or Infinity values from being ranked normally
+      if (item.value === 'N/A' || item.numericValue === -Infinity) {
+        groups.push({
+          rank: 999, // Unranked
+          value: 'N/A',
+          numericValue: item.numericValue,
+          characters: [item]
+        });
+        return;
+      }
+
       if (index > 0 && item.numericValue === data[index - 1].numericValue) {
         groups[groups.length - 1].characters.push(item);
       } else {
         groups.push({
-          rank: index + 1,
+          rank: currentRank,
           value: item.value,
           numericValue: item.numericValue,
           characters: [item]
         });
+        currentRank++;
       }
     });
 
-    return groups;
-  }, [factionCharacters, selectedTrait]);
+    // Filter out unranked if needed, or keep them at the bottom
+    return groups.filter(g => g.rank !== 999);
+  }, [factionCharacters, selectedTrait, sortOrder]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -132,18 +156,17 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
                       </div>
                       <div className="grid grid-cols-1 gap-1">
                         {cat.items.map((item, j) => (
-                          <div key={j} className="flex justify-between items-center bg-bg/20 p-2 border border-border/30 group hover:border-accent/50 transition-all">
-                            <span className="text-sm font-mono text-text/80">{item.label}</span>
-                            <button
-                              onClick={() => setSelectedTrait({ category: cat.category, label: item.label })}
-                              className={`flex items-center gap-2 px-3 py-1 text-[9px] font-mono tracking-tighter border transition-all ${
-                                selectedTrait?.label === item.label 
-                                  ? 'bg-accent text-bg border-accent' 
-                                  : 'border-accent/30 text-accent hover:bg-accent/10'
-                              }`}
-                            >
-                              <Trophy className="w-3 h-3" /> 查看排名
-                            </button>
+                          <div 
+                            key={j} 
+                            onClick={() => setSelectedTrait({ category: cat.category, label: item.label })}
+                            className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
+                              selectedTrait?.label === item.label 
+                                ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
+                                : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
+                            }`}
+                          >
+                            <span className="text-sm font-mono font-bold">{item.label}</span>
+                            {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
                           </div>
                         ))}
                       </div>
@@ -168,7 +191,16 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
                   <div className="text-[10px] text-primary font-bold uppercase mb-1">{selectedTrait.category}</div>
                   <h3 className="text-2xl font-serif text-accent cyber-glow-text">{selectedTrait.label} 排行榜</h3>
                 </div>
-                <div className="text-[10px] font-mono text-muted">共 {factionCharacters.length} 名成员</div>
+                <div className="flex flex-col items-end gap-2">
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-bg/50 border border-border hover:border-accent/50 text-xs font-mono text-muted hover:text-accent transition-all"
+                  >
+                    {sortOrder === 'desc' ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+                    {sortOrder === 'desc' ? '降序排列 (从大到小)' : '升序排列 (从小到大)'}
+                  </button>
+                  <div className="text-[10px] font-mono text-muted">共 {factionCharacters.length} 名成员</div>
+                </div>
               </div>
 
               <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-3">
@@ -193,13 +225,12 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
                     {/* Characters (Parallel) */}
                     <div className="flex flex-wrap gap-4 flex-grow">
                       {group.characters.map(char => (
-                        <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[140px]">
+                        <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px]">
                           <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
                             <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
                           </div>
-                          <div className="flex flex-col">
-                            <div className="text-xs font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
-                            <div className="text-[10px] text-muted font-mono">{char.name}</div>
+                          <div className="flex flex-col justify-center">
+                            <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
                           </div>
                         </div>
                       ))}
