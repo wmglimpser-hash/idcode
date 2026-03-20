@@ -10,9 +10,11 @@ interface Props {
   onEdit?: (char: Character) => void;
   onDelete?: (char: Character) => void;
   onViewFactors?: (category: string) => void;
+  onViewTalent?: (char: Character) => void;
+  onViewAuxiliaryTrait?: (char: Character) => void;
 }
 
-export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, onViewFactors }: Props) => {
+export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, onViewFactors, onViewTalent, onViewAuxiliaryTrait }: Props) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('traits');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -109,6 +111,23 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
             <span className="text-muted uppercase text-xs font-mono tracking-widest">定位 TYPE</span>
             <span className="text-text font-mono text-sm">{character.type}</span>
           </div>
+          
+          <div className="pt-4 border-t border-border/50 flex flex-col gap-2">
+            <button 
+              onClick={() => onViewTalent?.(character)}
+              className="w-full py-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-colors font-mono text-sm font-bold flex items-center justify-center gap-2"
+            >
+              <Activity className="w-4 h-4" /> 天赋页面_TALENT
+            </button>
+            {character.role === 'Hunter' && (
+              <button 
+                onClick={() => onViewAuxiliaryTrait?.(character)}
+                className="w-full py-2 bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-white transition-colors font-mono text-sm font-bold flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4" /> 辅助特质_AUXILIARY
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -167,7 +186,7 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
                             bc.category.split(' ')[0] === cat.category.split(' ')[0]
                           );
                           const baseItem = baseCat?.items.find(bi => bi.label === item.label);
-                          const isDifferent = baseItem && baseItem.value !== item.value;
+                          const isDifferent = character.role === 'Survivor' && baseItem && baseItem.value !== item.value;
 
                           return (
                             <BaseStatItem 
@@ -175,7 +194,7 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
                               label={item.label} 
                               value={item.value} 
                               isDifferent={!!isDifferent}
-                              baseValue={baseItem?.value}
+                              baseValue={character.role === 'Survivor' ? baseItem?.value : undefined}
                             />
                           );
                         })}

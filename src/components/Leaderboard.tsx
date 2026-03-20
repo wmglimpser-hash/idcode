@@ -38,6 +38,29 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
     return match ? parseFloat(match[1]) : -Infinity;
   };
 
+  const traitCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (!baseInfo?.traits) return counts;
+
+    baseInfo.traits.forEach(cat => {
+      cat.items.forEach(item => {
+        const label = item.label;
+        const uniqueValues = new Set<number>();
+        factionCharacters.forEach(char => {
+          const charItem = char.traits?.flatMap(t => t.items).find(i => i.label === label);
+          if (charItem && charItem.value && charItem.value !== 'N/A') {
+            const numVal = extractValue(charItem.value);
+            if (numVal !== -Infinity) {
+              uniqueValues.add(numVal);
+            }
+          }
+        });
+        counts[label] = uniqueValues.size;
+      });
+    });
+    return counts;
+  }, [baseInfo, factionCharacters]);
+
   const groupedRankedData = useMemo(() => {
     if (!selectedTrait) return [];
 
@@ -147,7 +170,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
             </h3>
             
             <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-8">
-              {baseInfo?.traits ? (
+              {baseInfo?.traits && baseInfo.traits.length > 0 ? (
                 <>
                   {baseInfo.traits.map((cat, i) => (
                     <div key={i} className="space-y-3">
@@ -166,7 +189,16 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
                             }`}
                           >
                             <span className="text-sm font-mono font-bold">{item.label}</span>
-                            {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border ${
+                                selectedTrait?.label === item.label 
+                                  ? 'bg-accent/20 border-accent/50 text-accent' 
+                                  : 'bg-bg/50 border-border/50 text-muted group-hover:text-text/80'
+                              }`}>
+                                {traitCounts[item.label] || 0} 项
+                              </span>
+                              {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -224,16 +256,26 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
                     
                     {/* Characters (Parallel) */}
                     <div className="flex flex-wrap gap-4 flex-grow">
-                      {group.characters.map(char => (
-                        <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px]">
-                          <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
-                            <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
-                          </div>
+                      {groupedRankedData.length === 1 ? (
+                        <div className="flex items-center gap-3 bg-bg/40 px-6 py-3 border border-border/30 hover:border-accent/50 transition-all group">
                           <div className="flex flex-col justify-center">
-                            <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
+                            <div className="text-lg font-bold text-accent group-hover:text-primary transition-colors tracking-widest">
+                              {role === 'Survivor' ? '所有求生者' : '所有监管者'}
+                            </div>
                           </div>
                         </div>
-                      ))}
+                      ) : (
+                        group.characters.map(char => (
+                          <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px]">
+                            <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
+                              <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                            </div>
+                            <div className="flex flex-col justify-center">
+                              <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     {/* Value */}

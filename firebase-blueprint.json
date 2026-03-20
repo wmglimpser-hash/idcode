@@ -78,6 +78,20 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["characterId", "category", "name", "effect", "type"]
+    },
+    "GameMap": {
+      "title": "Game Map",
+      "description": "A map in the game",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"] },
+        "resources": { "type": "string", "description": "Map resources description" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "description", "imageUrl", "difficulty"]
     }
   },
   "firestore": {
@@ -100,6 +114,10 @@
     "trait_factors": {
       "schema": "TraitFactor",
       "description": "Factors influencing character traits"
+    },
+    "maps": {
+      "schema": "GameMap",
+      "description": "Game maps database"
     }
   }
 }

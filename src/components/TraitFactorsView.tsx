@@ -14,9 +14,13 @@ interface Props {
 }
 
 export const TraitFactorsView = ({ characterId, characterName, category, allCharacters, baseItems, onBack }: Props) => {
-  const [factors, setFactors] = useState<TraitFactor[]>([]);
+  const [localFactors, setLocalFactors] = useState<TraitFactor[]>([]);
+  const [globalTalents, setGlobalTalents] = useState<TraitFactor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeFactors, setActiveFactors] = useState<Set<string>>(new Set());
+
+  const factors = [...localFactors, ...globalTalents];
 
   const character = allCharacters?.find(c => c.id === characterId);
   const baseCharacter = allCharacters?.find(c => 
@@ -27,13 +31,27 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
   const [newName, setNewName] = useState('');
   const [newEffect, setNewEffect] = useState('');
   const [newSource, setNewSource] = useState('');
+  const [newSourceType, setNewSourceType] = useState<'external_trait' | 'talent' | 'auxiliary_trait' | 'other'>('external_trait');
   const [newType, setNewType] = useState<'positive' | 'negative' | 'neutral'>('neutral');
   const [newTargetStat, setNewTargetStat] = useState('');
   const [newModifier, setNewModifier] = useState('');
   const [adding, setAdding] = useState(false);
 
+  const toggleFactor = (factorId: string) => {
+    setActiveFactors(prev => {
+      const next = new Set(prev);
+      if (next.has(factorId)) {
+        next.delete(factorId);
+      } else {
+        next.add(factorId);
+      }
+      return next;
+    });
+  };
+
   const calculateModifiedValue = (baseValue: string, itemFactors: TraitFactor[]) => {
-    if (!itemFactors.length) return baseValue;
+    const activeItemFactors = itemFactors.filter(f => activeFactors.has(f.id));
+    if (!activeItemFactors.length) return baseValue;
 
     // Extract numerical value and unit
     const match = baseValue.match(/([\d.]+)([^\d]*)/);
@@ -42,7 +60,11 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
     let value = parseFloat(match[1]);
     const unit = match[2];
 
-    itemFactors.forEach(f => {
+    let additiveModifier = 0;
+    let multiplicativeModifier = 1;
+    let percentAdditiveModifier = 0;
+
+    activeItemFactors.forEach(f => {
       if (!f.modifier) return;
       
       const modMatch = f.modifier.match(/([+\-x])([\d.]+)(%?)/);
@@ -53,15 +75,17 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       const isPercent = modMatch[3] === '%';
 
       if (op === '+') {
-        if (isPercent) value += value * (modVal / 100);
-        else value += modVal;
+        if (isPercent) percentAdditiveModifier += modVal;
+        else additiveModifier += modVal;
       } else if (op === '-') {
-        if (isPercent) value -= value * (modVal / 100);
-        else value -= modVal;
+        if (isPercent) percentAdditiveModifier -= modVal;
+        else additiveModifier -= modVal;
       } else if (op === 'x') {
-        value *= modVal;
+        multiplicativeModifier *= modVal;
       }
     });
+
+    value = (value + additiveModifier) * (1 + percentAdditiveModifier / 100) * multiplicativeModifier;
 
     // Format back to string with 2 decimal places if needed
     const formattedValue = Number.isInteger(value) ? value.toString() : value.toFixed(2);
@@ -76,12 +100,12 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       orderBy('updatedAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeFactors = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as TraitFactor[];
-      setFactors(data);
+      setLocalFactors(data);
       setLoading(false);
     }, (err) => {
       console.error("Error fetching factors:", err);
@@ -89,8 +113,39 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [characterId, category]);
+    let unsubscribeTalents: () => void = () => {};
+    if (character?.role) {
+      const tq = query(
+        collection(db, 'talent_definitions'),
+        where('role', '==', character.role)
+      );
+      unsubscribeTalents = onSnapshot(tq, (snapshot) => {
+        const talentData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            characterId: 'global',
+            category: 'talent',
+            name: data.name,
+            effect: data.effect || data.description,
+            source: '天赋系统',
+            sourceType: 'talent' as const,
+            type: 'positive' as const,
+            targetStat: data.targetStat || '',
+            modifier: data.modifier || '',
+            isGlobalTalent: true
+          } as TraitFactor & { isGlobalTalent?: boolean };
+        }).filter(t => t.targetStat || t.modifier || t.effect);
+        
+        setGlobalTalents(talentData);
+      });
+    }
+
+    return () => {
+      unsubscribeFactors();
+      unsubscribeTalents();
+    };
+  }, [characterId, category, character?.role]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +159,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
         name: newName,
         effect: newEffect,
         source: newSource || '未知来源',
+        sourceType: newSourceType,
         type: newType,
         targetStat: newTargetStat,
         modifier: newModifier,
@@ -112,6 +168,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       setNewName('');
       setNewEffect('');
       setNewSource('');
+      setNewSourceType('external_trait');
       setNewType('neutral');
       setNewTargetStat('');
       setNewModifier('');
@@ -133,6 +190,28 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
     }
   };
 
+  const renderFactorCell = (factorList: TraitFactor[]) => (
+    <div className="space-y-3">
+      {factorList.map(f => (
+        <label key={f.id} className="flex items-start gap-2 cursor-pointer group">
+          <input 
+            type="checkbox" 
+            className="mt-1 accent-accent"
+            checked={activeFactors.has(f.id)}
+            onChange={() => toggleFactor(f.id)}
+          />
+          <div className="flex flex-col">
+            <span className={`text-[11px] font-bold transition-colors ${activeFactors.has(f.id) ? 'text-accent' : 'text-text/80 group-hover:text-text'}`}>
+              {f.name}
+            </span>
+            <span className="text-[10px] text-muted leading-tight mt-0.5">{f.modifier ? `[${f.modifier}] ` : ''}{f.effect}</span>
+          </div>
+        </label>
+      ))}
+      {factorList.length === 0 && <span className="text-[10px] text-muted/50 italic">-</span>}
+    </div>
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
       <div className="flex items-center justify-between border-b border-border pb-4">
@@ -148,94 +227,80 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
         </div>
       </div>
 
-      {/* Base Stats Display */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 space-y-4">
-          <div className="bg-card/30 border border-border p-6 cyber-border h-full">
-            <h3 className="text-sm font-bold text-accent font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
-              <Activity className="w-4 h-4" /> 基础数值_BASE_STATS
-            </h3>
-            <div className="space-y-3">
-              {baseItems.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
-                  <span className="text-muted text-xs font-mono">{item.label}</span>
-                  <span className="text-text font-bold font-mono">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Dynamic Modifiers Table */}
+      <section className="bg-card/30 border border-border p-6 cyber-border overflow-x-auto">
+        <h3 className="text-sm font-bold text-primary font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+          <Zap className="w-4 h-4" /> 动态修正预览_DYNAMIC_MODIFIERS
+        </h3>
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead>
+            <tr className="border-b border-border/50 text-[10px] text-muted font-mono uppercase tracking-widest">
+              <th className="p-3 font-normal w-1/6">特质项目</th>
+              <th className="p-3 font-normal w-1/6">基础数值</th>
+              <th className="p-3 font-normal w-1/6">外在特质</th>
+              <th className="p-3 font-normal w-1/6">天赋因素</th>
+              <th className="p-3 font-normal w-1/6">监管者辅助特质</th>
+              <th className="p-3 font-normal w-1/6 text-accent">影响后的数值</th>
+            </tr>
+          </thead>
+          <tbody>
+            {baseItems.map((item, idx) => {
+              const relevantFactors = factors.filter(f => 
+                f.targetStat === item.label ||
+                (!f.targetStat && (
+                  f.effect.includes(item.label) || 
+                  item.label.includes(f.name) ||
+                  (category.includes('破译') && f.effect.includes('破译')) ||
+                  (category.includes('移动') && f.effect.includes('速度'))
+                ))
+              );
 
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-card/30 border border-border p-6 cyber-border h-full">
-            <h3 className="text-sm font-bold text-primary font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
-              <Zap className="w-4 h-4" /> 动态修正预览_DYNAMIC_MODIFIERS
-            </h3>
-            <div className="space-y-4">
-              {baseItems.map((item, idx) => {
-                const relevantFactors = factors.filter(f => 
-                  f.targetStat === item.label ||
-                  (!f.targetStat && (
-                    f.effect.includes(item.label) || 
-                    item.label.includes(f.name) ||
-                    (category.includes('破译') && f.effect.includes('破译')) ||
-                    (category.includes('移动') && f.effect.includes('速度'))
-                  ))
-                );
+              const externalTraits = relevantFactors.filter(f => f.sourceType === 'external_trait' || !f.sourceType);
+              const talentFactors = relevantFactors.filter(f => f.sourceType === 'talent');
+              const auxiliaryTraits = relevantFactors.filter(f => f.sourceType === 'auxiliary_trait');
 
-                const modifiedValue = calculateModifiedValue(item.value, relevantFactors);
-                const hasChange = modifiedValue !== item.value;
+              const modifiedValue = calculateModifiedValue(item.value, relevantFactors);
+              const hasChange = modifiedValue !== item.value;
 
-                const baseCat = baseCharacter?.traits?.find(bc => 
-                  bc.category.split(' ')[0] === category.split(' ')[0]
-                );
-                const baseItem = baseCat?.items.find(bi => bi.label === item.label);
-                const isBaseDifferent = baseItem && baseItem.value !== item.value;
+              const baseCat = baseCharacter?.traits?.find(bc => 
+                bc.category.split(' ')[0] === category.split(' ')[0]
+              );
+              const baseItem = baseCat?.items.find(bi => bi.label === item.label);
+              const isBaseDifferent = character?.role === 'Survivor' && baseItem && baseItem.value !== item.value;
 
-                return (
-                  <div key={idx} className={`p-4 bg-bg/50 border transition-colors group ${isBaseDifferent ? 'border-primary/30 bg-primary/5' : 'border-border/50 hover:border-accent/50'}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-text uppercase tracking-widest">{item.label}</span>
-                        {isBaseDifferent && baseItem && (
-                          <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-mono ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>初始: {item.value}</span>
-                        {hasChange && (
-                          <>
-                            <span className="text-muted text-[10px]">→</span>
-                            <span className="text-xs font-bold text-accent font-mono">修正后: {modifiedValue}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {relevantFactors.length > 0 ? (
-                        relevantFactors.map(f => (
-                          <div key={f.id} className="flex items-center gap-2 text-[11px] font-mono">
-                            <span className={`px-1.5 py-0.5 rounded-none text-[10px] ${
-                              f.type === 'positive' ? 'bg-emerald-500/10 text-emerald-500' : 
-                              f.type === 'negative' ? 'bg-primary/10 text-primary' : 
-                              'bg-muted/10 text-muted'
-                            }`}>
-                              {f.type === 'positive' ? '▲' : f.type === 'negative' ? '▼' : '●'}
-                            </span>
-                            <span className="text-text/70">{f.name}:</span>
-                            <span className="text-accent">{f.effect}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[10px] text-muted italic">暂无特定修正因素</p>
+              return (
+                <tr key={idx} className={`border-b border-border/30 last:border-0 transition-colors ${isBaseDifferent ? 'bg-primary/5' : 'hover:bg-bg/50'}`}>
+                  <td className="p-3 align-top">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-text uppercase tracking-widest">{item.label}</span>
+                      {isBaseDifferent && baseItem && (
+                        <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
                       )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+                  </td>
+                  <td className="p-3 align-top">
+                    <span className={`text-xs font-mono ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>{item.value}</span>
+                  </td>
+                  <td className="p-3 align-top border-l border-border/20">{renderFactorCell(externalTraits)}</td>
+                  <td className="p-3 align-top border-l border-border/20">{renderFactorCell(talentFactors)}</td>
+                  <td className="p-3 align-top border-l border-border/20">{renderFactorCell(auxiliaryTraits)}</td>
+                  <td className="p-3 align-top border-l border-border/20 bg-accent/5">
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-sm font-bold font-mono ${hasChange ? 'text-accent cyber-glow-text' : 'text-text'}`}>
+                        {modifiedValue}
+                      </span>
+                      {hasChange && (
+                        <span className="text-[10px] text-accent/70 font-mono">
+                          ({item.value} → {modifiedValue})
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </section>
 
       {/* Add Form */}
@@ -243,7 +308,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
         <h3 className="text-sm font-bold text-text font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
           <Plus className="w-4 h-4" /> 录入新因素_INPUT_NEW_FACTOR
         </h3>
-        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-2">
             <label className="text-[10px] text-muted uppercase font-mono tracking-widest">因素名称 NAME</label>
             <input 
@@ -267,12 +332,25 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源 SOURCE</label>
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源类型 SOURCE TYPE</label>
+            <select 
+              value={newSourceType}
+              onChange={(e) => setNewSourceType(e.target.value as any)}
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+            >
+              <option value="external_trait">外在特质</option>
+              <option value="talent">天赋因素</option>
+              <option value="auxiliary_trait">监管者辅助特质</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源 SOURCE (可选)</label>
             <input 
               type="text"
               value={newSource}
               onChange={(e) => setNewSource(e.target.value)}
-              placeholder="例如：外在特质"
+              placeholder="例如：破窗理论"
               className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
             />
           </div>
@@ -299,7 +377,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
               className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
             />
           </div>
-          <div className="flex gap-2 items-end">
+          <div className="flex gap-2 items-end lg:col-span-2">
             <div className="flex-1 space-y-2">
               <label className="text-[10px] text-muted uppercase font-mono tracking-widest">类型 TYPE</label>
               <select 
@@ -333,6 +411,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                 <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">目标属性_TARGET</th>
                 <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">修正值_MOD</th>
                 <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">影响效果_EFFECT</th>
+                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">来源类型_TYPE</th>
                 <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">来源_SOURCE</th>
                 <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">类型_TYPE</th>
                 <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest w-20">操作</th>
@@ -341,13 +420,13 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             <tbody className="divide-y divide-border/50">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted animate-pulse">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted animate-pulse">
                     正在扫描数据模块... SCANNING_DATA_MODULES
                   </td>
                 </tr>
               ) : factors.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted">
                     <div className="flex flex-col items-center gap-2">
                       <Info className="w-8 h-8 opacity-20" />
                       <p className="uppercase tracking-widest text-xs">暂无影响因素记录_NO_FACTORS_FOUND</p>
@@ -361,6 +440,11 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                     <td className="px-6 py-4 text-accent text-xs">{factor.targetStat || '自动匹配'}</td>
                     <td className="px-6 py-4 font-mono text-xs">{factor.modifier || '-'}</td>
                     <td className="px-6 py-4 text-text/80">{factor.effect}</td>
+                    <td className="px-6 py-4 text-muted text-xs">
+                      {factor.sourceType === 'external_trait' ? '外在特质' :
+                       factor.sourceType === 'talent' ? '天赋因素' :
+                       factor.sourceType === 'auxiliary_trait' ? '监管者辅助特质' : '其他'}
+                    </td>
                     <td className="px-6 py-4 text-muted">{factor.source}</td>
                     <td className="px-6 py-4">
                       {factor.type === 'positive' && (
@@ -380,12 +464,14 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <button 
-                        onClick={() => handleDelete(factor.id)}
-                        className="text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!(factor as any).isGlobalTalent && (
+                        <button 
+                          onClick={() => handleDelete(factor.id)}
+                          className="text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

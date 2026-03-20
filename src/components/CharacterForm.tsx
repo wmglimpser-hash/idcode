@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE } from '../constants';
+import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from '../constants';
 
 interface Props {
   onSave: (data: any) => void;
@@ -46,11 +46,13 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
         mechanics: initialData.mechanics || [],
       });
     } else {
-      // Initialize with fixed categories if it's a new survivor
+      // Initialize with fixed categories if it's a new character
       setFormData(prev => ({
         ...prev,
         order: prev.role === 'Survivor' ? (nextSurvivorOrder || 0) : (nextHunterOrder || 0),
-        traits: prev.role === 'Survivor' ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) : prev.traits
+        traits: prev.role === 'Survivor' 
+          ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
+          : JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE))
       }));
     }
   }, [initialData, nextSurvivorOrder, nextHunterOrder]);
@@ -60,9 +62,9 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
     if (!initialData) {
       setFormData(prev => {
         const newOrder = prev.role === 'Survivor' ? (nextSurvivorOrder || 0) : (nextHunterOrder || 0);
-        const newTraits = (prev.role === 'Survivor' && prev.traits.length === 0) 
+        const newTraits = prev.role === 'Survivor'
           ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
-          : prev.traits;
+          : JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE));
         
         return {
           ...prev,
@@ -103,10 +105,18 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
 
   const removeTraitCategory = (catIndex: number) => {
     const cat = formData.traits[catIndex];
-    const fixedCategories = SURVIVOR_TRAITS_TEMPLATE.map(t => t.category);
-    if (formData.role === 'Survivor' && fixedCategories.includes(cat.category)) {
-      alert('求生者的基础数值分类（移动 MOVEMENT、破译 DECODING、交互 INTERACTION、治疗 HEALING、其他 OTHERS）为固定项，不可删除。');
-      return;
+    if (formData.role === 'Survivor') {
+      const fixedCategories = SURVIVOR_TRAITS_TEMPLATE.map(t => t.category);
+      if (fixedCategories.includes(cat.category)) {
+        alert('求生者的基础数值分类为固定项，不可删除。');
+        return;
+      }
+    } else {
+      const fixedCategories = HUNTER_TRAITS_TEMPLATE.map(t => t.category);
+      if (fixedCategories.includes(cat.category)) {
+        alert('监管者的基础数值分类为固定项，不可删除。');
+        return;
+      }
     }
     setFormData(prev => ({
       ...prev,
@@ -214,7 +224,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
       const traitsText = traitsSection[1];
       const lines = traitsText.trim().split('\n');
       
-      const template = JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE));
+      const template = JSON.parse(JSON.stringify(data.role === 'Hunter' ? HUNTER_TRAITS_TEMPLATE : SURVIVOR_TRAITS_TEMPLATE));
       
       lines.forEach(line => {
         const parts = line.split(/[:：\s]+/).filter(Boolean);

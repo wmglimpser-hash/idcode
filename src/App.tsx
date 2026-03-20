@@ -3,11 +3,14 @@ import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIV
 import { CharacterForm } from './components/CharacterForm';
 import { CharacterDetail } from './components/CharacterDetail';
 import { TraitFactorsView } from './components/TraitFactorsView';
+import { CharacterExtensionView } from './components/CharacterExtensionView';
 import { WikiEditor } from './components/WikiEditor';
 import { WikiEntryView } from './components/WikiEntryView';
 import { Leaderboard } from './components/Leaderboard';
 import { MapList } from './components/MapList';
+import { TalentWeb } from './components/TalentWeb';
 import { WikiSearch } from './components/WikiSearch';
+import { WallpaperManager } from './components/WallpaperManager';
 import { 
   collection, 
   addDoc, 
@@ -23,9 +26,9 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
+import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network } from 'lucide-react';
 
-type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard';
+type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents';
 
 enum OperationType {
   CREATE = 'create',
@@ -83,6 +86,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('wiki');
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [viewingFactors, setViewingFactors] = useState<{ characterId: string; characterName: string; category: string } | null>(null);
+  const [viewingExtension, setViewingExtension] = useState<{ character: Character; type: 'talent' | 'auxiliary' } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isEditingCharacter, setIsEditingCharacter] = useState(false);
   
@@ -154,20 +158,23 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'characters'), (snapshot) => {
-      const dbChars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Character));
-      if (dbChars.length > 0) {
-        // Merge mock characters with DB characters, prioritizing DB
-        const merged = [...MOCK_CHARACTERS];
-        dbChars.forEach(dbChar => {
-          const index = merged.findIndex(m => m.id === dbChar.id);
+      const dbChars = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      
+      // Merge mock characters with DB characters, prioritizing DB
+      let merged = [...MOCK_CHARACTERS];
+      dbChars.forEach(dbChar => {
+        const index = merged.findIndex(m => m.id === dbChar.id);
+        if (dbChar.deleted) {
+          if (index !== -1) merged.splice(index, 1);
+        } else {
           if (index !== -1) {
-            merged[index] = dbChar;
+            merged[index] = dbChar as Character;
           } else {
-            merged.push(dbChar);
+            merged.push(dbChar as Character);
           }
-        });
-        setCharacters(merged);
-      }
+        }
+      });
+      setCharacters(merged);
     });
     return () => unsubscribe();
   }, []);
@@ -254,7 +261,8 @@ export default function App() {
     { id: 'leaderboard', label: '排行榜', icon: <Trophy className="w-4 h-4" /> },
     { id: 'survivors', label: '求生者', icon: <ShieldCheck className="w-4 h-4" /> },
     { id: 'hunters', label: '监管者', icon: <Swords className="w-4 h-4" /> },
-    { id: 'maps', label: '地图档案', icon: <MapIcon className="w-4 h-4" /> },
+    { id: 'maps', label: '地图', icon: <MapIcon className="w-4 h-4" /> },
+    { id: 'talents', label: '天赋系统', icon: <Network className="w-4 h-4" /> },
   ];
 
   const handleSaveCharacter = async (charData: any) => {
@@ -342,7 +350,14 @@ export default function App() {
     }
 
     try {
-      await deleteDoc(doc(db, 'characters', char.id));
+      const isMock = MOCK_CHARACTERS.some(m => m.id === char.id);
+      if (isMock) {
+        // Soft delete for mock characters so they don't reappear from the local constant
+        await setDoc(doc(db, 'characters', char.id), { deleted: true, lastUpdated: serverTimestamp() });
+      } else {
+        // Hard delete for purely DB characters
+        await deleteDoc(doc(db, 'characters', char.id));
+      }
       setSelectedCharacter(null);
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `characters/${char.id}`);
@@ -409,13 +424,16 @@ export default function App() {
             </div>
             
             <div className="flex items-center gap-6">
-              <button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2 border border-border bg-bg/50 text-muted hover:text-accent hover:border-accent transition-all"
-                title={isDarkMode ? '切换至明亮模式' : '切换至黑暗模式'}
-              >
-                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
+              <div className="flex items-center gap-2">
+                <WallpaperManager />
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="p-2 border border-border bg-bg/50 text-muted hover:text-accent hover:border-accent transition-all"
+                  title={isDarkMode ? '切换至明亮模式' : '切换至黑暗模式'}
+                >
+                  {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+              </div>
 
               {user ? (
                 <div className="flex items-center gap-4 bg-bg/50 border border-border px-4 py-2">
@@ -449,6 +467,7 @@ export default function App() {
                     setIsEditingWiki(false);
                     setSelectedWikiEntry(null);
                     setViewingFactors(null);
+                    setViewingExtension(null);
                   }}
                   className={`px-8 py-2 flex items-center gap-3 transition-all duration-300 relative group overflow-hidden ${
                     activeTab === item.id 
@@ -492,6 +511,8 @@ export default function App() {
                     setShowForm(false);
                     setIsEditingWiki(false);
                     setSelectedWikiEntry(null);
+                    setViewingFactors(null);
+                    setViewingExtension(null);
                   }}
                 />
                 <div className="flex justify-center gap-6 pt-8">
@@ -555,6 +576,7 @@ export default function App() {
                       setShowForm(false);
                       setIsEditingCharacter(false);
                       setViewingFactors(null);
+                      setViewingExtension(null);
                     }}
                     className={`group relative w-20 h-20 flex-shrink-0 transition-all duration-200 ${
                       selectedCharacter?.id === char.id && !showForm && !isEditingCharacter
@@ -634,6 +656,12 @@ export default function App() {
                 baseItems={selectedCharacter?.traits?.find(t => t.category === viewingFactors.category)?.items || []}
                 onBack={() => setViewingFactors(null)}
               />
+            ) : viewingExtension ? (
+              <CharacterExtensionView
+                character={viewingExtension.character}
+                type={viewingExtension.type}
+                onBack={() => setViewingExtension(null)}
+              />
             ) : (
               selectedCharacter && (
                 <CharacterDetail 
@@ -646,6 +674,8 @@ export default function App() {
                     characterName: selectedCharacter.name, 
                     category 
                   })}
+                  onViewTalent={(char) => setViewingExtension({ character: char, type: 'talent' })}
+                  onViewAuxiliaryTrait={(char) => setViewingExtension({ character: char, type: 'auxiliary' })}
                 />
               )
             )}
@@ -660,7 +690,8 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'maps' && <MapList />}
+        {activeTab === 'maps' && <MapList user={user} userProfile={userProfile} />}
+        {activeTab === 'talents' && <TalentWeb user={user} userProfile={userProfile} />}
       </main>
 
       {/* Footer */}

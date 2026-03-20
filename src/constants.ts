@@ -46,6 +46,7 @@ export interface TraitFactor {
   name: string;
   effect: string;
   source: string;
+  sourceType?: 'external_trait' | 'talent' | 'auxiliary_trait' | 'other';
   type: 'positive' | 'negative' | 'neutral';
   targetStat?: string;
   modifier?: string;
@@ -156,6 +157,54 @@ export const SURVIVOR_TRAITS_MODERN_TEMPLATE: CharacterTraitCategory[] = [
   }
 ];
 
+export const HUNTER_TRAITS_TEMPLATE: CharacterTraitCategory[] = [
+  {
+    category: '移动与交互 MOVEMENT & INTERACTION',
+    items: [
+      { label: '模型体积', value: '半径0.38米' },
+      { label: '移动速度', value: '4.64米/秒' },
+      { label: '转向速度', value: '726.0度/秒' },
+      { label: '跨过窗户时长', value: '1.31秒' },
+      { label: '摧毁木板时长', value: '2.54秒' },
+      { label: '被砸眩晕时长', value: '3.53秒' }
+    ]
+  },
+  {
+    category: '普通攻击 NORMAL ATTACK',
+    items: [
+      { label: '普通攻击前摇', value: '0.35秒' },
+      { label: '普通攻击距离', value: '2.87米' },
+      { label: '普通攻击未命中恢复动作时长', value: '0.61秒' },
+      { label: '普通攻击命中恢复动作时长', value: '4.26秒' }
+    ]
+  },
+  {
+    category: '蓄力攻击 CHARGED ATTACK',
+    items: [
+      { label: '蓄力攻击前摇', value: '2.06秒' },
+      { label: '蓄力攻击距离', value: '3.46米' },
+      { label: '蓄力攻击未命中恢复动作时长', value: '0.98秒' },
+      { label: '蓄力攻击命中恢复动作时长', value: '4.35秒' }
+    ]
+  },
+  {
+    category: '牵气球 BALLOONING',
+    items: [
+      { label: '牵起气球时长', value: '1.96秒' },
+      { label: '被挣脱后眩晕时长', value: '5.64秒' },
+      { label: '牵气球攻击前摇', value: '0.93秒' },
+      { label: '牵气球攻击距离', value: '2.87米' }
+    ]
+  },
+  {
+    category: '其他 OTHERS',
+    items: [
+      { label: '恐惧半径大小', value: '32.07米' },
+      { label: '攻击命中场景恢复动作时长', value: '1.01秒' }
+    ]
+  }
+];
+
 export const MOCK_CHARACTERS: Character[] = [
   {
     id: 'base_survivor',
@@ -235,26 +284,7 @@ export const MOCK_CHARACTERS: Character[] = [
     ],
     imageUrl: 'https://picsum.photos/seed/hunter-base/400/600',
     order: 0,
-    traits: [
-      {
-        category: '移动与交互 MOVEMENT & INTERACTION',
-        items: [
-          { label: '模型体积', value: '半径0.45米' },
-          { label: '移动速度', value: '4.64米/秒' },
-          { label: '转向速度', value: '900.0度/秒' },
-          { label: '跨过窗户时长', value: '1.5秒' },
-          { label: '摧毁木板时长', value: '2.0秒' }
-        ]
-      },
-      {
-        category: '普通攻击 NORMAL ATTACK',
-        items: [
-          { label: '普通攻击前摇', value: '0.4秒' },
-          { label: '普通攻击距离', value: '3.5米' },
-          { label: '攻击命中恢复时长', value: '3.0秒' }
-        ]
-      }
-    ]
+    traits: []
   },
   // Survivors
   { 
@@ -330,24 +360,7 @@ export const MOCK_CHARACTERS: Character[] = [
     ],
     imageUrl: 'https://picsum.photos/seed/hell-ember/400/600',
     order: 100,
-    traits: [
-      {
-        category: '移动与交互 MOVEMENT & INTERACTION',
-        items: [
-          { label: '移动速度', value: '4.64米/秒' },
-          { label: '跨过窗户时长', value: '1.5秒' },
-          { label: '摧毁木板时长', value: '2.0秒' }
-        ]
-      },
-      {
-        category: '普通攻击 NORMAL ATTACK',
-        items: [
-          { label: '普通攻击前摇', value: '0.4秒' },
-          { label: '普通攻击距离', value: '3.5米' },
-          { label: '攻击命中恢复时长', value: '3.0秒' }
-        ]
-      }
-    ],
+    traits: JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE)),
     mechanics: [
       { title: '守椅思路', content: '利用傀儡进行双守，或者在求生者救人时利用怨灵进行干扰。' }
     ]
@@ -369,9 +382,12 @@ export const MOCK_CHARACTERS: Character[] = [
       {
         category: '移动与交互 MOVEMENT & INTERACTION',
         items: [
+          { label: '模型体积', value: '半径0.38米' },
           { label: '移动速度', value: '4.74米/秒' },
+          { label: '转向速度', value: '726.0度/秒' },
           { label: '跨过窗户时长', value: '1.3秒' },
-          { label: '摧毁木板时长', value: '1.8秒' }
+          { label: '摧毁木板时长', value: '1.8秒' },
+          { label: '被砸眩晕时长', value: '3.53秒' }
         ]
       },
       {
@@ -379,7 +395,33 @@ export const MOCK_CHARACTERS: Character[] = [
         items: [
           { label: '普通攻击前摇', value: '0.35秒' },
           { label: '普通攻击距离', value: '3.8米' },
-          { label: '攻击命中恢复时长', value: '2.8秒' }
+          { label: '普通攻击未命中恢复动作时长', value: '0.61秒' },
+          { label: '普通攻击命中恢复动作时长', value: '2.8秒' }
+        ]
+      },
+      {
+        category: '蓄力攻击 CHARGED ATTACK',
+        items: [
+          { label: '蓄力攻击前摇', value: '2.06秒' },
+          { label: '蓄力攻击距离', value: '3.46米' },
+          { label: '蓄力攻击未命中恢复动作时长', value: '0.98秒' },
+          { label: '蓄力攻击命中恢复动作时长', value: '4.35秒' }
+        ]
+      },
+      {
+        category: '牵气球 BALLOONING',
+        items: [
+          { label: '牵起气球时长', value: '1.96秒' },
+          { label: '被挣脱后眩晕时长', value: '5.64秒' },
+          { label: '牵气球攻击前摇', value: '0.93秒' },
+          { label: '牵气球攻击距离', value: '2.87米' }
+        ]
+      },
+      {
+        category: '其他 OTHERS',
+        items: [
+          { label: '恐惧半径大小', value: '32.07米' },
+          { label: '攻击命中场景恢复动作时长', value: '1.01秒' }
         ]
       }
     ]
@@ -420,6 +462,7 @@ export interface GameMap {
   description: string;
   imageUrl: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
+  resources?: string;
 }
 
 export const MOCK_MAPS: GameMap[] = [

@@ -80,6 +80,14 @@ service cloud.firestore {
              (data.modifier == null || (data.modifier is string && data.modifier.size() < 100));
     }
 
+    function isValidMap(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 2000 &&
+             data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() < 1000 &&
+             data.difficulty in ['Easy', 'Medium', 'Hard'] &&
+             (data.resources == null || (data.resources is string && data.resources.size() < 5000));
+    }
+
     // Users Collection
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -118,6 +126,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isContributor() && isValidTraitFactor(request.resource.data);
       allow update: if isContributor() && isValidTraitFactor(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    // Maps Collection
+    match /maps/{mapId} {
+      allow read: if true;
+      allow create: if isContributor() && isValidMap(request.resource.data);
+      allow update: if isContributor() && isValidMap(request.resource.data);
       allow delete: if isAdmin();
     }
   }
