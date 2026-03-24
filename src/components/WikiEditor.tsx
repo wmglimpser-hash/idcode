@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from '../firebase';
 import { WikiEntry, Revision } from '../constants';
-import { Save, X, FileText, Layout, AlertTriangle, Image as ImageIcon, Upload } from 'lucide-react';
+import { Save, X, FileText, Layout, AlertTriangle, Image as ImageIcon, Upload, Network } from 'lucide-react';
 
 interface Props {
   entry?: WikiEntry;
@@ -14,12 +14,45 @@ interface Props {
 export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
   const [title, setTitle] = useState(entry?.title || '');
   const [type, setType] = useState<WikiEntry['type']>(entry?.type || 'character');
+  const [talentId, setTalentId] = useState(entry?.talentId || '');
   const [contentMode, setContentMode] = useState<WikiEntry['contentMode']>(entry?.contentMode || 'text');
   const [text, setText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableTalents, setAvailableTalents] = useState<any[]>([]);
+
+  // Load available talents for selection
+  React.useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'talent_definitions'), (snapshot) => {
+      setAvailableTalents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Load existing content if editing
+  React.useEffect(() => {
+    const loadContent = async () => {
+      if (entry?.currentRevisionId) {
+        setLoading(true);
+        try {
+          const revDoc = await getDoc(doc(db, 'revisions', entry.currentRevisionId));
+          if (revDoc.exists()) {
+            const data = revDoc.data();
+            if (data.content?.text) {
+              setText(data.content.text);
+            }
+          }
+        } catch (err) {
+          console.error("Error loading revision:", err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    loadContent();
+  }, [entry]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,12 +92,19 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
         const entryRef = await addDoc(collection(db, 'entries'), {
           title,
           type,
+          talentId: type === 'talent' ? talentId : null,
           contentMode,
           authorId: auth.currentUser.uid,
           tags: [],
           lastUpdated: serverTimestamp(),
         });
         entryId = entryRef.id;
+      } else if (type === 'talent') {
+        // Update talentId if it changed
+        await updateDoc(doc(db, 'entries', entryId), {
+          talentId,
+          lastUpdated: serverTimestamp(),
+        });
       }
 
       // 2. Create revision
@@ -157,9 +197,33 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
               <option value="map">地图</option>
               <option value="mechanic">游戏机制</option>
               <option value="guide">进阶攻略</option>
+              <option value="talent">天赋技能</option>
             </select>
           </div>
         </div>
+
+        {type === 'talent' && (
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase tracking-widest font-mono">关联天赋节点</label>
+            <select 
+              value={talentId}
+              onChange={(e) => setTalentId(e.target.value)}
+              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+            >
+              <option value="">-- 请选择天赋节点 --</option>
+              <optgroup label="求生者天赋">
+                {availableTalents.filter(t => t.role === 'Survivor').map(node => (
+                  <option key={`surv-${node.nodeId}`} value={node.nodeId}>{node.name || node.nodeId}</option>
+                ))}
+              </optgroup>
+              <optgroup label="监管者天赋">
+                {availableTalents.filter(t => t.role === 'Hunter').map(node => (
+                  <option key={`hunt-${node.nodeId}`} value={node.nodeId}>{node.name || node.nodeId}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+        )}
 
         {contentMode === 'text' ? (
           <div className="space-y-4">

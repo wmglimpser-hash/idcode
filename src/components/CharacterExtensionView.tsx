@@ -18,9 +18,10 @@ interface Props {
   character: Character;
   type: 'talent' | 'auxiliary';
   onBack: () => void;
+  canEdit?: boolean;
 }
 
-export const CharacterExtensionView = ({ character, type, onBack }: Props) => {
+export const CharacterExtensionView = ({ character, type, onBack, canEdit = false }: Props) => {
   const [items, setItems] = useState<ExtensionItem[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -111,53 +112,55 @@ export const CharacterExtensionView = ({ character, type, onBack }: Props) => {
       </div>
 
       {/* Add Form */}
-      <section className="bg-card/30 border border-border p-6 cyber-border">
-        <h3 className="text-sm font-bold text-text font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
-          <Plus className="w-4 h-4" /> 录入新{type === 'talent' ? '天赋' : '特质'}_INPUT_NEW
-        </h3>
-        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">名称 TITLE</label>
-            <input 
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder={type === 'talent' ? "例如：39天赋 (破窗理论+回光返照)" : "例如：闪现"}
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">图片链接 IMAGE_URL (可选)</label>
-            <input 
-              type="text"
-              value={newImageUrl}
-              onChange={(e) => setNewImageUrl(e.target.value)}
-              placeholder="输入图片URL..."
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">描述说明 DESCRIPTION</label>
-            <textarea 
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="详细说明适用场景、打法思路等..."
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors min-h-[100px] resize-y"
-              required
-            />
-          </div>
-          <div className="md:col-span-2 flex justify-end">
-            <button 
-              type="submit"
-              disabled={adding}
-              className="bg-primary text-white px-8 py-2 hover:bg-primary/80 transition-all disabled:opacity-50 flex items-center gap-2 font-mono text-sm tracking-widest"
-            >
-              <Plus className="w-4 h-4" /> 确认添加_ADD
-            </button>
-          </div>
-        </form>
-      </section>
+      {canEdit && (
+        <section className="bg-card/30 border border-border p-6 cyber-border">
+          <h3 className="text-sm font-bold text-text font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+            <Plus className="w-4 h-4" /> 录入新{type === 'talent' ? '天赋' : '特质'}_INPUT_NEW
+          </h3>
+          <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">名称 TITLE</label>
+              <input 
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder={type === 'talent' ? "例如：39天赋 (破窗理论+回光返照)" : "例如：闪现"}
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">图片链接 IMAGE_URL (可选)</label>
+              <input 
+                type="text"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="输入图片URL..."
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">描述说明 DESCRIPTION</label>
+              <textarea 
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="详细说明适用场景、打法思路等..."
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors min-h-[100px] resize-y"
+                required
+              />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button 
+                type="submit"
+                disabled={adding}
+                className="bg-primary text-white px-8 py-2 hover:bg-primary/80 transition-all disabled:opacity-50 flex items-center gap-2 font-mono text-sm tracking-widest"
+              >
+                <Plus className="w-4 h-4" /> 确认添加_ADD
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {/* Items List */}
       <section className="space-y-6">
@@ -174,13 +177,15 @@ export const CharacterExtensionView = ({ character, type, onBack }: Props) => {
           <div className="grid grid-cols-1 gap-6">
             {items.map((item) => (
               <div key={item.id} className="bg-card/30 border border-border p-6 cyber-border relative group">
-                <button 
-                  onClick={() => handleDelete(item.id)}
-                  className="absolute top-4 right-4 text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                  title="删除"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canEdit && (
+                  <button 
+                    onClick={() => handleDelete(item.id)}
+                    className="absolute top-4 right-4 text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                    title="删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 
                 <div className="flex flex-col md:flex-row gap-6">
                   {item.imageUrl && (

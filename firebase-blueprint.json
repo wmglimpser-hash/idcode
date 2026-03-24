@@ -92,6 +92,37 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "description", "imageUrl", "difficulty"]
+    },
+    "TalentDefinition": {
+      "title": "Talent Definition",
+      "description": "Metadata for a talent node in the talent tree",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["Survivor", "Hunter"] },
+        "nodeId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "targetStat": { "type": "string" },
+        "modifier": { "type": "string" },
+        "effect": { "type": "string" },
+        "x": { "type": "number", "description": "Optional override for X coordinate" },
+        "y": { "type": "number", "description": "Optional override for Y coordinate" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["role", "nodeId", "name", "description"]
+    },
+    "TalentBuild": {
+      "title": "Talent Build",
+      "description": "A saved talent point allocation for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["Survivor", "Hunter"] },
+        "name": { "type": "string" },
+        "points": { "type": "object", "description": "Map of nodeId to level" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "role", "name", "points"]
     }
   },
   "firestore": {
@@ -118,6 +149,14 @@
     "maps": {
       "schema": "GameMap",
       "description": "Game maps database"
+    },
+    "talent_definitions": {
+      "schema": "TalentDefinition",
+      "description": "Definitions for talent tree nodes"
+    },
+    "talent_builds": {
+      "schema": "TalentBuild",
+      "description": "Saved user talent builds"
     }
   }
 }

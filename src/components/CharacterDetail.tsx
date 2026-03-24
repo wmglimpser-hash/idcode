@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Character, COLORS } from '../constants';
-import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2 } from 'lucide-react';
+import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus } from 'lucide-react';
+import { CharacterTraitCategory } from '../constants';
 
 type DetailTab = 'traits' | 'external' | 'mechanics';
 
@@ -12,11 +13,63 @@ interface Props {
   onViewFactors?: (category: string) => void;
   onViewTalent?: (char: Character) => void;
   onViewAuxiliaryTrait?: (char: Character) => void;
+  onUpdate?: (charId: string, data: Partial<Character>) => Promise<void>;
 }
 
-export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, onViewFactors, onViewTalent, onViewAuxiliaryTrait }: Props) => {
+export const CharacterDetail = ({ 
+  character, 
+  allCharacters, 
+  onEdit, 
+  onDelete, 
+  onViewFactors, 
+  onViewTalent, 
+  onViewAuxiliaryTrait,
+  onUpdate 
+}: Props) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('traits');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingSection, setEditingSection] = useState<DetailTab | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Local state for editing
+  const [editTraits, setEditTraits] = useState<CharacterTraitCategory[]>([]);
+  const [editSkills, setEditSkills] = useState<{ name: string; description: string; icon?: string }[]>([]);
+  const [editMechanics, setEditMechanics] = useState<{ title: string; content: string; icon?: string }[]>([]);
+  const [editLinkedMechanics, setEditLinkedMechanics] = useState<{ characterId: string; mechanicIndex: number }[]>([]);
+
+  const canEdit = !!onEdit;
+
+  const startEditing = (section: DetailTab) => {
+    if (section === 'traits') setEditTraits(JSON.parse(JSON.stringify(character.traits || [])));
+    if (section === 'external') setEditSkills(JSON.parse(JSON.stringify(character.skills || [])));
+    if (section === 'mechanics') {
+      setEditMechanics(JSON.parse(JSON.stringify(character.mechanics || [])));
+      setEditLinkedMechanics(JSON.parse(JSON.stringify(character.linkedMechanics || [])));
+    }
+    setEditingSection(section);
+  };
+
+  const handleSaveSection = async () => {
+    if (!onUpdate) return;
+    setSaving(true);
+    try {
+      const data: Partial<Character> = {};
+      if (editingSection === 'traits') data.traits = editTraits;
+      if (editingSection === 'external') data.skills = editSkills;
+      if (editingSection === 'mechanics') {
+        data.mechanics = editMechanics;
+        data.linkedMechanics = editLinkedMechanics;
+      }
+      
+      await onUpdate(character.id, data);
+      setEditingSection(null);
+    } catch (error) {
+      console.error("Failed to save section:", error);
+      alert("保存失败，请重试。");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const baseCharacter = allCharacters?.find(c => 
     c.id === (character.role === 'Survivor' ? 'base_survivor' : 'base_hunter')
@@ -25,7 +78,7 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
   const tabs = [
     { id: 'traits', label: '特质详情', icon: <Activity className="w-4 h-4" /> },
     { id: 'external', label: '外在特质', icon: <Target className="w-4 h-4" /> },
-    { id: 'mechanics', label: '机制', icon: <Cpu className="w-4 h-4" /> },
+    { id: 'mechanics', label: '专属机制', icon: <Cpu className="w-4 h-4" /> },
   ];
 
   return (
@@ -73,7 +126,7 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
         </div>
 
         {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-bg/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6">
             <div className="bg-card border border-primary p-8 max-w-md w-full cyber-border animate-in zoom-in-95 duration-300">
               <h3 className="text-xl font-serif text-primary mb-4 flex items-center gap-3">
                 <Trash2 className="w-6 h-6" /> 确认删除档案？
@@ -159,13 +212,129 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
         {/* Tab Content */}
         <div className="space-y-8 animate-in fade-in duration-500">
           {activeTab === 'traits' && (
-            <section className="bg-card/30 border border-border p-8 rounded-none cyber-border relative overflow-hidden">
+            <section className="bg-card/40 border border-border p-8 rounded-none cyber-border relative overflow-hidden">
               <div className="absolute top-0 right-0 p-2 text-[10px] font-mono text-muted opacity-20">系统分析_V2.0</div>
-              <h2 className="text-2xl font-serif text-accent mb-8 flex items-center gap-3 cyber-glow-text">
-                <Activity className="w-6 h-6" /> 核心特质分析
-              </h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-serif text-accent flex items-center gap-3 cyber-glow-text">
+                  <Activity className="w-6 h-6" /> 核心特质分析
+                </h2>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    {editingSection === 'traits' ? (
+                      <>
+                        <button 
+                          onClick={() => setEditingSection(null)}
+                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> 取消_CANCEL
+                        </button>
+                        <button 
+                          onClick={handleSaveSection}
+                          disabled={saving}
+                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-[10px] flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存_SAVE'}
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => startEditing('traits')}
+                        className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" /> 单独编辑_EDIT
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               
-              {character.traits && character.traits.length > 0 ? (
+              {editingSection === 'traits' ? (
+                <div className="space-y-6">
+                  {editTraits.map((cat, catIdx) => (
+                    <div key={catIdx} className="p-4 bg-bg/20 border border-border">
+                      <div className="flex justify-between items-center mb-4">
+                        <input 
+                          type="text"
+                          value={cat.category}
+                          onChange={(e) => {
+                            const newTraits = [...editTraits];
+                            newTraits[catIdx].category = e.target.value;
+                            setEditTraits(newTraits);
+                          }}
+                          className="bg-transparent border-b border-border text-accent font-bold outline-none focus:border-accent py-1 font-mono text-sm flex-1 mr-4"
+                        />
+                        <button 
+                          onClick={() => {
+                            const newTraits = [...editTraits];
+                            newTraits[catIdx].items.push({ label: '', value: '' });
+                            setEditTraits(newTraits);
+                          }}
+                          className="text-[10px] text-accent hover:text-white flex items-center gap-1 font-mono"
+                        >
+                          <Plus className="w-3 h-3" /> 添加属性
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {cat.items.map((item, itemIdx) => (
+                          <div key={itemIdx} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
+                            <input 
+                              type="text"
+                              value={item.label}
+                              onChange={(e) => {
+                                const newTraits = [...editTraits];
+                                newTraits[catIdx].items[itemIdx].label = e.target.value;
+                                setEditTraits(newTraits);
+                              }}
+                              className="w-24 bg-transparent text-xs text-muted outline-none border-r border-border/30 pr-2"
+                            />
+                            <input 
+                              type="text"
+                              value={item.value}
+                              onChange={(e) => {
+                                const newTraits = [...editTraits];
+                                newTraits[catIdx].items[itemIdx].value = e.target.value;
+                                setEditTraits(newTraits);
+                              }}
+                              className="flex-1 bg-transparent text-xs text-accent outline-none"
+                              placeholder="数值"
+                            />
+                            <input 
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              max="5"
+                              value={item.rating || 3}
+                              onChange={(e) => {
+                                const newTraits = [...editTraits];
+                                newTraits[catIdx].items[itemIdx].rating = parseFloat(e.target.value);
+                                setEditTraits(newTraits);
+                              }}
+                              className="w-12 bg-transparent text-xs text-primary outline-none border-l border-border/30 pl-2"
+                              placeholder="评分"
+                            />
+                            <button 
+                              onClick={() => {
+                                const newTraits = [...editTraits];
+                                newTraits[catIdx].items = newTraits[catIdx].items.filter((_, idx) => idx !== itemIdx);
+                                setEditTraits(newTraits);
+                              }}
+                              className="text-muted hover:text-primary"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <button 
+                    onClick={() => setEditTraits([...editTraits, { category: '新分类', items: [] }])}
+                    className="w-full py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> 添加新分类_ADD_CATEGORY
+                  </button>
+                </div>
+              ) : character.traits && character.traits.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-mono text-sm">
                   {character.traits.filter(cat => cat.items.length > 0).map((cat, i) => (
                     <div key={i} className="space-y-4">
@@ -193,6 +362,7 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
                               key={j} 
                               label={item.label} 
                               value={item.value} 
+                              rating={item.rating}
                               isDifferent={!!isDifferent}
                               baseValue={character.role === 'Survivor' ? baseItem?.value : undefined}
                             />
@@ -217,74 +387,415 @@ export const CharacterDetail = ({ character, allCharacters, onEdit, onDelete, on
           )}
 
           {activeTab === 'external' && (
-            <section className="bg-card/30 border border-border p-8 rounded-none cyber-border">
-              <h2 className="text-2xl font-serif text-accent mb-8 flex items-center gap-3 cyber-glow-text">
-                <Shield className="w-6 h-6" /> 核心能力模块
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {character.skills.map((skill, index) => (
-                  <div key={index} className="group border border-border p-4 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300 relative">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <h3 className="text-lg font-mono font-bold text-text group-hover:text-primary transition-colors flex items-center gap-2">
-                      <span className="text-primary opacity-50 text-sm">0{index + 1}</span> {skill.name}
-                    </h3>
-                    <p className="text-muted text-sm mt-2 leading-relaxed font-mono">
-                      {skill.description}
-                    </p>
+            <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-serif text-accent flex items-center gap-3 cyber-glow-text">
+                  <Target className="w-6 h-6" /> 核心能力模块
+                </h2>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    {editingSection === 'external' ? (
+                      <>
+                        <button 
+                          onClick={() => setEditingSection(null)}
+                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> 取消_CANCEL
+                        </button>
+                        <button 
+                          onClick={handleSaveSection}
+                          disabled={saving}
+                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-[10px] flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存_SAVE'}
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => startEditing('external')}
+                        className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" /> 单独编辑_EDIT
+                      </button>
+                    )}
                   </div>
-                ))}
+                )}
               </div>
+
+              {editingSection === 'external' ? (
+                <div className="space-y-6">
+                  {editSkills.map((skill, idx) => (
+                    <div key={idx} className="p-4 bg-bg/20 border border-border relative group">
+                      <button 
+                        onClick={() => setEditSkills(editSkills.filter((_, i) => i !== idx))}
+                        className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                      <div className="flex gap-4">
+                        <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
+                          {skill.icon ? (
+                            <img src={skill.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          ) : (
+                            <Target className="w-6 h-6" />
+                          )}
+                          <input 
+                            type="text"
+                            value={skill.icon || ''}
+                            onChange={(e) => {
+                              const newSkills = [...editSkills];
+                              newSkills[idx].icon = e.target.value;
+                              setEditSkills(newSkills);
+                            }}
+                            placeholder="图标URL"
+                            className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <input 
+                            type="text"
+                            value={skill.name}
+                            onChange={(e) => {
+                              const newSkills = [...editSkills];
+                              newSkills[idx].name = e.target.value;
+                              setEditSkills(newSkills);
+                            }}
+                            placeholder="特质名称"
+                            className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
+                          />
+                          <textarea 
+                            rows={3}
+                            value={skill.description}
+                            onChange={(e) => {
+                              const newSkills = [...editSkills];
+                              newSkills[idx].description = e.target.value;
+                              setEditSkills(newSkills);
+                            }}
+                            placeholder="特质描述..."
+                            className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button 
+                    onClick={() => setEditSkills([...editSkills, { name: '新特质', description: '' }])}
+                    className="w-full py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> 添加新特质_ADD_TRAIT
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {character.skills.map((skill, index) => (
+                    <div key={index} className="group bg-bg/20 border border-border p-4 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300 relative flex gap-4">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {skill.icon && (
+                        <div className="w-12 h-12 flex-shrink-0 bg-transparent border border-border p-1 group-hover:scale-110 transition-transform">
+                          <img src={skill.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-lg font-mono font-bold text-text group-hover:text-primary transition-colors flex items-center gap-2">
+                          <span className="text-primary opacity-50 text-sm">0{index + 1}</span> {skill.name}
+                        </h3>
+                        <p className="text-muted text-sm mt-2 leading-relaxed font-mono">
+                          {skill.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
           {activeTab === 'mechanics' && (
-            <section className="bg-card/30 border border-border p-8 rounded-none cyber-border">
-              <h2 className="text-2xl font-serif text-accent mb-8 flex items-center gap-3 cyber-glow-text">
-                <Cpu className="w-6 h-6" /> 高级机制解析
-              </h2>
-              <div className="space-y-4">
-                {character.mechanics && character.mechanics.length > 0 ? (
-                  character.mechanics.map((mech, index) => (
-                    <div key={index} className="p-4 bg-bg/50 border border-border">
-                      <h4 className="text-base font-bold text-primary font-mono mb-2">{mech.title}</h4>
-                      <p className="text-sm text-muted font-mono leading-relaxed">
-                        {mech.content}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-bg/50 border border-border">
-                      <h4 className="text-base font-bold text-primary font-mono mb-2">博弈技巧</h4>
-                      <p className="text-sm text-muted font-mono leading-relaxed">
-                        该角色的核心博弈点在于技能的精准释放时机。建议在板窗交互点进行博弈。
-                      </p>
-                    </div>
-                    <div className="p-4 bg-bg/50 border border-border">
-                      <h4 className="text-base font-bold text-primary font-mono mb-2">进阶操作</h4>
-                      <p className="text-sm text-muted font-mono leading-relaxed">
-                        利用地形优势可以最大化技能收益，特别是在复杂地形中。
-                      </p>
-                    </div>
+            <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-serif text-accent flex items-center gap-3 cyber-glow-text">
+                  <Cpu className="w-6 h-6" /> 专属机制解析
+                </h2>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    {editingSection === 'mechanics' ? (
+                      <>
+                        <button 
+                          onClick={() => setEditingSection(null)}
+                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> 取消_CANCEL
+                        </button>
+                        <button 
+                          onClick={handleSaveSection}
+                          disabled={saving}
+                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-[10px] flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存_SAVE'}
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => startEditing('mechanics')}
+                        className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" /> 单独编辑_EDIT
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
+
+              {editingSection === 'mechanics' ? (
+                <div className="space-y-8">
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-bold text-text font-mono uppercase tracking-widest border-l-2 border-primary pl-3">
+                      核心机制_CORE_MECHANICS
+                    </h3>
+                    {editMechanics.map((mech, idx) => (
+                      <div key={idx} className="p-4 bg-bg/20 border border-border relative group">
+                        <button 
+                          onClick={() => setEditMechanics(editMechanics.filter((_, i) => i !== idx))}
+                          className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                        <div className="flex gap-4">
+                          <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
+                            {mech.icon ? (
+                              <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <Activity className="w-6 h-6" />
+                            )}
+                            <input 
+                              type="text"
+                              value={mech.icon || ''}
+                              onChange={(e) => {
+                                const newMechs = [...editMechanics];
+                                newMechs[idx].icon = e.target.value;
+                                setEditMechanics(newMechs);
+                              }}
+                              placeholder="图标URL"
+                              className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <input 
+                              type="text"
+                              value={mech.title}
+                              onChange={(e) => {
+                                const newMechs = [...editMechanics];
+                                newMechs[idx].title = e.target.value;
+                                setEditMechanics(newMechs);
+                              }}
+                              placeholder="机制标题"
+                              className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
+                            />
+                            <textarea 
+                              rows={4}
+                              value={mech.content}
+                              onChange={(e) => {
+                                const newMechs = [...editMechanics];
+                                newMechs[idx].content = e.target.value;
+                                setEditMechanics(newMechs);
+                              }}
+                              placeholder="机制详细解析..."
+                              className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button 
+                        onClick={() => setEditMechanics([...editMechanics, { title: '新机制', content: '' }])}
+                        className="py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" /> 添加新机制_ADD_MECHANIC
+                      </button>
+                      {character.skills.length > 0 && (
+                        <div className="relative group/import">
+                          <button 
+                            className="w-full py-2 border border-dashed border-primary/50 text-primary/70 hover:text-primary hover:border-primary transition-all font-mono text-xs flex items-center justify-center gap-2"
+                          >
+                            <Target className="w-4 h-4" /> 从外在特质导入_IMPORT
+                          </button>
+                          <div className="absolute bottom-full left-0 w-full bg-card border border-border shadow-2xl opacity-0 invisible group-hover/import:opacity-100 group-hover/import:visible transition-all z-50 mb-2 max-h-48 overflow-y-auto">
+                            {character.skills.map((skill, sIdx) => (
+                              <button
+                                key={sIdx}
+                                onClick={() => setEditMechanics([...editMechanics, { title: skill.name, content: skill.description, icon: skill.icon }])}
+                                className="w-full p-2 text-left text-[10px] font-mono hover:bg-primary/10 border-b border-border/50 last:border-0 flex items-center gap-2"
+                              >
+                                {skill.icon && <img src={skill.icon} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
+                                <span className="truncate">{skill.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-6 border-t border-border/50">
+                    <h3 className="text-sm font-bold text-accent font-mono uppercase tracking-widest border-l-2 border-accent pl-3">
+                      关联机制_LINKED_MECHANICS
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {editLinkedMechanics.map((link, idx) => {
+                        const linkedChar = allCharacters?.find(c => c.id === link.characterId);
+                        return (
+                          <div key={idx} className="flex items-center gap-3 p-3 bg-bg/20 border border-border group">
+                            <div className="flex-1">
+                              <select 
+                                value={link.characterId}
+                                onChange={(e) => {
+                                  const newLinks = [...editLinkedMechanics];
+                                  newLinks[idx].characterId = e.target.value;
+                                  newLinks[idx].mechanicIndex = 0;
+                                  setEditLinkedMechanics(newLinks);
+                                }}
+                                className="w-full bg-bg border border-border text-xs text-text p-1 outline-none focus:border-accent mb-2"
+                              >
+                                <option value="">选择角色...</option>
+                                {allCharacters?.filter(c => !c.id.startsWith('base_')).map(c => (
+                                  <option key={c.id} value={c.id}>{c.title} ({c.name})</option>
+                                ))}
+                              </select>
+                              {linkedChar && linkedChar.mechanics && linkedChar.mechanics.length > 0 && (
+                                <select 
+                                  value={link.mechanicIndex}
+                                  onChange={(e) => {
+                                    const newLinks = [...editLinkedMechanics];
+                                    newLinks[idx].mechanicIndex = parseInt(e.target.value);
+                                    setEditLinkedMechanics(newLinks);
+                                  }}
+                                  className="w-full bg-bg border border-border text-xs text-accent p-1 outline-none focus:border-accent"
+                                >
+                                  {linkedChar.mechanics.map((m, i) => (
+                                    <option key={i} value={i}>{m.title}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                            <button 
+                              onClick={() => setEditLinkedMechanics(editLinkedMechanics.filter((_, i) => i !== idx))}
+                              className="text-muted hover:text-primary"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button 
+                      onClick={() => setEditLinkedMechanics([...editLinkedMechanics, { characterId: '', mechanicIndex: 0 }])}
+                      className="w-full py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> 添加关联机制_ADD_LINK
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-12">
+                  <div className="space-y-6">
+                    {character.mechanics && character.mechanics.length > 0 ? (
+                      character.mechanics.map((mech, index) => (
+                        <div key={index} className="flex gap-6 p-6 bg-bg/20 border border-border group hover:border-primary/50 transition-all duration-300">
+                          <div className="w-20 h-20 flex-shrink-0 bg-transparent border border-border p-2 group-hover:scale-110 transition-transform flex items-center justify-center overflow-hidden">
+                            {mech.icon ? (
+                              <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <Cpu className="w-8 h-8 text-primary/40" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-lg font-bold text-primary font-mono mb-3 flex items-center gap-2">
+                              <span className="w-2 h-2 bg-primary rotate-45" /> {mech.title}
+                            </h4>
+                            <p className="text-sm text-muted font-mono leading-relaxed whitespace-pre-wrap">
+                              {mech.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 bg-bg/20 border border-border text-center text-muted font-mono text-xs flex flex-col items-center gap-4">
+                        <Cpu className="w-12 h-12 opacity-10" />
+                        <p className="uppercase tracking-widest">该角色尚未录入详细机制_NO_MECHANICS_DATA</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {character.linkedMechanics && character.linkedMechanics.length > 0 && (
+                    <div className="space-y-6">
+                      <h3 className="text-sm font-bold text-accent font-mono uppercase tracking-widest border-l-2 border-accent pl-3 flex items-center gap-2">
+                        <Layers className="w-4 h-4" /> 关联机制矩阵_LINKED_MATRIX
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {character.linkedMechanics.map((link, idx) => {
+                          const linkedChar = allCharacters?.find(c => c.id === link.characterId);
+                          const linkedMech = linkedChar?.mechanics?.[link.mechanicIndex];
+                          if (!linkedChar || !linkedMech) return null;
+
+                          return (
+                            <div key={idx} className="bg-bg/20 border border-border p-4 hover:bg-accent/5 hover:border-accent/50 transition-all group">
+                              <div className="flex gap-4">
+                                <div className="w-12 h-12 flex-shrink-0 bg-transparent border border-border p-1 group-hover:rotate-12 transition-transform overflow-hidden">
+                                  {linkedMech.icon ? (
+                                    <img src={linkedMech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                  ) : (
+                                    <img src={linkedChar.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start mb-1">
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 ${linkedChar.role === 'Survivor' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
+                                      {linkedChar.role === 'Survivor' ? '求生者' : '监管者'}
+                                    </span>
+                                    <span className="text-[10px] text-muted font-mono">{linkedChar.title}</span>
+                                  </div>
+                                  <h4 className="text-sm font-bold text-text truncate mb-1">{linkedMech.title}</h4>
+                                  <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
+                                    {linkedMech.content}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
+
         </div>
       </div>
     </div>
   );
 };
 
-const BaseStatItem = ({ label, value, isDifferent, baseValue }: { label: string; value: string; isDifferent?: boolean; baseValue?: string }) => (
-  <div className={`flex justify-between items-center py-1 border-b border-border/30 last:border-0 hover:bg-white/5 px-2 transition-colors ${isDifferent ? 'bg-primary/5' : ''}`}>
-    <span className="text-muted">{label}</span>
-    <div className="flex flex-col items-end">
-      <span className={`font-bold ${isDifferent ? 'text-primary cyber-glow-text' : 'text-text'}`}>{value}</span>
-      {isDifferent && baseValue && (
-        <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseValue}</span>
-      )}
+const BaseStatItem = ({ label, value, rating, isDifferent, baseValue }: { label: string; value: string; rating?: number; isDifferent?: boolean; baseValue?: string }) => (
+  <div className={`flex flex-col py-2 border-b border-border/30 last:border-0 hover:bg-white/5 px-2 transition-colors ${isDifferent ? 'bg-primary/5' : ''}`}>
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-muted text-xs">{label}</span>
+      <div className="flex flex-col items-end">
+        <span className={`font-bold text-xs ${isDifferent ? 'text-primary cyber-glow-text' : 'text-text'}`}>{value}</span>
+        {isDifferent && baseValue && (
+          <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseValue}</span>
+        )}
+      </div>
     </div>
+    {rating !== undefined && (
+      <div className="h-1 bg-bg border border-border/50 relative overflow-hidden">
+        <div 
+          className="absolute inset-y-0 left-0 bg-accent/40 transition-all duration-500"
+          style={{ width: `${(rating / 5) * 100}%` }}
+        />
+      </div>
+    )}
   </div>
 );

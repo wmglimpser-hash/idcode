@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Image as ImageIcon, Plus, Trash2, X, RefreshCcw } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { User as FirebaseUser } from 'firebase/auth';
 
 interface Wallpaper {
   id: string;
@@ -7,15 +10,20 @@ interface Wallpaper {
   isCustom: boolean;
 }
 
+interface WallpaperManagerProps {
+  user: FirebaseUser | null;
+  userProfile: any;
+}
+
 const DEFAULT_WALLPAPERS: Wallpaper[] = [
   { id: 'default-dark', url: 'https://storage.googleapis.com/m-infra.appspot.com/v0/b/m-infra.appspot.com/o/mc32cnrkrtci62albw45f7%2F1742308781830_1.png?alt=media&token=e5309324-f726-4448-8924-d36885317374', isCustom: false },
   { id: 'default-light', url: 'https://storage.googleapis.com/m-infra.appspot.com/v0/b/m-infra.appspot.com/o/mc32cnrkrtci62albw45f7%2F1742308781830_0.png?alt=media&token=86790539-756d-4731-955a-478696899b82', isCustom: false },
-  { id: 'default-1', url: 'https://picsum.photos/seed/manor/1920/1080?blur=4', isCustom: false },
-  { id: 'default-2', url: 'https://picsum.photos/seed/hunter/1920/1080?blur=4', isCustom: false },
-  { id: 'default-3', url: 'https://picsum.photos/seed/survivor/1920/1080?blur=4', isCustom: false },
+  { id: 'default-1', url: 'https://picsum.photos/seed/manor/1920/1080', isCustom: false },
+  { id: 'default-2', url: 'https://picsum.photos/seed/hunter/1920/1080', isCustom: false },
+  { id: 'default-3', url: 'https://picsum.photos/seed/survivor/1920/1080', isCustom: false },
 ];
 
-export const WallpaperManager = () => {
+export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [wallpapers, setWallpapers] = useState<Wallpaper[]>(() => {
     const saved = localStorage.getItem('custom_wallpapers');
@@ -24,6 +32,40 @@ export const WallpaperManager = () => {
   const [currentWallpaper, setCurrentWallpaper] = useState<string | null>(() => {
     return localStorage.getItem('current_wallpaper') || null;
   });
+
+  // Sync from cloud when user logs in
+  useEffect(() => {
+    if (userProfile?.settings) {
+      if (userProfile.settings.customWallpapers) {
+        const custom = userProfile.settings.customWallpapers.map((url: string, index: number) => ({
+          id: `custom-${index}-${Date.now()}`,
+          url,
+          isCustom: true
+        }));
+        setWallpapers([...DEFAULT_WALLPAPERS, ...custom]);
+      }
+      if (userProfile.settings.currentWallpaper !== undefined) {
+        setCurrentWallpaper(userProfile.settings.currentWallpaper);
+      }
+    }
+  }, [userProfile]);
+
+  // Sync to cloud when changed
+  useEffect(() => {
+    if (user && userProfile) {
+      const customUrls = wallpapers.filter(w => w.isCustom).map(w => w.url);
+      const cloudCustomUrls = userProfile.settings?.customWallpapers || [];
+      const cloudCurrentWallpaper = userProfile.settings?.currentWallpaper || null;
+
+      if (JSON.stringify(customUrls) !== JSON.stringify(cloudCustomUrls) || currentWallpaper !== cloudCurrentWallpaper) {
+        updateDoc(doc(db, 'users', user.uid), {
+          'settings.customWallpapers': customUrls,
+          'settings.currentWallpaper': currentWallpaper
+        }).catch(console.error);
+      }
+    }
+  }, [wallpapers, currentWallpaper, user, userProfile]);
+
   const [newUrl, setNewUrl] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 

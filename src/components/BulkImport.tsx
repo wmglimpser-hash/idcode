@@ -1,0 +1,317 @@
+import React, { useState } from 'react';
+import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { X, Save, AlertTriangle, FileJson, Sparkles, Wand2, RefreshCcw } from 'lucide-react';
+import { GoogleGenAI, Type } from "@google/genai";
+
+interface Props {
+  mode: 'wiki' | 'talent';
+  role?: 'Survivor' | 'Hunter';
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
+  const [inputMode, setInputMode] = useState<'json' | 'natural'>('json');
+  const [jsonInput, setJsonInput] = useState('');
+  const [naturalInput, setNaturalInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+
+  const handleAIParse = async () => {
+    if (!naturalInput.trim()) return;
+    
+    setIsParsing(true);
+    setError(null);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      
+      const schema = mode === 'wiki' ? {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: "词条标题" },
+            type: { type: Type.STRING, description: "词条类型，通常为 'talent'" },
+            talentId: { type: Type.STRING, description: "关联的天赋节点 ID (如 1.1, 2.3)" },
+            content: { type: Type.STRING, description: "详细的 Markdown 内容" },
+            tags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "标签列表" }
+          },
+          required: ["title", "content"]
+        }
+      } : {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            nodeId: { type: Type.STRING, description: "天赋节点 ID (如 1.1, 2.3)" },
+            name: { type: Type.STRING, description: "天赋名称" },
+            description: { type: Type.STRING, description: "天赋描述" },
+            targetStat: { type: Type.STRING, description: "影响的属性" },
+            modifier: { type: Type.STRING, description: "修正值 (如 +10%)" },
+            effect: { type: Type.STRING, description: "具体效果描述" }
+          },
+          required: ["nodeId", "name"]
+        }
+      };
+
+      const prompt = `你是一个专业的游戏数据分析师。请将以下关于《第五人格》${mode === 'wiki' ? '百科词条' : '天赋定义'}的自然语言描述解析为结构化的 JSON 数组。
+      
+      待解析文本：
+      ${naturalInput}
+      
+      请严格遵守以下规则：
+      1. 返回结果必须是合法的 JSON 数组。
+      2. 如果文本中包含多个项目，请全部解析。
+      3. 对于缺失的信息，请根据上下文推断或留空。
+      4. Markdown 内容应保持专业且格式正确。`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema
+        }
+      });
+
+      if (response.text) {
+        setJsonInput(JSON.stringify(JSON.parse(response.text), null, 2));
+        setInputMode('json');
+      }
+    } catch (err: any) {
+      console.error("AI Parse error:", err);
+      setError("AI 解析失败：" + (err.message || "未知错误"));
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!auth.currentUser) {
+      setError("请先登录以执行批量导入。");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const data = JSON.parse(jsonInput);
+      if (!Array.isArray(data)) throw new Error("输入必须是 JSON 数组格式。");
+
+      setProgress({ current: 0, total: data.length });
+
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        
+        if (mode === 'wiki') {
+          if (!item.title) continue;
+          
+          // 1. Create entry
+          const entryRef = await addDoc(collection(db, 'entries'), {
+            title: item.title,
+            type: item.type || 'talent',
+            talentId: item.talentId || null,
+            contentMode: 'text',
+            authorId: auth.currentUser.uid,
+            tags: item.tags || [],
+            lastUpdated: serverTimestamp(),
+          });
+
+          // 2. Create revision
+          const revRef = await addDoc(collection(db, 'revisions'), {
+            entryId: entryRef.id,
+            authorId: auth.currentUser.uid,
+            content: { text: item.content || '暂无内容' },
+            timestamp: serverTimestamp(),
+            status: 'approved',
+            changeSummary: '批量导入',
+          });
+
+          // 3. Link revision
+          await updateDoc(doc(db, 'entries', entryRef.id), {
+            currentRevisionId: revRef.id
+          });
+        } else {
+          // Talent Definition mode
+          if (!item.nodeId) continue;
+          const targetRole = item.role || role || 'Survivor';
+          const docId = `${targetRole.toLowerCase()}_${item.nodeId}`;
+          
+          await setDoc(doc(db, 'talent_definitions', docId), {
+            ...item,
+            role: targetRole,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        }
+
+        setProgress(prev => ({ ...prev, current: i + 1 }));
+      }
+
+      onSuccess();
+    } catch (err: any) {
+      console.error("Bulk import error:", err);
+      setError(err.message || "导入失败，请检查 JSON 格式是否正确。");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const wikiTemplate = [
+    {
+      "title": "天赋名称",
+      "type": "talent",
+      "talentId": "1.1",
+      "content": "# 标题\n\n在此输入详细的 Markdown 内容...",
+      "tags": ["核心", "加速"]
+    }
+  ];
+
+  const talentTemplate = [
+    {
+      "nodeId": "1.1",
+      "name": "天赋名称",
+      "description": "简短的天赋描述...",
+      "targetStat": "移动速度",
+      "modifier": "+10%",
+      "effect": "翻窗后加速"
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6 overflow-y-auto">
+      <div className="bg-card w-full max-w-3xl cyber-border p-8 shadow-2xl space-y-6 my-auto">
+        <div className="flex justify-between items-center border-b border-border pb-4">
+          <div className="flex items-center gap-3">
+            <FileJson className="text-accent w-6 h-6" />
+            <h3 className="text-2xl font-serif text-accent cyber-glow-text">
+              批量导入{mode === 'wiki' ? '百科词条' : '天赋定义'}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-text transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="bg-accent/5 border border-accent/20 p-4 text-xs font-mono text-muted leading-relaxed">
+          <p className="text-accent font-bold mb-2">操作说明：</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>{inputMode === 'json' ? '请粘贴符合 JSON 数组格式的数据。' : '请粘贴包含多个天赋或词条描述的原始文本，AI 将自动解析。'}</li>
+            {mode === 'wiki' ? (
+              <>
+                <li><code className="text-text">talentId</code> 对应天赋系统中的节点 ID。</li>
+                <li>批量导入的词条将自动设为“已审核”状态。</li>
+              </>
+            ) : (
+              <>
+                <li><code className="text-text">nodeId</code> 必须与天赋树配置中的 ID 一致。</li>
+                <li>数据将直接更新至天赋树侧边栏详情。</li>
+              </>
+            )}
+          </ul>
+        </div>
+
+        {error && (
+          <div className="p-4 bg-primary/10 border border-primary/50 text-primary text-xs flex items-center gap-3 font-mono">
+            <AlertTriangle className="w-4 h-4" /> {error}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div className="flex gap-4 border-b border-border">
+            <button 
+              onClick={() => setInputMode('json')}
+              className={`pb-2 px-4 text-[10px] font-mono uppercase tracking-widest transition-colors ${inputMode === 'json' ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-text'}`}
+            >
+              JSON 模式
+            </button>
+            <button 
+              onClick={() => setInputMode('natural')}
+              className={`pb-2 px-4 text-[10px] font-mono uppercase tracking-widest transition-colors flex items-center gap-2 ${inputMode === 'natural' ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-text'}`}
+            >
+              <Sparkles className="w-3 h-3" /> 自然语言识别 (AI)
+            </button>
+          </div>
+
+          {inputMode === 'json' ? (
+            <div className="space-y-2">
+              <div className="flex justify-between items-end">
+                <label className="text-[10px] text-muted uppercase tracking-widest font-mono">JSON 数据输入</label>
+                <button 
+                  onClick={() => setJsonInput(JSON.stringify(mode === 'wiki' ? wikiTemplate : talentTemplate, null, 2))}
+                  className="text-[10px] text-accent hover:underline font-mono"
+                >
+                  使用模板示例
+                </button>
+              </div>
+              <textarea 
+                rows={12}
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs leading-relaxed custom-scrollbar"
+                placeholder="在此粘贴 JSON 数组..."
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex justify-between items-end">
+                <label className="text-[10px] text-muted uppercase tracking-widest font-mono">原始文本输入</label>
+                <button 
+                  onClick={handleAIParse}
+                  disabled={isParsing || !naturalInput.trim()}
+                  className="flex items-center gap-2 px-4 py-1 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono uppercase tracking-widest hover:bg-accent hover:text-bg transition-all disabled:opacity-50"
+                >
+                  {isParsing ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                  {isParsing ? '正在解析...' : '开始 AI 解析_SMART_PARSE'}
+                </button>
+              </div>
+              <textarea 
+                rows={12}
+                value={naturalInput}
+                onChange={(e) => setNaturalInput(e.target.value)}
+                className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs leading-relaxed custom-scrollbar"
+                placeholder="在此粘贴包含多个天赋或词条描述的文本，例如：
+1.1 强迫症：翻窗后加速10%，持续3秒。
+2.3 寒意：当监管者在36米范围内看向你时，获得警告。"
+              />
+            </div>
+          )}
+        </div>
+
+        {loading && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-[10px] font-mono text-muted">
+              <span>正在处理数据流...</span>
+              <span>{progress.current} / {progress.total}</span>
+            </div>
+            <div className="h-1 bg-border overflow-hidden">
+              <div 
+                className="h-full bg-accent transition-all duration-300" 
+                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-6 pt-4">
+          <button 
+            onClick={onClose} 
+            disabled={loading}
+            className="px-8 py-2 text-muted font-mono text-xs hover:text-text transition-colors disabled:opacity-50"
+          >
+            取消_CANCEL
+          </button>
+          <button 
+            onClick={handleImport}
+            disabled={loading || !jsonInput}
+            className="px-10 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 disabled:opacity-50 flex items-center gap-3 shadow-[0_0_20px_rgba(0,243,255,0.3)] transition-all"
+          >
+            <Save className="w-4 h-4" /> {loading ? '正在同步...' : '开始批量导入_START_IMPORT'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

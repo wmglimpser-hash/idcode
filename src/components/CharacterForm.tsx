@@ -7,11 +7,12 @@ interface Props {
   onCancel: () => void;
   onDelete?: (char: Character) => void;
   initialData?: Character | null;
+  allCharacters?: Character[];
   nextSurvivorOrder?: number;
   nextHunterOrder?: number;
 }
 
-export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSurvivorOrder, nextHunterOrder }: Props) => {
+export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allCharacters, nextSurvivorOrder, nextHunterOrder }: Props) => {
   const [importMode, setImportMode] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
@@ -28,7 +29,8 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
     description: '',
     skills: [] as { name: string; description: string }[],
     traits: [] as CharacterTraitCategory[],
-    mechanics: [] as { title: string; content: string }[],
+    mechanics: [] as { title: string; content: string; icon?: string }[],
+    linkedMechanics: [] as { characterId: string; mechanicIndex: number }[],
   });
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
         skills: initialData.skills || [],
         traits: initialData.traits || [],
         mechanics: initialData.mechanics || [],
+        linkedMechanics: initialData.linkedMechanics || [],
       });
     } else {
       // Initialize with fixed categories if it's a new character
@@ -158,7 +161,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
   const addMechanic = () => {
     setFormData(prev => ({
       ...prev,
-      mechanics: [...prev.mechanics, { title: '', content: '' }]
+      mechanics: [...prev.mechanics, { title: '', content: '', icon: '' }]
     }));
   };
 
@@ -169,10 +172,31 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
     }));
   };
 
-  const updateMechanic = (index: number, field: 'title' | 'content', value: string) => {
+  const updateMechanic = (index: number, field: 'title' | 'content' | 'icon', value: string) => {
     setFormData(prev => ({
       ...prev,
       mechanics: prev.mechanics.map((m, i) => i === index ? { ...m, [field]: value } : m)
+    }));
+  };
+
+  const addLinkedMechanic = () => {
+    setFormData(prev => ({
+      ...prev,
+      linkedMechanics: [...prev.linkedMechanics, { characterId: '', mechanicIndex: 0 }]
+    }));
+  };
+
+  const removeLinkedMechanic = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      linkedMechanics: prev.linkedMechanics.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateLinkedMechanic = (index: number, field: 'characterId' | 'mechanicIndex', value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      linkedMechanics: prev.linkedMechanics.map((m, i) => i === index ? { ...m, [field]: value } : m)
     }));
   };
 
@@ -478,7 +502,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
                     className="flex-1 bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs"
                     placeholder="https://..."
                   />
-                  <div className="w-12 h-12 bg-bg border border-border flex items-center justify-center text-muted">
+                  <div className="w-12 h-12 bg-transparent border border-border flex items-center justify-center text-muted">
                     <ImageIcon className="w-5 h-5" />
                   </div>
                 </div>
@@ -630,20 +654,96 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
-                  <input 
-                    type="text"
-                    value={mech.title}
-                    onChange={(e) => updateMechanic(index, 'title', e.target.value)}
-                    placeholder="机制标题（如：博弈技巧）"
-                    className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
-                  />
-                  <textarea 
-                    rows={2}
-                    value={mech.content}
-                    onChange={(e) => updateMechanic(index, 'content', e.target.value)}
-                    placeholder="机制详细解析..."
-                    className="w-full bg-transparent text-xs text-muted outline-none resize-none"
-                  />
+                  <div className="flex gap-4 mb-2">
+                    <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
+                      {mech.icon ? (
+                        <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6" />
+                      )}
+                      <input 
+                        type="text"
+                        value={mech.icon || ''}
+                        onChange={(e) => updateMechanic(index, 'icon', e.target.value)}
+                        placeholder="图标URL"
+                        className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <input 
+                        type="text"
+                        value={mech.title}
+                        onChange={(e) => updateMechanic(index, 'title', e.target.value)}
+                        placeholder="机制标题（如：博弈技巧）"
+                        className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
+                      />
+                      <textarea 
+                        rows={2}
+                        value={mech.content}
+                        onChange={(e) => updateMechanic(index, 'content', e.target.value)}
+                        placeholder="机制详细解析..."
+                        className="w-full bg-transparent text-xs text-muted outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Linked Mechanics */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">关联其他角色机制 (LINKED_MECHANICS)</h3>
+              <button 
+                type="button"
+                onClick={addLinkedMechanic}
+                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+              >
+                <Plus className="w-3 h-3" /> 添加关联
+              </button>
+            </div>
+            <div className="space-y-2">
+              {formData.linkedMechanics.map((link, index) => (
+                <div key={index} className="flex items-center gap-4 bg-bg/50 border border-border p-3 group">
+                  <select
+                    value={link.characterId}
+                    onChange={(e) => updateLinkedMechanic(index, 'characterId', e.target.value)}
+                    className="flex-1 bg-bg border border-border text-text text-xs p-2 outline-none focus:border-accent font-mono"
+                  >
+                    <option value="">选择角色...</option>
+                    <optgroup label="求生者 SURVIVORS">
+                      {allCharacters?.filter(c => c.role === 'Survivor').map(c => (
+                        <option key={c.id} value={c.id}>{c.title} ({c.name})</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="监管者 HUNTERS">
+                      {allCharacters?.filter(c => c.role === 'Hunter').map(c => (
+                        <option key={c.id} value={c.id}>{c.title} ({c.name})</option>
+                      ))}
+                    </optgroup>
+                  </select>
+
+                  {link.characterId && (
+                    <select
+                      value={link.mechanicIndex}
+                      onChange={(e) => updateLinkedMechanic(index, 'mechanicIndex', parseInt(e.target.value))}
+                      className="flex-1 bg-bg border border-border text-text text-xs p-2 outline-none focus:border-accent font-mono"
+                    >
+                      <option value={0}>选择机制...</option>
+                      {allCharacters?.find(c => c.id === link.characterId)?.mechanics?.map((m, i) => (
+                        <option key={i} value={i}>{m.title}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button 
+                    type="button"
+                    onClick={() => removeLinkedMechanic(index)}
+                    className="text-muted hover:text-primary transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -682,7 +782,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, nextSur
       )}
 
       {showDeleteConfirm && initialData && (
-        <div className="fixed inset-0 bg-bg/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6">
           <div className="bg-card border border-primary p-8 max-w-md w-full cyber-border animate-in zoom-in-95 duration-300">
             <h3 className="text-xl font-serif text-primary mb-4 flex items-center gap-3">
               <Trash2 className="w-6 h-6" /> 确认删除档案？

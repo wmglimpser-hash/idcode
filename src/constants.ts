@@ -17,6 +17,7 @@ export const COLORS = {
 export interface CharacterTraitItem {
   label: string;
   value: string;
+  rating?: number;
 }
 
 export interface CharacterTraitCategory {
@@ -35,7 +36,8 @@ export interface Character {
   imageUrl: string;
   order?: number;
   traits?: CharacterTraitCategory[];
-  mechanics?: { title: string; content: string }[];
+  mechanics?: { title: string; content: string; icon?: string }[];
+  linkedMechanics?: { characterId: string; mechanicIndex: number }[];
   lastUpdated?: any;
 }
 
@@ -428,14 +430,23 @@ export const MOCK_CHARACTERS: Character[] = [
   },
 ];
 
+export interface TalentNode {
+  id: string;
+  maxLevel: number;
+  connections: string[];
+  defaultName?: string;
+}
+
+
 export interface WikiEntry {
   id: string;
   title: string;
-  type: 'character' | 'map' | 'mechanic' | 'guide';
+  type: 'character' | 'map' | 'mechanic' | 'guide' | 'talent';
   contentMode: 'text' | 'template';
   currentRevisionId: string;
   authorId: string;
   tags: string[];
+  talentId?: string; // Link to a talent node
   lastUpdated: any;
 }
 

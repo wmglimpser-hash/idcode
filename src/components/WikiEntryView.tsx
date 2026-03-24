@@ -1,22 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { WikiEntry, Revision } from '../constants';
-import { Book, Clock, User, Shield, Zap, Search, Heart, Edit3, Activity, Save, X } from 'lucide-react';
+import { Book, Clock, User, Shield, Zap, Search, Heart, Edit3, Activity, Save, X, Network } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Props {
   entry: WikiEntry;
   onEdit: () => void;
+  userProfile?: any;
+  user?: any;
 }
 
-export const WikiEntryView = ({ entry, onEdit }: Props) => {
+export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
   const [revision, setRevision] = useState<Revision | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [talentName, setTalentName] = useState<string | null>(null);
+
+  const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
+  const isContributor = userProfile?.role === 'contributor' || isAdminUser;
+
+  useEffect(() => {
+    if (entry.talentId) {
+      const q = query(collection(db, 'talent_definitions'), where('nodeId', '==', entry.talentId));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          setTalentName(snapshot.docs[0].data().name);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [entry.talentId]);
 
   useEffect(() => {
     const fetchRevision = async () => {
@@ -104,7 +122,7 @@ export const WikiEntryView = ({ entry, onEdit }: Props) => {
             该词条已在系统中创建，但具体内容正在等待管理员审核。请稍后再试，或提交您的版本。
           </p>
         </div>
-        {onEdit && (
+        {isContributor && onEdit && (
           <button 
             onClick={onEdit}
             className="px-8 py-3 bg-accent/10 border border-accent/50 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all tracking-widest"
@@ -127,18 +145,25 @@ export const WikiEntryView = ({ entry, onEdit }: Props) => {
             <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-mono border border-primary/30 uppercase tracking-widest">
               {entry.type}
             </span>
+            {entry.talentId && (
+              <span className="px-2 py-0.5 bg-accent/20 text-accent text-[10px] font-mono border border-accent/30 flex items-center gap-1">
+                <Network className="w-3 h-3" /> 天赋: {talentName || entry.talentId}
+              </span>
+            )}
             <span className="text-muted text-[10px] font-mono flex items-center gap-1">
               <Clock className="w-3 h-3" /> 最后更新: {new Date(entry.lastUpdated?.seconds * 1000).toLocaleDateString()}
             </span>
           </div>
           <h1 className="text-5xl font-serif font-bold text-accent cyber-glow-text">{entry.title}</h1>
         </div>
-        <button 
-          onClick={onEdit}
-          className="flex items-center gap-2 px-6 py-2 border border-accent text-accent hover:bg-accent hover:text-bg transition-all font-mono text-xs tracking-widest cyber-border"
-        >
-          <Edit3 className="w-4 h-4" /> 编辑词条_EDIT
-        </button>
+        {isContributor && (
+          <button 
+            onClick={onEdit}
+            className="flex items-center gap-2 px-6 py-2 border border-accent text-accent hover:bg-accent hover:text-bg transition-all font-mono text-xs tracking-widest cyber-border"
+          >
+            <Edit3 className="w-4 h-4" /> 编辑词条_EDIT
+          </button>
+        )}
       </div>
 
       {/* Content Rendering */}
@@ -153,13 +178,15 @@ export const WikiEntryView = ({ entry, onEdit }: Props) => {
           {!isEditing ? (
             <div className="prose prose-invert max-w-none font-mono text-sm leading-relaxed">
               <div className="bg-card/30 p-8 cyber-border relative group">
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg"
-                  title="快速编辑"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
+                {isContributor && (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg"
+                    title="快速编辑"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
                 <ReactMarkdown>{revision?.content?.text || '暂无内容'}</ReactMarkdown>
               </div>
             </div>

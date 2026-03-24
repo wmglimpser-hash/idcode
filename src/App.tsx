@@ -9,6 +9,7 @@ import { WikiEntryView } from './components/WikiEntryView';
 import { Leaderboard } from './components/Leaderboard';
 import { MapList } from './components/MapList';
 import { TalentWeb } from './components/TalentWeb';
+import { BulkImport } from './components/BulkImport';
 import { WikiSearch } from './components/WikiSearch';
 import { WallpaperManager } from './components/WallpaperManager';
 import { 
@@ -26,7 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network } from 'lucide-react';
+import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson } from 'lucide-react';
 
 type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents';
 
@@ -93,16 +94,29 @@ export default function App() {
   // Wiki State
   const [selectedWikiEntry, setSelectedWikiEntry] = useState<WikiEntry | null>(null);
   const [isEditingWiki, setIsEditingWiki] = useState(false);
+  const [isBulkImportingWiki, setIsBulkImportingWiki] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+
+  const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
+  const isContributor = userProfile?.role === 'contributor' || isAdminUser;
 
   // Theme State
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved ? saved === 'dark' : true;
   });
+
+  // Sync theme to Firestore when changed
+  useEffect(() => {
+    if (user && userProfile && userProfile.settings?.isDarkMode !== isDarkMode) {
+      updateDoc(doc(db, 'users', user.uid), {
+        'settings.isDarkMode': isDarkMode
+      }).catch(console.error);
+    }
+  }, [isDarkMode, user, userProfile]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -128,26 +142,21 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Sync user profile
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        
         if (!userDoc.exists()) {
           const role = currentUser.email === 'wmglimpser@gmail.com' ? 'admin' : 'user';
           const newProfile = {
             displayName: currentUser.displayName || '庄园访客',
             role,
-            contributions: 0
+            contributions: 0,
+            settings: {
+              isDarkMode: isDarkMode,
+              activeTalents: {}
+            }
           };
-          await setDoc(doc(db, 'users', currentUser.uid), newProfile);
-          setUserProfile(newProfile);
-        } else {
-          const data = userDoc.data();
-          // Auto-upgrade wmglimpser to admin if they are just a user
-          if (currentUser.email === 'wmglimpser@gmail.com' && data?.role === 'user') {
-            await updateDoc(doc(db, 'users', currentUser.uid), { role: 'admin' });
-            setUserProfile({ ...data, role: 'admin' });
-          } else {
-            setUserProfile(data);
-          }
+          await setDoc(userRef, newProfile);
         }
       } else {
         setUserProfile(null);
@@ -155,6 +164,24 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Real-time user profile listener
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setUserProfile(data);
+        // Sync theme from cloud if it exists
+        if (data.settings?.isDarkMode !== undefined && data.settings.isDarkMode !== isDarkMode) {
+          setIsDarkMode(data.settings.isDarkMode);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user, isDarkMode]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'characters'), (snapshot) => {
@@ -189,7 +216,6 @@ export default function App() {
   }, [characters, selectedCharacter]);
 
   const handleSyncCharacterOrders = async (silent = true) => {
-    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
     if (!isAdminUser || characters.length === 0) return;
 
     const updates: { id: string, order: number }[] = [];
@@ -265,10 +291,23 @@ export default function App() {
     { id: 'talents', label: '天赋系统', icon: <Network className="w-4 h-4" /> },
   ];
 
-  const handleSaveCharacter = async (charData: any) => {
-    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
-    const isContributor = userProfile?.role === 'contributor' || isAdminUser;
+  const handleUpdateCharacter = async (charId: string, data: Partial<Character>) => {
+    if (!isContributor) {
+      alert("您没有权限修改档案数据。");
+      return;
+    }
 
+    try {
+      await setDoc(doc(db, 'characters', charId), {
+        ...data,
+        lastUpdated: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `characters/${charId}`);
+    }
+  };
+
+  const handleSaveCharacter = async (charData: any) => {
     if (!isContributor) {
       alert("您没有权限修改档案数据。请联系管理员获取贡献者权限。");
       return;
@@ -343,7 +382,6 @@ export default function App() {
   };
 
   const handleDeleteCharacter = async (char: Character) => {
-    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
     if (!isAdminUser) {
       alert("只有管理员可以删除档案。");
       return;
@@ -365,7 +403,6 @@ export default function App() {
   };
 
   const handleSyncSurvivorTraits = async () => {
-    const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
     if (!isAdminUser) {
       alert("只有管理员可以同步数据。");
       return;
@@ -408,12 +445,17 @@ export default function App() {
       <div className="scanline" />
       
       {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-border bg-card/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-24 flex flex-col justify-center">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary flex items-center justify-center shadow-[0_0_20px_#ff003c] rotate-45">
-                <Skull className="text-white w-6 h-6 -rotate-45" />
+              <div className="w-10 h-10 bg-primary flex items-center justify-center shadow-[0_0_20px_#ff003c] rotate-45 overflow-hidden">
+                <img 
+                  src="https://id5.res.netease.com/pc/zt/20220110193643/img/icon1_9b4384f.png" 
+                  alt="Logo"
+                  className="w-8 h-8 -rotate-45 object-contain"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-serif font-bold tracking-tighter text-accent cyber-glow-text">
@@ -425,7 +467,7 @@ export default function App() {
             
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <WallpaperManager />
+                <WallpaperManager user={user} userProfile={userProfile} />
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
                   className="p-2 border border-border bg-bg/50 text-muted hover:text-accent hover:border-accent transition-all"
@@ -516,12 +558,22 @@ export default function App() {
                   }}
                 />
                 <div className="flex justify-center gap-6 pt-8">
-                  <button 
-                    onClick={() => setIsEditingWiki(true)}
-                    className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-sm tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)] hover:scale-105 transition-all"
-                  >
-                    <Plus className="w-4 h-4" /> 创建新词条_NEW
-                  </button>
+                  {(userProfile?.role === 'admin' || userProfile?.role === 'contributor' || user?.email === 'wmglimpser@gmail.com') && (
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => setIsEditingWiki(true)}
+                        className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-sm tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)] hover:scale-105 transition-all"
+                      >
+                        <Plus className="w-4 h-4" /> 创建新词条_NEW
+                      </button>
+                      <button 
+                        onClick={() => setIsBulkImportingWiki(true)}
+                        className="flex items-center gap-2 px-8 py-3 bg-card border border-border text-muted font-mono text-sm tracking-widest hover:text-accent hover:border-accent transition-all"
+                      >
+                        <FileJson className="w-4 h-4" /> 批量导入_BULK
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -537,6 +589,14 @@ export default function App() {
               />
             )}
 
+            {isBulkImportingWiki && (
+              <BulkImport 
+                mode="wiki" 
+                onClose={() => setIsBulkImportingWiki(false)} 
+                onSuccess={() => setIsBulkImportingWiki(false)} 
+              />
+            )}
+
             {selectedWikiEntry && !isEditingWiki && (
               <div className="space-y-6">
                 <button 
@@ -548,6 +608,8 @@ export default function App() {
                 <WikiEntryView 
                   entry={selectedWikiEntry} 
                   onEdit={() => setIsEditingWiki(true)} 
+                  userProfile={userProfile}
+                  user={user}
                 />
               </div>
             )}
@@ -584,7 +646,7 @@ export default function App() {
                         : 'hover:scale-105'
                     }`}
                   >
-                    <div className={`absolute inset-0 border transition-colors duration-200 ${
+                    <div className={`absolute inset-0 border bg-transparent transition-colors duration-200 ${
                       selectedCharacter?.id === char.id && !showForm && !isEditingCharacter 
                         ? 'border-accent' 
                         : 'border-border/20'
@@ -644,6 +706,7 @@ export default function App() {
                 }} 
                 onDelete={handleDeleteCharacter}
                 initialData={isEditingCharacter ? selectedCharacter || undefined : undefined}
+                allCharacters={characters}
                 nextSurvivorOrder={Math.max(...characters.filter(c => c.role === 'Survivor').map(c => c.order || 0), 0) + 1}
                 nextHunterOrder={Math.max(...characters.filter(c => c.role === 'Hunter').map(c => c.order || 0), 99) + 1}
               />
@@ -661,6 +724,7 @@ export default function App() {
                 character={viewingExtension.character}
                 type={viewingExtension.type}
                 onBack={() => setViewingExtension(null)}
+                canEdit={isContributor}
               />
             ) : (
               selectedCharacter && (
@@ -676,6 +740,7 @@ export default function App() {
                   })}
                   onViewTalent={(char) => setViewingExtension({ character: char, type: 'talent' })}
                   onViewAuxiliaryTrait={(char) => setViewingExtension({ character: char, type: 'auxiliary' })}
+                  onUpdate={handleUpdateCharacter}
                 />
               )
             )}
@@ -691,7 +756,23 @@ export default function App() {
         )}
 
         {activeTab === 'maps' && <MapList user={user} userProfile={userProfile} />}
-        {activeTab === 'talents' && <TalentWeb user={user} userProfile={userProfile} />}
+        {activeTab === 'talents' && (
+          <TalentWeb 
+            user={user} 
+            userProfile={userProfile} 
+            onViewWiki={async (entryId) => {
+              try {
+                const entryDoc = await getDoc(doc(db, 'entries', entryId));
+                if (entryDoc.exists()) {
+                  setSelectedWikiEntry({ id: entryDoc.id, ...entryDoc.data() } as WikiEntry);
+                  setActiveTab('wiki');
+                }
+              } catch (err) {
+                console.error("Error fetching wiki entry:", err);
+              }
+            }}
+          />
+        )}
       </main>
 
       {/* Footer */}
@@ -722,7 +803,7 @@ export default function App() {
       </footer>
 
       {/* Mobile Nav */}
-      <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around shadow-[0_0_30px_rgba(0,243,255,0.2)] z-50 backdrop-blur-xl">
+      <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around shadow-[0_0_30px_rgba(0,243,255,0.2)] z-50">
         {navItems.map((item) => (
           <button
             key={item.id}
