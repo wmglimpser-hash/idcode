@@ -8,7 +8,7 @@ export const CharacterComparison = () => {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-between items-end border-b border-border pb-4">
         <div>
-          <h2 className="text-3xl font-serif text-accent cyber-glow-text">角色档案对比</h2>
+          <h2 className="text-3xl font-serif text-accent">角色档案对比</h2>
           <p className="text-muted font-mono text-xs uppercase tracking-widest">ARCHIVE COMPARISON_V5.0</p>
         </div>
       </div>
@@ -21,7 +21,7 @@ export const CharacterComparison = () => {
                 <img src={char.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" />
               </div>
               <div>
-                <h3 className="text-accent font-serif text-xl cyber-glow-text">{char.name}</h3>
+                <h3 className="text-accent font-serif text-xl">{char.name}</h3>
                 <p className="text-muted text-xs font-mono">{char.title} | {char.role === 'Survivor' ? '求生者' : '监管者'}</p>
               </div>
             </div>

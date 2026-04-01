@@ -123,7 +123,7 @@ export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) =
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border z-50 p-4 animate-in fade-in slide-in-from-top-2">
           <div className="flex justify-between items-center mb-4 border-b border-border pb-2">
             <h3 className="text-sm font-bold text-accent font-mono tracking-widest">壁纸设置_WALLPAPER</h3>
             <button onClick={() => setIsOpen(false)} className="text-muted hover:text-primary">

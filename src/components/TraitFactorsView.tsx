@@ -16,6 +16,7 @@ interface Props {
 export const TraitFactorsView = ({ characterId, characterName, category, allCharacters, baseItems, onBack }: Props) => {
   const [localFactors, setLocalFactors] = useState<TraitFactor[]>([]);
   const [globalTalents, setGlobalTalents] = useState<TraitFactor[]>([]);
+  const [allocatedPoints, setAllocatedPoints] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeFactors, setActiveFactors] = useState<Set<string>>(new Set());
@@ -26,6 +27,31 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
   const baseCharacter = allCharacters?.find(c => 
     c.id === (character?.role === 'Survivor' ? 'base_survivor' : 'base_hunter')
   );
+
+  // Sync allocated points from talent system
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const role = character?.role || 'Survivor';
+    const unsub = onSnapshot(doc(db, 'user_talent_allocations', `${auth.currentUser.uid}_${role}`), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data().allocatedPoints || {};
+        setAllocatedPoints(data);
+        
+        // Auto-activate factors for allocated talents
+        setActiveFactors(prev => {
+          const next = new Set(prev);
+          // We'll handle the actual activation in the talent definitions listener 
+          // because we need the talent IDs and their target stats
+          return next;
+        });
+      } else {
+        setAllocatedPoints({});
+      }
+    }, (err) => {
+      console.error("Error fetching allocations:", err);
+    });
+    return () => unsub();
+  }, [character?.role]);
   
   // Form state
   const [newName, setNewName] = useState('');
@@ -113,39 +139,64 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       setLoading(false);
     });
 
-    let unsubscribeTalents: () => void = () => {};
-    if (character?.role) {
-      const tq = query(
-        collection(db, 'talent_definitions'),
-        where('role', '==', character.role)
-      );
-      unsubscribeTalents = onSnapshot(tq, (snapshot) => {
-        const talentData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            characterId: 'global',
-            category: 'talent',
-            name: data.name,
-            effect: data.effect || data.description,
-            source: '天赋系统',
-            sourceType: 'talent' as const,
-            type: 'positive' as const,
-            targetStat: data.targetStat || '',
-            modifier: data.modifier || '',
-            isGlobalTalent: true
-          } as TraitFactor & { isGlobalTalent?: boolean };
-        }).filter(t => t.targetStat || t.modifier || t.effect);
-        
-        setGlobalTalents(talentData);
+    const qTalents = query(
+      collection(db, 'talent_definitions')
+    );
+
+    const unsubscribeTalents = onSnapshot(qTalents, (snapshot) => {
+      const charRole = character?.role || 'Survivor';
+      const newGlobalTalents: TraitFactor[] = [];
+      const autoActiveIds: string[] = [];
+
+      snapshot.docs.forEach(doc => {
+        const talent = doc.data() as any;
+        const talentId = doc.id;
+        const targetRole = talent.targetRole || talent.role;
+        const isRelevant = targetRole === charRole || targetRole === 'Both';
+
+        if (isRelevant && talent.targetStats && talent.targetStats.length > 0) {
+          const isAllocated = allocatedPoints[talentId] > 0;
+          
+          talent.targetStats.forEach((stat: string, index: number) => {
+            const factorId = `talent_${talentId}_${index}`;
+            newGlobalTalents.push({
+              id: factorId,
+              name: talent.name,
+              effect: talent.effect || talent.description,
+              source: '天赋系统',
+              sourceType: 'talent',
+              type: 'positive',
+              targetStat: stat,
+              modifier: talent.modifier || '',
+              characterId: characterId,
+              category: category,
+              updatedAt: talent.updatedAt || serverTimestamp()
+            } as TraitFactor);
+
+            if (isAllocated) {
+              autoActiveIds.push(factorId);
+            }
+          });
+        }
       });
-    }
+
+      setGlobalTalents(newGlobalTalents);
+      
+      // Sync active factors with allocated talents
+      if (autoActiveIds.length > 0) {
+        setActiveFactors(prev => {
+          const next = new Set(prev);
+          autoActiveIds.forEach(id => next.add(id));
+          return next;
+        });
+      }
+    });
 
     return () => {
       unsubscribeFactors();
       unsubscribeTalents();
     };
-  }, [characterId, category, character?.role]);
+  }, [characterId, category, character?.role, allocatedPoints]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +273,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
           <ArrowLeft className="w-4 h-4" /> 返回详情_BACK
         </button>
         <div className="text-right">
-          <h2 className="text-xl font-serif text-accent cyber-glow-text">{category}</h2>
+          <h2 className="text-xl font-serif text-accent">{category}</h2>
           <p className="text-xs text-muted font-mono uppercase tracking-tighter">影响因素分析_FACTORS FOR {characterName}</p>
         </div>
       </div>
@@ -286,7 +337,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                   <td className="p-3 align-top border-l border-border/20">{renderFactorCell(auxiliaryTraits)}</td>
                   <td className="p-3 align-top border-l border-border/20 bg-accent/5">
                     <div className="flex flex-col gap-1">
-                      <span className={`text-sm font-bold font-mono ${hasChange ? 'text-accent cyber-glow-text' : 'text-text'}`}>
+                      <span className={`text-sm font-bold font-mono ${hasChange ? 'text-accent' : 'text-text'}`}>
                         {modifiedValue}
                       </span>
                       {hasChange && (
@@ -420,7 +471,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             <tbody className="divide-y divide-border/50">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted animate-pulse">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted">
                     正在扫描数据模块... SCANNING_DATA_MODULES
                   </td>
                 </tr>

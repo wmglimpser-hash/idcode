@@ -9,6 +9,7 @@ import { WikiEntryView } from './components/WikiEntryView';
 import { Leaderboard } from './components/Leaderboard';
 import { MapList } from './components/MapList';
 import { TalentWeb } from './components/TalentWeb';
+import { CombatSimulator } from './components/CombatSimulator';
 import { BulkImport } from './components/BulkImport';
 import { WikiSearch } from './components/WikiSearch';
 import { WallpaperManager } from './components/WallpaperManager';
@@ -27,9 +28,9 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson } from 'lucide-react';
+import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap } from 'lucide-react';
 
-type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents';
+type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'combat';
 
 enum OperationType {
   CREATE = 'create',
@@ -289,6 +290,7 @@ export default function App() {
     { id: 'hunters', label: '监管者', icon: <Swords className="w-4 h-4" /> },
     { id: 'maps', label: '地图', icon: <MapIcon className="w-4 h-4" /> },
     { id: 'talents', label: '天赋系统', icon: <Network className="w-4 h-4" /> },
+    { id: 'combat', label: '实战模拟', icon: <Zap className="w-4 h-4" /> },
   ];
 
   const handleUpdateCharacter = async (charId: string, data: Partial<Character>) => {
@@ -449,7 +451,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 h-24 flex flex-col justify-center">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary flex items-center justify-center shadow-[0_0_20px_#ff003c] rotate-45 overflow-hidden">
+              <div className="w-10 h-10 bg-primary flex items-center justify-center rotate-45 overflow-hidden">
                 <img 
                   src="https://id5.res.netease.com/pc/zt/20220110193643/img/icon1_9b4384f.png" 
                   alt="Logo"
@@ -562,7 +564,7 @@ export default function App() {
                     <div className="flex gap-4">
                       <button 
                         onClick={() => setIsEditingWiki(true)}
-                        className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-sm tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)] hover:scale-105 transition-all"
+                        className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-sm tracking-widest hover:scale-105 transition-all"
                       >
                         <Plus className="w-4 h-4" /> 创建新词条_NEW
                       </button>
@@ -621,7 +623,7 @@ export default function App() {
             <div className="relative group/nav pb-8">
               <button 
                 onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100 shadow-xl"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -691,7 +693,7 @@ export default function App() {
 
               <button 
                 onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100 shadow-xl"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -773,6 +775,7 @@ export default function App() {
             }}
           />
         )}
+        {activeTab === 'combat' && <CombatSimulator allCharacters={characters} />}
       </main>
 
       {/* Footer */}
@@ -803,7 +806,7 @@ export default function App() {
       </footer>
 
       {/* Mobile Nav */}
-      <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around shadow-[0_0_30px_rgba(0,243,255,0.2)] z-50">
+      <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around z-50">
         {navItems.map((item) => (
           <button
             key={item.id}

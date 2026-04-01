@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { DEFAULT_TAG_CONFIG } from '../constants';
 import { X, Save, AlertTriangle, FileJson, Sparkles, Wand2, RefreshCcw } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -46,14 +47,14 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
         items: {
           type: Type.OBJECT,
           properties: {
-            nodeId: { type: Type.STRING, description: "天赋节点 ID (如 1.1, 2.3)" },
+            nodeId: { type: Type.STRING, description: "天赋节点 ID (如 1.1, 2.3)，可选" },
             name: { type: Type.STRING, description: "天赋名称" },
             description: { type: Type.STRING, description: "天赋描述" },
-            targetStat: { type: Type.STRING, description: "影响的属性" },
-            modifier: { type: Type.STRING, description: "修正值 (如 +10%)" },
+            targetStats: { type: Type.ARRAY, items: { type: Type.STRING }, description: "目标属性列表 (如 ['跑动速度', '走路速度'])" },
+            modifier: { type: Type.STRING, description: "修正值 (如 '+10%', '-2')" },
             effect: { type: Type.STRING, description: "具体效果描述" }
           },
-          required: ["nodeId", "name"]
+          required: ["name"]
         }
       };
 
@@ -66,7 +67,8 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
       1. 返回结果必须是合法的 JSON 数组。
       2. 如果文本中包含多个项目，请全部解析。
       3. 对于缺失的信息，请根据上下文推断或留空。
-      4. Markdown 内容应保持专业且格式正确。`;
+      4. 对于天赋定义，请务必识别其影响的属性 (targetStats)、数值 (modifier) 和效果 (effect)。
+      5. Markdown 内容应保持专业且格式正确。`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -136,12 +138,21 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
           });
         } else {
           // Talent Definition mode
-          if (!item.nodeId) continue;
           const targetRole = item.role || role || 'Survivor';
-          const docId = `${targetRole.toLowerCase()}_${item.nodeId}`;
+          const nodeId = item.nodeId || `gen_${Math.random().toString(36).substr(2, 9)}`;
+          const docId = `${targetRole.toLowerCase()}_${nodeId}`;
           
+          // Auto-tagging logic
+          const text = ((item.name || '') + (item.description || '')).toLowerCase();
+          const autoTags = DEFAULT_TAG_CONFIG
+            .filter(config => config.keywords.some(k => text.includes(k)))
+            .map(config => config.name);
+          const combinedTags = Array.from(new Set([...(item.tags || []), ...autoTags]));
+
           await setDoc(doc(db, 'talent_definitions', docId), {
             ...item,
+            tags: combinedTags,
+            nodeId: nodeId,
             role: targetRole,
             updatedAt: serverTimestamp()
           }, { merge: true });
@@ -174,7 +185,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
       "nodeId": "1.1",
       "name": "天赋名称",
       "description": "简短的天赋描述...",
-      "targetStat": "移动速度",
+      "targetStats": ["跑动速度"],
       "modifier": "+10%",
       "effect": "翻窗后加速"
     }
@@ -186,7 +197,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
         <div className="flex justify-between items-center border-b border-border pb-4">
           <div className="flex items-center gap-3">
             <FileJson className="text-accent w-6 h-6" />
-            <h3 className="text-2xl font-serif text-accent cyber-glow-text">
+            <h3 className="text-2xl font-serif text-accent">
               批量导入{mode === 'wiki' ? '百科词条' : '天赋定义'}
             </h3>
           </div>
@@ -306,7 +317,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
           <button 
             onClick={handleImport}
             disabled={loading || !jsonInput}
-            className="px-10 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 disabled:opacity-50 flex items-center gap-3 shadow-[0_0_20px_rgba(0,243,255,0.3)] transition-all"
+            className="px-10 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 disabled:opacity-50 flex items-center gap-3 transition-all"
           >
             <Save className="w-4 h-4" /> {loading ? '正在同步...' : '开始批量导入_START_IMPORT'}
           </button>

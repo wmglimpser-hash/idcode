@@ -26,10 +26,9 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
 
   useEffect(() => {
     if (entry.talentId) {
-      const q = query(collection(db, 'talent_definitions'), where('nodeId', '==', entry.talentId));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          setTalentName(snapshot.docs[0].data().name);
+      const unsubscribe = onSnapshot(doc(db, 'talent_definitions', entry.talentId), (snapshot) => {
+        if (snapshot.exists()) {
+          setTalentName(snapshot.data().name);
         }
       });
       return () => unsubscribe();
@@ -108,16 +107,16 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
     }
   };
 
-  if (loading) return <div className="py-20 text-center animate-pulse text-accent font-mono">正在调取档案数据...</div>;
+  if (loading) return <div className="py-20 text-center text-accent font-mono">正在调取档案数据...</div>;
 
   if (!entry.currentRevisionId) {
     return (
       <div className="bg-card/50 cyber-border p-12 text-center space-y-6 animate-in fade-in duration-700">
         <div className="w-16 h-16 bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto rotate-45">
-          <Book className="text-primary w-8 h-8 -rotate-45 animate-pulse" />
+          <Book className="text-primary w-8 h-8 -rotate-45" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-serif text-accent cyber-glow-text">档案尚未同步</h3>
+          <h3 className="text-2xl font-serif text-accent">档案尚未同步</h3>
           <p className="text-muted text-sm font-mono max-w-md mx-auto">
             该词条已在系统中创建，但具体内容正在等待管理员审核。请稍后再试，或提交您的版本。
           </p>
@@ -154,7 +153,7 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
               <Clock className="w-3 h-3" /> 最后更新: {new Date(entry.lastUpdated?.seconds * 1000).toLocaleDateString()}
             </span>
           </div>
-          <h1 className="text-5xl font-serif font-bold text-accent cyber-glow-text">{entry.title}</h1>
+          <h1 className="text-5xl font-serif font-bold text-accent">{entry.title}</h1>
         </div>
         {isContributor && (
           <button 
@@ -239,7 +238,7 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
 
           <div className="lg:col-span-8 space-y-8">
             <section className="bg-card/30 border border-border p-8 cyber-border relative overflow-hidden">
-              <h2 className="text-2xl font-serif text-accent mb-8 flex items-center gap-3 cyber-glow-text">
+              <h2 className="text-2xl font-serif text-accent mb-8 flex items-center gap-3">
                 <Activity className="w-6 h-6" /> 核心档案解析
               </h2>
               <div className="space-y-6">

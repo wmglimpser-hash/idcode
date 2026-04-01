@@ -349,7 +349,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
   return (
     <div className="max-w-5xl mx-auto bg-card/50 cyber-border p-8 shadow-2xl animate-in zoom-in-95 duration-500">
       <div className="flex justify-between items-center mb-8 border-b border-border pb-4">
-        <h2 className="text-3xl font-serif text-accent cyber-glow-text">
+        <h2 className="text-3xl font-serif text-accent">
           {initialData ? '修改档案_UPDATE' : '录入新档案_CREATE'}
         </h2>
         <button 
@@ -772,7 +772,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
               <button 
                 type="submit"
                 disabled={saving}
-                className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 shadow-[0_0_20px_rgba(255,0,60,0.3)] font-mono text-xs tracking-widest disabled:opacity-50"
+                className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 font-mono text-xs tracking-widest disabled:opacity-50"
               >
                 <Save className="w-4 h-4" /> {saving ? '正在同步...' : '写入数据_SAVE'}
               </button>

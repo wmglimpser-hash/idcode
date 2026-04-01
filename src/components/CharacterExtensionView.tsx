@@ -102,7 +102,7 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
           <ArrowLeft className="w-4 h-4" /> 返回详情_BACK
         </button>
         <div className="text-right">
-          <h2 className="text-xl font-serif text-accent cyber-glow-text flex items-center justify-end gap-2">
+          <h2 className="text-xl font-serif text-accent flex items-center justify-end gap-2">
             <Icon className="w-5 h-5" /> {titleText}
           </h2>
           <p className="text-xs text-muted font-mono uppercase tracking-tighter">
@@ -165,7 +165,7 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
       {/* Items List */}
       <section className="space-y-6">
         {loading ? (
-          <div className="p-12 text-center text-muted animate-pulse font-mono border border-border bg-card/30">
+          <div className="p-12 text-center text-muted font-mono border border-border bg-card/30">
             正在扫描数据模块... SCANNING_DATA_MODULES
           </div>
         ) : items.length === 0 ? (

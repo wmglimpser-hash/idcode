@@ -152,6 +152,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Talent Tree Layout Collection
+    match /talent_tree_layout/{roleId} {
+      allow read: if true;
+      allow create: if isContributor();
+      allow update: if isContributor();
+      allow delete: if isAdmin();
+    }
+
+    // User Talent Allocations Collection
+    match /user_talent_allocations/{allocationId} {
+      allow read, write: if isAuthenticated() && (allocationId == request.auth.uid + "_Survivor" || allocationId == request.auth.uid + "_Hunter" || isAdmin());
+    }
+
     // Talent Builds Collection
     match /talent_builds/{buildId} {
       allow read: if true;

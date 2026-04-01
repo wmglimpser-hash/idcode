@@ -111,6 +111,15 @@
       },
       "required": ["role", "nodeId", "name", "description"]
     },
+    "TalentTreeLayout": {
+      "title": "Talent Tree Layout",
+      "description": "Layout and connections for the talent tree",
+      "type": "object",
+      "properties": {
+        "nodes": { "type": "array" }
+      },
+      "required": ["nodes"]
+    },
     "TalentBuild": {
       "title": "Talent Build",
       "description": "A saved talent point allocation for a user",
@@ -123,6 +132,30 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "role", "name", "points"]
+    },
+    "UserTalentAllocation": {
+      "title": "User Talent Allocation",
+      "description": "Real-time talent point allocation for a user",
+      "type": "object",
+      "properties": {
+        "allocatedPoints": { "type": "object", "description": "Map of nodeId to level" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["allocatedPoints"]
+    },
+    "CharacterExtension": {
+      "title": "Character Extension",
+      "description": "Recommended talents or auxiliary traits for a character",
+      "type": "object",
+      "properties": {
+        "characterId": { "type": "string" },
+        "type": { "type": "string", "enum": ["talent", "auxiliary"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["characterId", "type", "title", "description"]
     }
   },
   "firestore": {
@@ -154,9 +187,21 @@
       "schema": "TalentDefinition",
       "description": "Definitions for talent tree nodes"
     },
+    "talent_tree_layout": {
+      "schema": "TalentTreeLayout",
+      "description": "Layout and connections for the talent tree"
+    },
     "talent_builds": {
       "schema": "TalentBuild",
       "description": "Saved user talent builds"
+    },
+    "user_talent_allocations": {
+      "schema": "UserTalentAllocation",
+      "description": "Real-time user talent point allocations"
+    },
+    "character_extensions": {
+      "schema": "CharacterExtension",
+      "description": "Character-specific recommendations"
     }
   }
 }

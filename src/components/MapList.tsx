@@ -76,7 +76,7 @@ export const MapList = ({ user, userProfile }: MapListProps) => {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-serif text-accent cyber-glow-text">庄园地图侦察</h2>
+          <h2 className="text-3xl font-serif text-accent">庄园地图侦察</h2>
           <p className="text-muted font-mono text-xs tracking-widest uppercase">地形分析与战术数据</p>
         </div>
         {isContributor && (

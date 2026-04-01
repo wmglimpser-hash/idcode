@@ -94,12 +94,12 @@ export const CharacterDetail = ({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-80" />
           <div className="absolute bottom-6 left-6 right-6">
-            <h1 className="text-4xl font-serif font-bold text-accent cyber-glow-text mb-1">
+            <h1 className="text-4xl font-serif font-bold text-accent mb-1">
               {character.title}
             </h1>
             <p className="text-xl text-text font-mono italic opacity-70 tracking-tighter">{character.name}</p>
           </div>
-          <div className="absolute top-4 right-4 bg-primary px-2 py-1 text-xs font-mono text-white cyber-glitch">
+          <div className="absolute top-4 right-4 bg-primary px-2 py-1 text-xs font-mono text-white">
             ID: {String(character.order !== undefined ? character.order : character.id).padStart(4, '0')}
           </div>
           
@@ -146,7 +146,7 @@ export const CharacterDetail = ({
                     onDelete?.(character);
                     setShowDeleteConfirm(false);
                   }}
-                  className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-xs tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)]"
+                  className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-xs tracking-widest"
                 >
                   确认删除_CONFIRM
                 </button>
@@ -215,7 +215,7 @@ export const CharacterDetail = ({
             <section className="bg-card/40 border border-border p-8 rounded-none cyber-border relative overflow-hidden">
               <div className="absolute top-0 right-0 p-2 text-[10px] font-mono text-muted opacity-20">系统分析_V2.0</div>
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-serif text-accent flex items-center gap-3 cyber-glow-text">
+                <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
                   <Activity className="w-6 h-6" /> 核心特质分析
                 </h2>
                 {canEdit && (
@@ -389,7 +389,7 @@ export const CharacterDetail = ({
           {activeTab === 'external' && (
             <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-serif text-accent flex items-center gap-3 cyber-glow-text">
+                <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
                   <Target className="w-6 h-6" /> 核心能力模块
                 </h2>
                 {canEdit && (
@@ -513,7 +513,7 @@ export const CharacterDetail = ({
           {activeTab === 'mechanics' && (
             <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-serif text-accent flex items-center gap-3 cyber-glow-text">
+                <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
                   <Cpu className="w-6 h-6" /> 专属机制解析
                 </h2>
                 {canEdit && (
@@ -783,7 +783,7 @@ const BaseStatItem = ({ label, value, rating, isDifferent, baseValue }: { label:
     <div className="flex justify-between items-center mb-1">
       <span className="text-muted text-xs">{label}</span>
       <div className="flex flex-col items-end">
-        <span className={`font-bold text-xs ${isDifferent ? 'text-primary cyber-glow-text' : 'text-text'}`}>{value}</span>
+        <span className={`font-bold text-xs ${isDifferent ? 'text-primary' : 'text-text'}`}>{value}</span>
         {isDifferent && baseValue && (
           <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseValue}</span>
         )}

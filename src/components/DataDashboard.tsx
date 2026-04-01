@@ -17,7 +17,7 @@ export const DataDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-card/30 border border-border p-8 rounded-none cyber-border">
-          <h3 className="text-accent font-serif text-xl mb-8 flex items-center gap-3 cyber-glow-text">
+          <h3 className="text-accent font-serif text-xl mb-8 flex items-center gap-3">
             <PieChart className="w-6 h-6" /> 阵营分布分析
           </h3>
           <div className="flex items-center justify-center h-[300px] relative">
@@ -41,7 +41,7 @@ export const DataDashboard = () => {
         </div>
 
         <div className="bg-card/30 border border-border p-8 rounded-none cyber-border">
-          <h3 className="text-accent font-serif text-xl mb-8 cyber-glow-text">最新录入角色</h3>
+          <h3 className="text-accent font-serif text-xl mb-8">最新录入角色</h3>
           <div className="space-y-4">
             {MOCK_CHARACTERS.slice(0, 5).map(char => (
               <div key={char.id} className="flex items-center justify-between p-4 bg-bg/50 border border-border hover:border-accent transition-colors group cursor-pointer">
@@ -72,7 +72,7 @@ const DashboardCard = ({ icon, label, value, sub }: { icon: React.ReactNode; lab
     </div>
     <div className="relative z-10">
       <div className="text-[10px] text-muted uppercase tracking-widest mb-1 font-mono">{label}</div>
-      <div className="text-3xl font-serif text-accent mb-1 cyber-glow-text">{value}</div>
+      <div className="text-3xl font-serif text-accent mb-1">{value}</div>
       <div className="text-xs text-primary font-mono">{sub}</div>
     </div>
   </div>

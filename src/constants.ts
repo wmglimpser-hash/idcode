@@ -435,6 +435,7 @@ export interface TalentNode {
   maxLevel: number;
   connections: string[];
   defaultName?: string;
+  talentId?: string;
 }
 
 
@@ -498,4 +499,11 @@ export const MOCK_MAPS: GameMap[] = [
     imageUrl: 'https://picsum.photos/seed/hospital/800/400',
     difficulty: 'Medium',
   },
+];
+
+export const DEFAULT_TAG_CONFIG = [
+  { name: '移动', keywords: ['移动', '移速', '速度', '冲刺', '加速', '距离'] },
+  { name: '破译', keywords: ['破译', '修机', '密码机', '进度', '校准'] },
+  { name: '交互', keywords: ['交互', '翻窗', '翻板', '窗板', '放板', '跨越', '牵制'] },
+  { name: '治疗', keywords: ['治疗', '自愈', '倒地', '受伤', '愈合', '救人'] },
 ];

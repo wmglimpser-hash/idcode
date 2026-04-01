@@ -106,7 +106,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
     <div className="relative w-full max-w-2xl mx-auto">
       <div className="relative group">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className={`w-5 h-5 transition-colors ${loading ? 'text-accent animate-pulse' : 'text-muted'}`} />
+          <Search className={`w-5 h-5 transition-colors ${loading ? 'text-accent' : 'text-muted'}`} />
         </div>
         <input
           type="text"
@@ -116,7 +116,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
             setShowAll(false);
           }}
           placeholder="搜索庄园秘典词条或角色称号..."
-          className="w-full bg-card/50 border border-border text-text pl-12 pr-4 py-4 rounded-none focus:border-accent outline-none transition-all cyber-border shadow-[0_0_20px_rgba(0,0,0,0.3)]"
+          className="w-full bg-card/50 border border-border text-text pl-12 pr-4 py-4 rounded-none focus:border-accent outline-none transition-all cyber-border"
         />
         {searchTerm.trim().length === 0 && !showAll && (
           <button
@@ -151,7 +151,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-accent group-hover:cyber-glow-text">{entry.title}</div>
+                  <div className="text-sm font-bold text-accent">{entry.title}</div>
                   <div className="text-[10px] text-muted uppercase tracking-widest flex items-center gap-3 mt-1">
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {entry.type}</span>
                   </div>
@@ -176,7 +176,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
                     <UserCircle className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-primary group-hover:cyber-glow-text">{char.title} <span className="text-[10px] text-muted font-normal ml-2">({char.name})</span></div>
+                    <div className="text-sm font-bold text-primary">{char.title} <span className="text-[10px] text-muted font-normal ml-2">({char.name})</span></div>
                     <div className="text-[10px] text-muted uppercase tracking-widest flex items-center gap-3 mt-1">
                       <span className="flex items-center gap-1">角色档案</span>
                       <span className="flex items-center gap-1">{char.role}</span>
@@ -200,7 +200,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-accent group-hover:cyber-glow-text">{entry.title}</div>
+                    <div className="text-sm font-bold text-accent">{entry.title}</div>
                     <div className="text-[10px] text-muted uppercase tracking-widest flex items-center gap-3 mt-1">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {entry.type}</span>
                       <span className="flex items-center gap-1"><User className="w-3 h-3" /> {entry.authorId.slice(0, 6)}</span>
