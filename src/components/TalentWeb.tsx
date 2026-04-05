@@ -3,7 +3,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query,
 import { db, auth } from '../firebase';
 import { Save, Trash2, Plus, Info, ShieldCheck, Swords, Network, ExternalLink, FileText, FileJson, Search, List, X, Edit3, Wand2, Tag, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TalentNode, WikiEntry, DEFAULT_TAG_CONFIG } from '../constants';
+import { TalentNode, WikiEntry, DEFAULT_TAG_CONFIG, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from '../constants';
 import { BulkImport } from './BulkImport';
 
 interface TalentDefinition {
@@ -16,11 +16,22 @@ interface TalentDefinition {
   modifier: string;
   effect: string;
   tags?: string[];
+  tagColors?: Record<string, string>;
   targetRole?: 'Survivor' | 'Hunter' | 'Both';
 }
 
 const MAX_TOTAL_POINTS = 130;
 const POINT_COST_PER_LEVEL = 5;
+
+const TAG_COLORS = [
+  { name: '默认', value: '' },
+  { name: '红色', value: '#ff003c' },
+  { name: '青色', value: '#00f3ff' },
+  { name: '金色', value: '#d4af37' },
+  { name: '紫色', value: '#a855f7' },
+  { name: '绿色', value: '#22c55e' },
+  { name: '橙色', value: '#f97316' },
+];
 
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
@@ -94,6 +105,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     y?: number;
     selectedTalentId?: string;
     tagInput?: string;
+    selectedTagColor?: string;
   }>({});
   const [saving, setSaving] = useState(false);
   const [allocatedPoints, setAllocatedPoints] = useState<Record<string, number>>({});
@@ -107,7 +119,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
   const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
   const isContributor = userProfile?.role === 'contributor' || isAdminUser;
 
-  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
+  const [viewMode, setViewMode] = useState<'tree' | 'list' | 'tags'>('tree');
   const [showEditDropdown, setShowEditDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -123,10 +135,24 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [bulkTagInput, setBulkTagInput] = useState('');
+  const [bulkTagColor, setBulkTagColor] = useState('');
+  const [tagToRename, setTagToRename] = useState<string | null>(null);
+  const [newTagName, setNewTagName] = useState('');
+  const [selectedTalentIds, setSelectedTalentIds] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1);
+  const [showStatSelector, setShowStatSelector] = useState(false);
+
+  const toggleStat = (stat: string) => {
+    const current = editForm.targetStats || [];
+    if (current.includes(stat)) {
+      setEditForm({...editForm, targetStats: current.filter(s => s !== stat)});
+    } else {
+      setEditForm({...editForm, targetStats: [...current, stat]});
+    }
+  };
 
   const [treeNodes, setTreeNodes] = useState<(TalentNode & { x: number; y: number })[]>(DEFAULT_NODES);
-  const [selectedTalentIds, setSelectedTalentIds] = useState<string[]>([]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'talent_tree_layout', role), (docSnap) => {
@@ -137,6 +163,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           const uniqueMap = new Map();
           (data.nodes as any[]).forEach(node => {
             if (node && node.id) {
+              // Use node.id as the primary key for deduplication
               uniqueMap.set(node.id, node);
             }
           });
@@ -312,11 +339,22 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             
             {editForm.tags && editForm.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {editForm.tags.map(tag => (
-                  <span key={tag} className="px-2 py-0.5 bg-accent/10 border border-accent/30 text-accent text-[9px] font-mono uppercase">
-                    {tag}
-                  </span>
-                ))}
+                {Array.from(new Set(editForm.tags || [])).map((tag: string) => {
+                  const tagColor = editForm.tagColors?.[tag] || '#00f3ff';
+                  return (
+                    <span 
+                      key={tag} 
+                      className="px-2 py-0.5 text-[9px] font-mono uppercase border"
+                      style={{ 
+                        backgroundColor: tagColor + '10',
+                        borderColor: tagColor + '30',
+                        color: tagColor
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -356,6 +394,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                           name: selected.name,
                           description: selected.description,
                           tags: selected.tags || [],
+                          tagColors: selected.tagColors || {},
                           tagInput: ''
                         });
                       }
@@ -366,6 +405,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         name: '',
                         description: '',
                         tags: [],
+                        tagColors: {},
                         tagInput: ''
                       });
                     }
@@ -427,13 +467,24 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase font-mono tracking-widest">目标属性 TARGET_STATS (逗号分隔)</label>
-                    <input
-                      type="text"
-                      value={editForm.targetStats?.join(', ') || ''}
-                      onChange={e => setEditForm({...editForm, targetStats: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
-                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
-                      placeholder="例如：跑动速度, 走路速度"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editForm.targetStats?.join(', ') || ''}
+                        onChange={e => setEditForm({...editForm, targetStats: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+                        className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        placeholder="例如：跑动速度, 走路速度"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowStatSelector(true)}
+                        className="px-3 py-2 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg transition-all flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest"
+                        title="从模板选择"
+                      >
+                        <Plus size={14} />
+                        选择_SELECT
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -467,86 +518,138 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 <label className="text-[10px] text-muted uppercase font-mono tracking-widest flex items-center gap-2">
                   <Tag size={10} /> 自定义标签 TAGS
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={editForm.tagInput || ''}
-                    onChange={e => setEditForm({...editForm, tagInput: e.target.value})}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && editForm.tagInput?.trim()) {
-                        e.preventDefault();
-                        const newTag = editForm.tagInput.trim();
-                        if (!editForm.tags?.includes(newTag)) {
-                          setEditForm({
-                            ...editForm,
-                            tags: [...(editForm.tags || []), newTag],
-                            tagInput: ''
-                          });
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editForm.tagInput || ''}
+                      onChange={e => setEditForm({...editForm, tagInput: e.target.value})}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && editForm.tagInput?.trim()) {
+                          e.preventDefault();
+                          const newTag = editForm.tagInput.trim();
+                          if (!editForm.tags?.includes(newTag)) {
+                            const newTagColors = { ...(editForm.tagColors || {}) };
+                            if (editForm.selectedTagColor) {
+                              newTagColors[newTag] = editForm.selectedTagColor;
+                            }
+                            setEditForm({
+                              ...editForm,
+                              tags: [...(editForm.tags || []), newTag],
+                              tagColors: newTagColors,
+                              tagInput: ''
+                            });
+                          }
                         }
-                      }
-                    }}
-                    className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
-                    placeholder="输入标签并回车..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (editForm.tagInput?.trim()) {
-                        const newTag = editForm.tagInput.trim();
-                        if (!editForm.tags?.includes(newTag)) {
-                          setEditForm({
-                            ...editForm,
-                            tags: [...(editForm.tags || []), newTag],
-                            tagInput: ''
-                          });
+                      }}
+                      className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                      placeholder="输入标签并回车..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editForm.tagInput?.trim()) {
+                          const newTag = editForm.tagInput.trim();
+                          if (!editForm.tags?.includes(newTag)) {
+                            const newTagColors = { ...(editForm.tagColors || {}) };
+                            if (editForm.selectedTagColor) {
+                              newTagColors[newTag] = editForm.selectedTagColor;
+                            }
+                            setEditForm({
+                              ...editForm,
+                              tags: [...(editForm.tags || []), newTag],
+                              tagColors: newTagColors,
+                              tagInput: ''
+                            });
+                          }
                         }
-                      }
-                    }}
-                    className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
-                  >
-                    添加_ADD
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const text = ((editForm.name || '') + (editForm.description || '')).toLowerCase();
-                      const autoTags = DEFAULT_TAG_CONFIG
-                        .filter(config => config.keywords.some(k => text.includes(k)))
-                        .map(config => config.name);
-                      
-                      const currentTags = editForm.tags || [];
-                      const combinedTags = Array.from(new Set([...currentTags, ...autoTags]));
-                      
-                      setEditForm({
-                        ...editForm,
-                        tags: combinedTags
-                      });
-                    }}
-                    className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
-                    title="根据名称和描述自动识别标签"
-                  >
-                    自动识别_AUTO
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {editForm.tags?.map(tag => (
-                    <span 
-                      key={tag}
-                      className="flex items-center gap-1 px-2 py-0.5 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono"
+                      }}
+                      className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
                     >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => setEditForm({
+                      添加_ADD
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = ((editForm.name || '') + (editForm.description || '')).toLowerCase();
+                        const matchingConfigs = DEFAULT_TAG_CONFIG
+                          .filter(config => config.keywords.some(k => text.includes(k)));
+                        
+                        const autoTags = matchingConfigs.map(config => config.name);
+                        const newTagColors = { ...(editForm.tagColors || {}) };
+                        matchingConfigs.forEach(config => {
+                          if (!newTagColors[config.name]) {
+                            newTagColors[config.name] = config.color;
+                          }
+                        });
+                        
+                        const currentTags = editForm.tags || [];
+                        const combinedTags = Array.from(new Set([...currentTags, ...autoTags]));
+                        
+                        setEditForm({
                           ...editForm,
-                          tags: editForm.tags?.filter(t => t !== tag)
-                        })}
-                        className="hover:text-primary transition-colors"
-                      >
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))}
+                          tags: combinedTags,
+                          tagColors: newTagColors
+                        });
+                      }}
+                      className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
+                      title="根据名称和描述自动识别标签"
+                    >
+                      自动识别_AUTO
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-[9px] text-muted font-mono uppercase mr-1">选择颜色:</span>
+                    {TAG_COLORS.map(color => (
+                      <button
+                        key={color.name}
+                        type="button"
+                        onClick={() => setEditForm({...editForm, selectedTagColor: color.value})}
+                        className={`w-5 h-5 border transition-all ${
+                          (editForm.selectedTagColor || '') === color.value 
+                            ? 'border-white scale-110' 
+                            : 'border-transparent hover:scale-110'
+                        }`}
+                        style={{ backgroundColor: color.value || '#333' }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+
+                  {editForm.tags && editForm.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {Array.from(new Set(editForm.tags || [])).map((tag: string) => (
+                        <div key={tag} className="flex items-center group">
+                          <span 
+                            className="px-2 py-0.5 text-[9px] font-mono uppercase border"
+                            style={{ 
+                              backgroundColor: (editForm.tagColors?.[tag] || '#00f3ff') + '10',
+                              borderColor: (editForm.tagColors?.[tag] || '#00f3ff') + '30',
+                              color: editForm.tagColors?.[tag] || '#00f3ff'
+                            }}
+                          >
+                            {tag}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newTagColors = { ...(editForm.tagColors || {}) };
+                              delete newTagColors[tag];
+                              setEditForm({
+                                ...editForm,
+                                tags: editForm.tags?.filter(t => t !== tag),
+                                tagColors: newTagColors
+                              });
+                            }}
+                            className="p-1 text-muted hover:text-primary transition-colors"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -728,7 +831,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     );
   };
   const ListView = () => {
-    const allTalents = talents.filter(t => t.role === role).map(talent => {
+    const allTalentsRaw = talents.filter(t => t.role === role).map(talent => {
       const node = treeNodes.find(n => n.talentId === talent.id || n.id === talent.nodeId);
       const nodeId = node?.id;
       const wiki = getLinkedWikiEntry(talent.id) || (nodeId ? getLinkedWikiEntry(nodeId) : undefined);
@@ -745,6 +848,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
       };
     });
 
+    // Ensure uniqueness by ID to prevent React key errors
+    const allTalentsMap = new Map();
+    allTalentsRaw.forEach(t => {
+      if (t.id) allTalentsMap.set(t.id, t);
+    });
+    const allTalents = Array.from(allTalentsMap.values());
+
     const handleAutoTagAll = async () => {
       if (!isContributor) return;
       
@@ -753,18 +863,26 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
         const batch = [];
         for (const talent of allTalents) {
           const text = (talent.name + (talent.description || '')).toLowerCase();
-          const autoTags = DEFAULT_TAG_CONFIG
-            .filter(config => config.keywords.some(k => text.includes(k)))
-            .map(config => config.name);
+          const matchingConfigs = DEFAULT_TAG_CONFIG
+            .filter(config => config.keywords.some(k => text.includes(k)));
           
+          const autoTags = matchingConfigs.map(config => config.name);
           const currentTags = talent.talentData.tags || [];
           const combinedTags = Array.from(new Set([...currentTags, ...autoTags]));
           
           if (combinedTags.length > currentTags.length) {
+            const newTagColors = { ...(talent.talentData.tagColors || {}) };
+            matchingConfigs.forEach(config => {
+              if (!newTagColors[config.name]) {
+                newTagColors[config.name] = config.color;
+              }
+            });
+
             const docId = `${talent.talentData.role.toLowerCase()}_${talent.talentData.nodeId}`;
             batch.push(setDoc(doc(db, 'talent_definitions', docId), {
               ...talent.talentData,
               tags: combinedTags,
+              tagColors: newTagColors,
               updatedAt: serverTimestamp()
             }, { merge: true }));
           }
@@ -833,52 +951,134 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           </div>
 
           {isContributor && (
-            <div className="flex items-center justify-between bg-card/30 p-3 border border-border">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (selectedTalentIds.length === filteredTalents.length) {
-                      setSelectedTalentIds([]);
-                    } else {
-                      setSelectedTalentIds(filteredTalents.map(t => t.id));
-                    }
-                  }}
-                  className={`w-4 h-4 border flex items-center justify-center transition-colors ${
-                    selectedTalentIds.length > 0 && selectedTalentIds.length === filteredTalents.length 
-                      ? 'bg-accent border-accent' 
-                      : 'border-muted group-hover:border-accent'
-                  }`}
-                >
-                  {selectedTalentIds.length > 0 && selectedTalentIds.length === filteredTalents.length && (
-                    <div className="w-2 h-2 bg-bg" />
+            <div className="flex flex-col gap-4">
+              {viewMode === 'tags' && (
+                <div className="bg-card/30 p-4 border border-border space-y-4">
+                  <h4 className="text-[10px] font-mono uppercase tracking-widest text-accent flex items-center gap-2">
+                    <Tag className="w-3 h-3" /> 标签全局管理 GLOBAL_TAG_MANAGEMENT
+                  </h4>
+                  <div className="flex flex-wrap gap-3">
+                    {allAvailableTags.map(tag => (
+                      <div key={tag} className="flex items-center gap-1 bg-bg/50 border border-border p-1 group">
+                        <span className="text-[10px] font-mono px-2">{tag}</span>
+                        <button
+                          onClick={() => { setTagToRename(tag); setNewTagName(tag); }}
+                          className="p-1 text-muted hover:text-accent transition-colors"
+                          title="重命名"
+                        >
+                          <Edit3 size={10} />
+                        </button>
+                        <button
+                          onClick={() => { if(window.confirm(`确定要全局删除标签 "${tag}" 吗？`)) handleDeleteTagGlobal(tag); }}
+                          className="p-1 text-muted hover:text-primary transition-colors"
+                          title="删除"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {tagToRename && (
+                    <div className="flex items-center gap-2 p-3 bg-accent/5 border border-accent/20 rounded-sm">
+                      <span className="text-[10px] font-mono text-muted uppercase">重命名 "{tagToRename}" 为:</span>
+                      <input
+                        type="text"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        className="bg-bg border border-border px-2 py-1 text-xs font-mono outline-none focus:border-accent"
+                      />
+                      <button
+                        onClick={() => { handleRenameTag(tagToRename, newTagName); setTagToRename(null); }}
+                        className="px-3 py-1 bg-accent text-bg text-[10px] font-mono uppercase tracking-widest"
+                      >
+                        确认_CONFIRM
+                      </button>
+                      <button
+                        onClick={() => setTagToRename(null)}
+                        className="px-3 py-1 bg-bg border border-border text-muted text-[10px] font-mono uppercase tracking-widest"
+                      >
+                        取消_CANCEL
+                      </button>
+                    </div>
                   )}
                 </div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-muted">全选_SELECT_ALL</span>
-              </label>
-              <span className="text-[10px] font-mono text-muted">已选择: {selectedTalentIds.length}</span>
+              )}
+
+              <div className="flex items-center justify-between bg-card/30 p-3 border border-border">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedTalentIds.length === filteredTalents.length) {
+                          setSelectedTalentIds([]);
+                        } else {
+                          setSelectedTalentIds(filteredTalents.map(t => t.id));
+                        }
+                      }}
+                      className={`w-4 h-4 border flex items-center justify-center transition-colors ${
+                        selectedTalentIds.length > 0 && selectedTalentIds.length === filteredTalents.length 
+                          ? 'bg-accent border-accent' 
+                          : 'border-muted group-hover:border-accent'
+                      }`}
+                    >
+                      {selectedTalentIds.length > 0 && selectedTalentIds.length === filteredTalents.length && (
+                        <div className="w-2 h-2 bg-bg" />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted">全选_SELECT_ALL</span>
+                  </label>
+                  <span className="text-[10px] font-mono text-muted">已选择: {selectedTalentIds.length}</span>
+                </div>
+                {selectedTalentIds.length > 0 && (
+                  <div className="flex items-center gap-2 bg-bg/50 p-1 border border-border">
+                    <input
+                      type="text"
+                      value={bulkTagInput}
+                      onChange={(e) => setBulkTagInput(e.target.value)}
+                      placeholder="新标签..."
+                      className="bg-transparent border-none px-2 py-1 text-[10px] font-mono outline-none w-24"
+                    />
+                    <div className="flex gap-1">
+                      {TAG_COLORS.map(color => (
+                        <button
+                          key={color.name}
+                          onClick={() => setBulkTagColor(color.value)}
+                          className={`w-3 h-3 border ${bulkTagColor === color.value ? 'border-white' : 'border-transparent'}`}
+                          style={{ backgroundColor: color.value || '#333' }}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleBulkTag}
+                      disabled={saving || !bulkTagInput.trim()}
+                      className="px-2 py-1 bg-accent/20 text-accent hover:bg-accent hover:text-bg transition-all text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
+                    >
+                      添加标签_ADD_TAG
+                    </button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
+                    >
+                      <Trash2 size={12} />
+                      批量删除_BULK_DELETE
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={handleAutoTagAll}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg transition-all text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
+                >
+                  <Wand2 size={12} />
+                  自动标记所有_AUTO_TAG_ALL
+                </button>
+              </div>
             </div>
-            {selectedTalentIds.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                disabled={saving}
-                className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
-              >
-                <Trash2 size={12} />
-                批量删除_BULK_DELETE
-              </button>
-            )}
-            <button
-              onClick={handleAutoTagAll}
-              disabled={saving}
-              className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg transition-all text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
-            >
-              <Wand2 size={12} />
-              自动标记所有_AUTO_TAG_ALL
-            </button>
-          </div>
-        )}
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -896,6 +1096,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     connections: node?.connections.join(', ') || '',
                     selectedTalentId: talent.id,
                     tags: talent.talentData.tags || [],
+                    tagColors: talent.talentData.tagColors || {},
                     tagInput: ''
                   });
                   // Do not enter edit mode automatically
@@ -907,6 +1108,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     ...talent.talentData,
                     selectedTalentId: talent.id,
                     tags: talent.talentData.tags || [],
+                    tagColors: talent.talentData.tagColors || {},
                     tagInput: ''
                   });
                   // Do not enter edit mode automatically
@@ -969,11 +1171,22 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               
               {talent.talentData.tags && talent.talentData.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-4">
-                  {talent.talentData.tags.map(tag => (
-                    <span key={tag} className="px-1.5 py-0.5 bg-accent/5 border border-accent/20 text-accent text-[8px] font-mono uppercase">
-                      {tag}
-                    </span>
-                  ))}
+                  {Array.from(new Set(talent.talentData.tags || [])).map((tag: string) => {
+                    const tagColor = talent.talentData.tagColors?.[tag] || '#00f3ff';
+                    return (
+                      <span 
+                        key={tag} 
+                        className="px-1.5 py-0.5 text-[8px] font-mono uppercase border"
+                        style={{ 
+                          backgroundColor: tagColor + '10',
+                          borderColor: tagColor + '30',
+                          color: tagColor
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
               
@@ -1003,6 +1216,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                           connections: node?.connections.join(', ') || '',
                           selectedTalentId: talent.id,
                           tags: talent.talentData.tags || [],
+                          tagColors: talent.talentData.tagColors || {},
                           tagInput: ''
                         });
                       } else {
@@ -1011,6 +1225,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                           ...talent.talentData,
                           selectedTalentId: talent.id,
                           tags: talent.talentData.tags || [],
+                          tagColors: talent.talentData.tagColors || {},
                           tagInput: ''
                         });
                       }
@@ -1039,9 +1254,12 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     const unsubscribe = onSnapshot(collection(db, 'talent_definitions'), (snapshot) => {
       const uniqueMap = new Map();
       snapshot.docs.forEach(doc => {
-        uniqueMap.set(doc.id, {
-          id: doc.id,
-          ...doc.data()
+        const data = doc.data();
+        // Use document ID as the primary unique identifier
+        const talentId = doc.id;
+        uniqueMap.set(talentId, {
+          ...data,
+          id: talentId
         });
       });
       setTalents(Array.from(uniqueMap.values()) as TalentDefinition[]);
@@ -1375,6 +1593,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
         y: node?.y || 0,
         selectedTalentId: existingTalent.id,
         tags: existingTalent.tags || [],
+        tagColors: existingTalent.tagColors || {},
         tagInput: '',
         targetRole: existingTalent.targetRole || (role === 'Hunter' ? 'Hunter' : 'Survivor')
       });
@@ -1394,6 +1613,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
         y: node?.y || 0,
         selectedTalentId: '',
         tags: [],
+        tagColors: {},
         tagInput: '',
         targetRole: role === 'Hunter' ? 'Hunter' : 'Survivor'
       });
@@ -1454,11 +1674,31 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     
     setSaving(true);
     try {
-      const { newId: _, maxLevel: __, connections: ___, selectedTalentId: ____, tagInput: _____, ...talentData } = editForm;
+      const { 
+        newId: _, 
+        maxLevel: __, 
+        connections: ___, 
+        selectedTalentId: ____, 
+        tagInput: _____, 
+        selectedTagColor: ______, 
+        id: _______, // Remove id if it exists
+        ...talentData 
+      } = editForm;
       
+      // Ensure tags and tagColors are included even if empty
+      const finalTalentData = {
+        ...talentData,
+        tags: editForm.tags || [],
+        tagColors: editForm.tagColors || {},
+        name: finalName,
+        role,
+        nodeId: newId || null,
+        updatedAt: serverTimestamp()
+      };
+
       // Remove undefined values to prevent Firestore errors
       const cleanTalentData = Object.fromEntries(
-        Object.entries(talentData).filter(([_, v]) => v !== undefined)
+        Object.entries(finalTalentData).filter(([_, v]) => v !== undefined)
       );
 
       // Save talent definition if name is provided
@@ -1467,22 +1707,11 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           // Create new talent
           const newTalentRef = doc(collection(db, 'talent_definitions'));
           finalTalentId = newTalentRef.id;
-          await setDoc(newTalentRef, {
-            ...cleanTalentData,
-            name: finalName,
-            role,
-            nodeId: newId || null, // Keep for backward compatibility
-            updatedAt: serverTimestamp()
-          });
+          await setDoc(newTalentRef, cleanTalentData);
         } else {
-          // Update existing talent
-          await setDoc(doc(db, 'talent_definitions', finalTalentId), {
-            ...cleanTalentData,
-            name: finalName,
-            role,
-            nodeId: newId || null, // Keep for backward compatibility
-            updatedAt: serverTimestamp()
-          }, { merge: true });
+          // Update existing talent - use updateDoc to ensure we only change provided fields
+          // This also ensures arrays and maps are replaced correctly if provided
+          await updateDoc(doc(db, 'talent_definitions', finalTalentId), cleanTalentData);
         }
       }
 
@@ -1735,6 +1964,116 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     }
   };
 
+  const handleBulkTag = async () => {
+    if (selectedTalentIds.length === 0 || !bulkTagInput.trim()) return;
+    
+    setSaving(true);
+    try {
+      const newTag = bulkTagInput.trim();
+      const batch = [];
+      
+      for (const talentId of selectedTalentIds) {
+        const talent = talents.find(t => t.id === talentId);
+        if (talent) {
+          const currentTags = talent.tags || [];
+          if (!currentTags.includes(newTag)) {
+            const newTags = [...currentTags, newTag];
+            const newTagColors = { ...(talent.tagColors || {}) };
+            if (bulkTagColor) {
+              newTagColors[newTag] = bulkTagColor;
+            }
+            
+            batch.push(updateDoc(doc(db, 'talent_definitions', talentId), {
+              tags: newTags,
+              tagColors: newTagColors,
+              updatedAt: serverTimestamp()
+            }));
+          }
+        }
+      }
+      
+      if (batch.length > 0) {
+        await Promise.all(batch);
+        showStatus(`已为 ${batch.length} 个天赋添加标签 "${newTag}"`);
+      } else {
+        showStatus("所选天赋已包含该标签");
+      }
+      
+      setBulkTagInput('');
+      setSelectedTalentIds([]);
+    } catch (error) {
+      console.error("Error bulk tagging talents:", error);
+      showStatus("批量添加标签失败", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRenameTag = async (oldTag: string, newTag: string) => {
+    if (!oldTag || !newTag || oldTag === newTag) return;
+    setSaving(true);
+    try {
+      const batch = [];
+      const talentsWithTag = talents.filter(t => t.tags?.includes(oldTag));
+      
+      for (const talent of talentsWithTag) {
+        const newTags = talent.tags?.map(t => t === oldTag ? newTag : t) || [];
+        const newTagColors = { ...(talent.tagColors || {}) };
+        if (newTagColors[oldTag]) {
+          newTagColors[newTag] = newTagColors[oldTag];
+          delete newTagColors[oldTag];
+        }
+        
+        batch.push(updateDoc(doc(db, 'talent_definitions', talent.id), {
+          tags: newTags,
+          tagColors: newTagColors,
+          updatedAt: serverTimestamp()
+        }));
+      }
+      
+      if (batch.length > 0) {
+        await Promise.all(batch);
+        showStatus(`已将标签 "${oldTag}" 重命名为 "${newTag}" (${batch.length} 个天赋)`);
+      }
+    } catch (error) {
+      console.error("Error renaming tag:", error);
+      showStatus("重命名标签失败", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTagGlobal = async (tagToDelete: string) => {
+    if (!tagToDelete) return;
+    setSaving(true);
+    try {
+      const batch = [];
+      const talentsWithTag = talents.filter(t => t.tags?.includes(tagToDelete));
+      
+      for (const talent of talentsWithTag) {
+        const newTags = talent.tags?.filter(t => t !== tagToDelete) || [];
+        const newTagColors = { ...(talent.tagColors || {}) };
+        delete newTagColors[tagToDelete];
+        
+        batch.push(updateDoc(doc(db, 'talent_definitions', talent.id), {
+          tags: newTags,
+          tagColors: newTagColors,
+          updatedAt: serverTimestamp()
+        }));
+      }
+      
+      if (batch.length > 0) {
+        await Promise.all(batch);
+        showStatus(`已删除标签 "${tagToDelete}" (${batch.length} 个天赋)`);
+      }
+    } catch (error) {
+      console.error("Error deleting tag:", error);
+      showStatus("删除标签失败", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleResetTree = async () => {
     setSaving(true);
     try {
@@ -1807,6 +2146,12 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-accent'}`}
               >
                 列表
+              </button>
+              <button
+                onClick={() => setViewMode('tags')}
+                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all ${viewMode === 'tags' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-accent'}`}
+              >
+                标签管理
               </button>
             </div>
 
@@ -1924,8 +2269,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           </div>
         </div>
 
-        <div className={`flex-1 relative flex items-start justify-center overflow-hidden bg-bg/30 rounded-lg border border-border/50 custom-scrollbar ${viewMode === 'list' ? 'min-h-[850px]' : 'min-h-[750px]'}`}>
-          {viewMode === 'list' ? (
+        <div className={`flex-1 relative flex items-start justify-center overflow-hidden bg-bg/30 rounded-lg border border-border/50 custom-scrollbar ${viewMode !== 'tree' ? 'min-h-[850px]' : 'min-h-[750px]'}`}>
+          {viewMode !== 'tree' ? (
             <ListView />
           ) : (
             <motion.svg 
@@ -2138,6 +2483,133 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           </div>
         )}
       </AnimatePresence>
+      
+      {/* Stat Selector Modal */}
+      <AnimatePresence>
+        {showStatSelector && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-card border border-border w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl"
+            >
+              <div className="p-4 border-b border-border flex justify-between items-center bg-bg/50">
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-mono uppercase tracking-widest text-accent flex items-center gap-2">
+                    <Wand2 size={14} /> 选择目标属性_SELECT_TARGET_STATS
+                  </h3>
+                  <p className="text-[9px] text-muted font-mono uppercase mt-1">选择受此天赋影响的属性详情</p>
+                </div>
+                <button onClick={() => setShowStatSelector(false)} className="text-muted hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-8">
+                {/* Survivor Traits */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-primary/20" />
+                    <h4 className="text-[10px] text-primary uppercase font-mono tracking-widest flex items-center gap-2">
+                      <ShieldCheck size={12} /> 求生者特质 SURVIVOR_TRAITS
+                    </h4>
+                    <div className="h-px flex-1 bg-primary/20" />
+                  </div>
+                  <div className="space-y-6">
+                    {SURVIVOR_TRAITS_MODERN_TEMPLATE.map(category => (
+                      <div key={category.category}>
+                        <h5 className="text-[9px] text-muted font-mono uppercase mb-2 tracking-tighter opacity-70">{category.category}</h5>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {category.items.map(item => (
+                            <button
+                              key={item.label}
+                              onClick={() => toggleStat(item.label)}
+                              className={`text-[10px] font-mono p-2 border text-left transition-all relative group ${
+                                editForm.targetStats?.includes(item.label)
+                                  ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(255,0,60,0.2)]'
+                                  : 'bg-bg/50 border-border text-muted hover:border-primary/50 hover:text-primary'
+                              }`}
+                            >
+                              {item.label}
+                              {editForm.targetStats?.includes(item.label) && (
+                                <div className="absolute top-1 right-1">
+                                  <ShieldCheck size={8} />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Hunter Traits */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-accent/20" />
+                    <h4 className="text-[10px] text-accent uppercase font-mono tracking-widest flex items-center gap-2">
+                      <Swords size={12} /> 监管者特质 HUNTER_TRAITS
+                    </h4>
+                    <div className="h-px flex-1 bg-accent/20" />
+                  </div>
+                  <div className="space-y-6">
+                    {HUNTER_TRAITS_TEMPLATE.map(category => (
+                      <div key={category.category}>
+                        <h5 className="text-[9px] text-muted font-mono uppercase mb-2 tracking-tighter opacity-70">{category.category}</h5>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                          {category.items.map(item => (
+                            <button
+                              key={item.label}
+                              onClick={() => toggleStat(item.label)}
+                              className={`text-[10px] font-mono p-2 border text-left transition-all relative group ${
+                                editForm.targetStats?.includes(item.label)
+                                  ? 'bg-accent border-accent text-bg shadow-[0_0_10px_rgba(0,243,255,0.2)]'
+                                  : 'bg-bg/50 border-border text-muted hover:border-accent/50 hover:text-accent'
+                              }`}
+                            >
+                              {item.label}
+                              {editForm.targetStats?.includes(item.label) && (
+                                <div className="absolute top-1 right-1">
+                                  <Swords size={8} />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4 border-t border-border bg-bg/50 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="text-[10px] font-mono text-muted uppercase tracking-widest">
+                    已选择: <span className="text-accent">{editForm.targetStats?.length || 0}</span>
+                  </div>
+                  {editForm.targetStats && editForm.targetStats.length > 0 && (
+                    <button 
+                      onClick={() => setEditForm({...editForm, targetStats: []})}
+                      className="text-[9px] font-mono text-red-500 hover:underline uppercase"
+                    >
+                      清空_CLEAR
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowStatSelector(false)}
+                  className="px-8 py-2 bg-accent text-bg text-[10px] font-mono uppercase tracking-widest hover:bg-white transition-all font-bold"
+                >
+                  确认_CONFIRM
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Status Message Overlay */}
       <AnimatePresence>
         {statusMessage && (

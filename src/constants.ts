@@ -502,8 +502,8 @@ export const MOCK_MAPS: GameMap[] = [
 ];
 
 export const DEFAULT_TAG_CONFIG = [
-  { name: '移动', keywords: ['移动', '移速', '速度', '冲刺', '加速', '距离'] },
-  { name: '破译', keywords: ['破译', '修机', '密码机', '进度', '校准'] },
-  { name: '交互', keywords: ['交互', '翻窗', '翻板', '窗板', '放板', '跨越', '牵制'] },
-  { name: '治疗', keywords: ['治疗', '自愈', '倒地', '受伤', '愈合', '救人'] },
+  { name: '移动', color: '#06b6d4', keywords: ['移动', '移速', '速度', '冲刺', '加速', '距离'] },
+  { name: '破译', color: '#10b981', keywords: ['破译', '修机', '密码机', '进度', '校准'] },
+  { name: '交互', color: '#f59e0b', keywords: ['交互', '翻窗', '翻板', '窗板', '放板', '跨越', '牵制'] },
+  { name: '治疗', color: '#ef4444', keywords: ['治疗', '自愈', '倒地', '受伤', '愈合', '救人'] },
 ];
