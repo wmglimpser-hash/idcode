@@ -477,6 +477,15 @@ export interface GameMap {
   resources?: string;
 }
 
+export interface MapResource {
+  id: string;
+  title: string;
+  content: string;
+  mapId?: string; // Optional link to a map
+  updatedAt: any;
+  authorId: string;
+}
+
 export const MOCK_MAPS: GameMap[] = [
   {
     id: 'm1',

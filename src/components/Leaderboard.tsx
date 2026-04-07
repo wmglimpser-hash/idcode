@@ -6,13 +6,27 @@ interface Props {
   characters: Character[];
   onRefresh?: () => void;
   isAdmin?: boolean;
+  initialTrait?: { role: 'Survivor' | 'Hunter', label: string } | null;
 }
 
-export const Leaderboard = ({ characters, onRefresh, isAdmin }: Props) => {
-  const [role, setRole] = useState<'Survivor' | 'Hunter'>('Survivor');
-  const [selectedTrait, setSelectedTrait] = useState<{ category: string, label: string } | null>(null);
+export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Props) => {
+  const [role, setRole] = useState<'Survivor' | 'Hunter'>(initialTrait?.role || 'Survivor');
+  const [selectedTrait, setSelectedTrait] = useState<{ category: string, label: string } | null>(() => {
+    if (initialTrait) {
+      return { category: '', label: initialTrait.label };
+    }
+    return null;
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  // Update state if initialTrait changes (e.g. from comparison page)
+  React.useEffect(() => {
+    if (initialTrait) {
+      setRole(initialTrait.role);
+      setSelectedTrait({ category: '', label: initialTrait.label });
+    }
+  }, [initialTrait]);
 
   const handleRefresh = async () => {
     if (!onRefresh) return;

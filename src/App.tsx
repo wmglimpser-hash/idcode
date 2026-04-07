@@ -9,7 +9,7 @@ import { WikiEntryView } from './components/WikiEntryView';
 import { Leaderboard } from './components/Leaderboard';
 import { MapList } from './components/MapList';
 import { TalentWeb } from './components/TalentWeb';
-import { CombatSimulator } from './components/CombatSimulator';
+import { CharacterComparison } from './components/CharacterComparison';
 import { BulkImport } from './components/BulkImport';
 import { WikiSearch } from './components/WikiSearch';
 import { WallpaperManager } from './components/WallpaperManager';
@@ -30,7 +30,7 @@ import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap } from 'lucide-react';
 
-type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'combat';
+type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'comparison';
 
 enum OperationType {
   CREATE = 'create',
@@ -94,6 +94,12 @@ export default function App() {
   
   // Wiki State
   const [selectedWikiEntry, setSelectedWikiEntry] = useState<WikiEntry | null>(null);
+  const [leaderboardTrait, setLeaderboardTrait] = useState<{ role: 'Survivor' | 'Hunter', label: string } | null>(null);
+
+  const handleViewRanking = (role: 'Survivor' | 'Hunter', label: string) => {
+    setLeaderboardTrait({ role, label });
+    setActiveTab('leaderboard');
+  };
   const [isEditingWiki, setIsEditingWiki] = useState(false);
   const [isBulkImportingWiki, setIsBulkImportingWiki] = useState(false);
   
@@ -290,7 +296,7 @@ export default function App() {
     { id: 'hunters', label: '监管者', icon: <Swords className="w-4 h-4" /> },
     { id: 'maps', label: '地图', icon: <MapIcon className="w-4 h-4" /> },
     { id: 'talents', label: '天赋系统', icon: <Network className="w-4 h-4" /> },
-    { id: 'combat', label: '实战模拟', icon: <Zap className="w-4 h-4" /> },
+    { id: 'comparison', label: 'VS对比', icon: <Zap className="w-4 h-4" /> },
   ];
 
   const handleUpdateCharacter = async (charId: string, data: Partial<Character>) => {
@@ -754,6 +760,7 @@ export default function App() {
             characters={characters} 
             onRefresh={() => handleSyncCharacterOrders(false)}
             isAdmin={user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin'}
+            initialTrait={leaderboardTrait}
           />
         )}
 
@@ -775,7 +782,11 @@ export default function App() {
             }}
           />
         )}
-        {activeTab === 'combat' && <CombatSimulator allCharacters={characters} />}
+        {activeTab === 'comparison' && (
+          <CharacterComparison 
+            allCharacters={characters} 
+          />
+        )}
       </main>
 
       {/* Footer */}

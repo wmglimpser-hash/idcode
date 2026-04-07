@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { TraitFactor, CharacterTraitItem, COLORS, Character } from '../constants';
+import { TraitFactor, CharacterTraitItem, COLORS, Character, DEFAULT_TAG_CONFIG } from '../constants';
 import { Plus, Trash2, ArrowLeft, Info, AlertCircle, CheckCircle2, Activity, Zap } from 'lucide-react';
 
 interface Props {
@@ -20,10 +20,45 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeFactors, setActiveFactors] = useState<Set<string>>(new Set());
+  const [availableTags, setAvailableTags] = useState<{name: string, type: string}[]>([]);
 
   const factors = [...localFactors, ...globalTalents];
 
   const character = allCharacters?.find(c => c.id === characterId);
+
+  // Collect available tags
+  useEffect(() => {
+    const tags: {name: string, type: string}[] = [];
+    
+    // 1. Common Tags
+    DEFAULT_TAG_CONFIG.forEach(tag => {
+      tags.push({ name: tag.name, type: 'other' });
+    });
+
+    // 2. Character Skills (External Traits)
+    if (character?.skills) {
+      character.skills.forEach(skill => {
+        tags.push({ name: skill.name, type: 'external_trait' });
+      });
+    }
+
+    // 2. Talents
+    const unsubTalents = onSnapshot(collection(db, 'talent_definitions'), (snapshot) => {
+      const talentTags = snapshot.docs.map(doc => ({
+        name: doc.data().name as string,
+        type: 'talent'
+      }));
+      
+      // Merge unique tags
+      setAvailableTags(prev => {
+        const existingNames = new Set(tags.map(t => t.name));
+        const filteredTalents = talentTags.filter(t => !existingNames.has(t.name));
+        return [...tags, ...filteredTalents];
+      });
+    });
+
+    return () => unsubTalents();
+  }, [character]);
   const baseCharacter = allCharacters?.find(c => 
     c.id === (character?.role === 'Survivor' ? 'base_survivor' : 'base_hunter')
   );
@@ -327,6 +362,54 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                       {isBaseDifferent && baseItem && (
                         <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
                       )}
+                      
+                      {/* Quick Add Tag Dropdown */}
+                      <div className="mt-2">
+                        <select 
+                          onChange={async (e) => {
+                            const tagName = e.target.value;
+                            if (!tagName) return;
+                            const tag = availableTags.find(t => t.name === tagName);
+                            if (!tag) return;
+                            
+                            try {
+                              await addDoc(collection(db, 'trait_factors'), {
+                                characterId,
+                                category,
+                                name: tag.name,
+                                effect: `影响 ${item.label}`,
+                                source: tag.name,
+                                sourceType: tag.type,
+                                type: 'neutral',
+                                targetStat: item.label,
+                                modifier: '',
+                                updatedAt: serverTimestamp()
+                              });
+                              e.target.value = '';
+                            } catch (err) {
+                              console.error("Error quick-adding factor:", err);
+                            }
+                          }}
+                          className="text-[9px] bg-bg border border-border px-1 py-0.5 font-mono text-muted hover:text-accent hover:border-accent outline-none transition-colors w-full max-w-[120px]"
+                        >
+                          <option value="">+ 快速关联标签</option>
+                          <optgroup label="常用标签">
+                            {availableTags.filter(t => t.type === 'other' && DEFAULT_TAG_CONFIG.some(dt => dt.name === t.name)).map(t => (
+                              <option key={`qa-${t.name}`} value={t.name}>{t.name}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="外在特质">
+                            {availableTags.filter(t => t.type === 'external_trait').map(t => (
+                              <option key={`qa-${t.name}`} value={t.name}>{t.name}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="天赋系统">
+                            {availableTags.filter(t => t.type === 'talent').map(t => (
+                              <option key={`qa-${t.name}`} value={t.name}>{t.name}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </div>
                     </div>
                   </td>
                   <td className="p-3 align-top">
@@ -396,7 +479,47 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源 SOURCE (可选)</label>
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源 SOURCE (下拉选择标签)</label>
+            <div className="relative group">
+              <select 
+                value={newSource}
+                onChange={(e) => {
+                  const selectedTag = availableTags.find(t => t.name === e.target.value);
+                  setNewSource(e.target.value);
+                  if (selectedTag) {
+                    setNewSourceType(selectedTag.type as any);
+                  }
+                }}
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors appearance-none"
+              >
+                <option value="">-- 选择特质/天赋标签 --</option>
+                <optgroup label="常用标签 COMMON_TAGS">
+                  {availableTags.filter(t => t.type === 'other' && DEFAULT_TAG_CONFIG.some(dt => dt.name === t.name)).map(t => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="外在特质 EXTERNAL_TRAITS">
+                  {availableTags.filter(t => t.type === 'external_trait').map(t => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="天赋系统 TALENTS">
+                  {availableTags.filter(t => t.type === 'talent').map(t => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="其他 OTHERS">
+                  <option value="监管者辅助特质">辅助特质</option>
+                  <option value="其他">其他</option>
+                </optgroup>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-muted">
+                <Info className="w-3 h-3" />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">或手动输入来源 (MANUAL)</label>
             <input 
               type="text"
               value={newSource}

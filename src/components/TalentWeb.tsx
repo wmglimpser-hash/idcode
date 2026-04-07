@@ -163,8 +163,10 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           const uniqueMap = new Map();
           (data.nodes as any[]).forEach(node => {
             if (node && node.id) {
-              // Use node.id as the primary key for deduplication
-              uniqueMap.set(node.id, node);
+              const id = String(node.id);
+              if (!uniqueMap.has(id)) {
+                uniqueMap.set(id, node);
+              }
             }
           });
           setTreeNodes(Array.from(uniqueMap.values()) as (TalentNode & { x: number; y: number })[]);
@@ -908,9 +910,15 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
       return matchesSearch && matchesTag;
     });
 
-    // Get all unique tags for the current role
+    // Get all unique tags for the current role that match the search term
     const allAvailableTags = Array.from(new Set(
-      allTalents.flatMap(t => t.talentData.tags || [])
+      allTalents
+        .filter(t => 
+          t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.talentData.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+        .flatMap(t => t.talentData.tags || [])
     )).sort();
 
     return (
@@ -926,7 +934,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             >
               全部_ALL
             </button>
-            {DEFAULT_TAG_CONFIG.map(config => (
+            {DEFAULT_TAG_CONFIG.filter(config => allAvailableTags.includes(config.name)).map(config => (
               <button
                 key={config.name}
                 onClick={() => setSelectedTag(selectedTag === config.name ? null : config.name)}
@@ -1839,29 +1847,29 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
   };
 
   const handleSyncLayout = async () => {
-    if (role !== 'Hunter') return;
+    const otherRole = role === 'Survivor' ? 'Hunter' : 'Survivor';
     setSaving(true);
     try {
-      const survivorDoc = await getDoc(doc(db, 'talent_tree_layout', 'Survivor'));
-      if (!survivorDoc.exists()) {
-        showStatus("未找到求生者布局数据", "error");
+      const otherDoc = await getDoc(doc(db, 'talent_tree_layout', otherRole));
+      if (!otherDoc.exists()) {
+        showStatus(`未找到${otherRole === 'Survivor' ? '求生者' : '监管者'}布局数据`, "error");
         return;
       }
       
-      const survivorNodes = survivorDoc.data().nodes as (TalentNode & { x: number; y: number })[];
+      const otherNodes = otherDoc.data().nodes as (TalentNode & { x: number; y: number })[];
       
-      const hunterDoc = await getDoc(doc(db, 'talent_tree_layout', 'Hunter'));
-      const hunterNodes = hunterDoc.exists() ? hunterDoc.data().nodes as (TalentNode & { x: number; y: number })[] : [];
+      const currentDoc = await getDoc(doc(db, 'talent_tree_layout', role));
+      const currentNodes = currentDoc.exists() ? currentDoc.data().nodes as (TalentNode & { x: number; y: number })[] : [];
       
-      const syncedNodes = survivorNodes.map(sNode => {
-        const hNode = hunterNodes.find(n => n.id === sNode.id);
+      const syncedNodes = otherNodes.map(oNode => {
+        const cNode = currentNodes.find(n => n.id === oNode.id);
         return {
-          ...sNode,
-          talentId: hNode?.talentId || null
+          ...oNode,
+          talentId: cNode?.talentId || null
         };
       });
       
-      await setDoc(doc(db, 'talent_tree_layout', 'Hunter'), { nodes: syncedNodes });
+      await setDoc(doc(db, 'talent_tree_layout', role), { nodes: syncedNodes });
       showStatus("同步成功");
     } catch (error) {
       console.error("Error syncing layout:", error);
@@ -2194,6 +2202,18 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         <Save className="w-3 h-3" /> 保存方案
                       </button>
                     )}
+                    {isContributor && (
+                      <>
+                        <div className="h-px bg-border my-1" />
+                        <button 
+                          onClick={() => { handleSyncLayout(); setShowEditDropdown(false); }}
+                          disabled={saving}
+                          className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                        >
+                          <Network className="w-3 h-3" /> 同步布局
+                        </button>
+                      </>
+                    )}
                     {isAdminUser && (
                       <>
                         <div className="h-px bg-border my-1" />
@@ -2204,15 +2224,6 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         >
                           <Trash2 className="w-3 h-3" /> 重置天赋树
                         </button>
-                        {role === 'Hunter' && (
-                          <button 
-                            onClick={() => { handleSyncLayout(); setShowEditDropdown(false); }}
-                            disabled={saving}
-                            className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
-                          >
-                            <Network className="w-3 h-3" /> 同步布局
-                          </button>
-                        )}
                         <button 
                           onClick={() => { setShowBulkImport(true); setShowEditDropdown(false); }}
                           className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"

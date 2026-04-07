@@ -156,6 +156,19 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["characterId", "type", "title", "description"]
+    },
+    "MapResource": {
+      "title": "Map Resource",
+      "description": "Independent map resource data (e.g. cipher machine spawns)",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "mapId": { "type": "string", "description": "Optional ID of the map this resource belongs to" },
+        "authorId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "authorId"]
     }
   },
   "firestore": {
@@ -202,6 +215,10 @@
     "character_extensions": {
       "schema": "CharacterExtension",
       "description": "Character-specific recommendations"
+    },
+    "map_resources": {
+      "schema": "MapResource",
+      "description": "Independent map resource entries"
     }
   }
 }
