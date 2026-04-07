@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Character, CharacterTraitCategory } from '../constants';
-import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight } from 'lucide-react';
+import { CharacterComparison } from './CharacterComparison';
 
 interface Props {
   characters: Character[];
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Props) => {
+  const [showComparison, setShowComparison] = useState(false);
   const [role, setRole] = useState<'Survivor' | 'Hunter'>(initialTrait?.role || 'Survivor');
   const [selectedTrait, setSelectedTrait] = useState<{ category: string, label: string } | null>(() => {
     if (initialTrait) {
@@ -137,11 +139,24 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-border pb-8">
-        <div>
-          <h2 className="text-4xl font-serif font-bold text-accent cyber-glow-text flex items-center gap-4">
-            <Trophy className="w-10 h-10 text-gold" /> 庄园能力排行榜
-          </h2>
-          <p className="text-muted text-xs font-mono mt-2 uppercase tracking-widest">Neural Leaderboard System v2.1</p>
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="flex items-center gap-4">
+            <h2 className="text-4xl font-serif font-bold text-accent cyber-glow-text flex items-center gap-4">
+              <Trophy className="w-10 h-10 text-gold" /> 庄园能力排行榜
+            </h2>
+            <button
+              onClick={() => setShowComparison(!showComparison)}
+              className={`flex items-center gap-2 px-4 py-2 border transition-all font-mono text-xs font-bold uppercase tracking-widest ${
+                showComparison 
+                  ? 'bg-accent text-bg border-accent shadow-[0_0_15px_rgba(255,0,60,0.4)]' 
+                  : 'bg-card/50 border-border text-muted hover:text-accent hover:border-accent'
+              }`}
+            >
+              <Zap className={`w-4 h-4 ${showComparison ? 'animate-pulse' : ''}`} />
+              {showComparison ? '返回排行榜_BACK' : 'VS 对比系统_VS_COMPARE'}
+            </button>
+          </div>
+          <p className="text-muted text-xs font-mono mt-2 uppercase tracking-widest md:ml-4">Neural Leaderboard System v2.1</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -172,150 +187,156 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Base Info Section */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="bg-card/30 border border-border p-6 cyber-border relative overflow-hidden flex flex-col h-[800px]">
-            <div className="absolute top-0 right-0 p-2 opacity-10">
-              <Activity className="w-24 h-24" />
-            </div>
-            <h3 className="text-xl font-serif text-accent mb-6 flex items-center gap-2 flex-shrink-0">
-              <Shield className="w-5 h-5" /> 阵营基础数值概览
-            </h3>
-            
-            <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-8">
-              {baseInfo?.traits && baseInfo.traits.length > 0 ? (
-                <>
-                  {baseInfo.traits.map((cat, i) => (
-                    <div key={i} className="space-y-3">
-                      <div className="text-xs text-primary font-bold uppercase tracking-widest border-b border-primary/20 pb-1">
-                        {cat.category}
-                      </div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {cat.items.map((item, j) => (
-                          <div 
-                            key={j} 
-                            onClick={() => setSelectedTrait({ category: cat.category, label: item.label })}
-                            className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
-                              selectedTrait?.label === item.label 
-                                ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
-                                : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
-                            }`}
-                          >
-                            <span className="text-sm font-mono font-bold">{item.label}</span>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border ${
+      {showComparison ? (
+        <div className="animate-in fade-in zoom-in-95 duration-500">
+          <CharacterComparison allCharacters={characters} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Base Info Section */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="bg-card/30 border border-border p-6 cyber-border relative overflow-hidden flex flex-col h-[800px]">
+              <div className="absolute top-0 right-0 p-2 opacity-10">
+                <Activity className="w-24 h-24" />
+              </div>
+              <h3 className="text-xl font-serif text-accent mb-6 flex items-center gap-2 flex-shrink-0">
+                <Shield className="w-5 h-5" /> 阵营基础数值概览
+              </h3>
+              
+              <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-8">
+                {baseInfo?.traits && baseInfo.traits.length > 0 ? (
+                  <>
+                    {baseInfo.traits.map((cat, i) => (
+                      <div key={i} className="space-y-3">
+                        <div className="text-xs text-primary font-bold uppercase tracking-widest border-b border-primary/20 pb-1">
+                          {cat.category}
+                        </div>
+                        <div className="grid grid-cols-1 gap-1">
+                          {cat.items.map((item, j) => (
+                            <div 
+                              key={j} 
+                              onClick={() => setSelectedTrait({ category: cat.category, label: item.label })}
+                              className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
                                 selectedTrait?.label === item.label 
-                                  ? 'bg-accent/20 border-accent/50 text-accent' 
-                                  : 'bg-bg/50 border-border/50 text-muted group-hover:text-text/80'
-                              }`}>
-                                {traitCounts[item.label] || 0} 项
-                              </span>
-                              {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                                  ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
+                                  : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
+                              }`}
+                            >
+                              <span className="text-sm font-mono font-bold">{item.label}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border ${
+                                  selectedTrait?.label === item.label 
+                                    ? 'bg-accent/20 border-accent/50 text-accent' 
+                                    : 'bg-bg/50 border-border/50 text-muted group-hover:text-text/80'
+                                }`}>
+                                  {traitCounts[item.label] || 0} 项
+                                </span>
+                                {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="py-12 text-center text-muted font-mono text-sm">
+                    暂无基础数值数据。
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Ranking Section */}
+          <div className="lg:col-span-7 space-y-6">
+            {selectedTrait ? (
+              <div className="bg-card/30 border border-border p-6 cyber-border h-[800px] flex flex-col">
+                <div className="flex justify-between items-end mb-8 border-b border-border pb-4 flex-shrink-0">
+                  <div>
+                    <div className="text-[10px] text-primary font-bold uppercase mb-1">{selectedTrait.category}</div>
+                    <h3 className="text-2xl font-serif text-accent cyber-glow-text">{selectedTrait.label} 排行榜</h3>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-bg/50 border border-border hover:border-accent/50 text-xs font-mono text-muted hover:text-accent transition-all"
+                    >
+                      {sortOrder === 'desc' ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+                      {sortOrder === 'desc' ? '降序排列 (从大到小)' : '升序排列 (从小到大)'}
+                    </button>
+                    <div className="text-[10px] font-mono text-muted">共 {factionCharacters.length} 名成员</div>
+                  </div>
+                </div>
+
+                <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                  {groupedRankedData.map((group) => (
+                    <div 
+                      key={group.rank} 
+                      className={`flex items-center gap-6 p-4 border transition-all ${
+                        group.rank === 1 ? 'bg-gold/10 border-gold/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]' : 
+                        group.rank === 2 ? 'bg-accent/5 border-accent/30' :
+                        group.rank === 3 ? 'bg-primary/5 border-primary/30' :
+                        'bg-bg/40 border-border/50'
+                      }`}
+                    >
+                      {/* Rank */}
+                      <div className="w-12 text-center font-mono font-bold flex-shrink-0">
+                        {group.rank === 1 ? <span className="text-gold text-2xl">1</span> :
+                         group.rank === 2 ? <span className="text-accent text-xl">2</span> :
+                         group.rank === 3 ? <span className="text-primary text-lg">3</span> :
+                         <span className="text-muted text-lg">{group.rank}</span>}
+                      </div>
+                      
+                      {/* Characters (Parallel) */}
+                      <div className="flex flex-wrap gap-4 flex-grow">
+                        {groupedRankedData.length === 1 ? (
+                          <div className="flex items-center gap-3 bg-bg/40 px-6 py-3 border border-border/30 hover:border-accent/50 transition-all group">
+                            <div className="flex flex-col justify-center">
+                              <div className="text-lg font-bold text-accent group-hover:text-primary transition-colors tracking-widest">
+                                {role === 'Survivor' ? '所有求生者' : '所有监管者'}
+                              </div>
                             </div>
                           </div>
-                        ))}
+                        ) : (
+                          group.characters.map(char => (
+                            <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px]">
+                              <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
+                                <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="flex flex-col justify-center">
+                                <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Value */}
+                      <div className="text-right flex-shrink-0 min-w-[80px]">
+                        <div className="text-xl font-mono font-bold text-accent">{group.value}</div>
+                        {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest">TOP RANK</div>}
                       </div>
                     </div>
                   ))}
-                </>
-              ) : (
-                <div className="py-12 text-center text-muted font-mono text-sm">
-                  暂无基础数值数据。
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-card/20 border border-dashed border-border p-12 cyber-border flex flex-col items-center justify-center text-center space-y-4 min-h-[600px]">
+                <div className="w-16 h-16 bg-border/20 flex items-center justify-center rotate-45">
+                  <Search className="text-muted w-8 h-8 -rotate-45" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-xl font-serif text-muted">等待选择数据项</h4>
+                  <p className="text-muted text-xs font-mono max-w-xs">
+                    请从左侧的基础数值概览中选择一个具体项目，以查看全角色的实时能力排名。
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Ranking Section */}
-        <div className="lg:col-span-7 space-y-6">
-          {selectedTrait ? (
-            <div className="bg-card/30 border border-border p-6 cyber-border h-[800px] flex flex-col">
-              <div className="flex justify-between items-end mb-8 border-b border-border pb-4 flex-shrink-0">
-                <div>
-                  <div className="text-[10px] text-primary font-bold uppercase mb-1">{selectedTrait.category}</div>
-                  <h3 className="text-2xl font-serif text-accent cyber-glow-text">{selectedTrait.label} 排行榜</h3>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-bg/50 border border-border hover:border-accent/50 text-xs font-mono text-muted hover:text-accent transition-all"
-                  >
-                    {sortOrder === 'desc' ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
-                    {sortOrder === 'desc' ? '降序排列 (从大到小)' : '升序排列 (从小到大)'}
-                  </button>
-                  <div className="text-[10px] font-mono text-muted">共 {factionCharacters.length} 名成员</div>
-                </div>
-              </div>
-
-              <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                {groupedRankedData.map((group) => (
-                  <div 
-                    key={group.rank} 
-                    className={`flex items-center gap-6 p-4 border transition-all ${
-                      group.rank === 1 ? 'bg-gold/10 border-gold/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]' : 
-                      group.rank === 2 ? 'bg-accent/5 border-accent/30' :
-                      group.rank === 3 ? 'bg-primary/5 border-primary/30' :
-                      'bg-bg/40 border-border/50'
-                    }`}
-                  >
-                    {/* Rank */}
-                    <div className="w-12 text-center font-mono font-bold flex-shrink-0">
-                      {group.rank === 1 ? <span className="text-gold text-2xl">1</span> :
-                       group.rank === 2 ? <span className="text-accent text-xl">2</span> :
-                       group.rank === 3 ? <span className="text-primary text-lg">3</span> :
-                       <span className="text-muted text-lg">{group.rank}</span>}
-                    </div>
-                    
-                    {/* Characters (Parallel) */}
-                    <div className="flex flex-wrap gap-4 flex-grow">
-                      {groupedRankedData.length === 1 ? (
-                        <div className="flex items-center gap-3 bg-bg/40 px-6 py-3 border border-border/30 hover:border-accent/50 transition-all group">
-                          <div className="flex flex-col justify-center">
-                            <div className="text-lg font-bold text-accent group-hover:text-primary transition-colors tracking-widest">
-                              {role === 'Survivor' ? '所有求生者' : '所有监管者'}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        group.characters.map(char => (
-                          <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px]">
-                            <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
-                              <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
-                            </div>
-                            <div className="flex flex-col justify-center">
-                              <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Value */}
-                    <div className="text-right flex-shrink-0 min-w-[80px]">
-                      <div className="text-xl font-mono font-bold text-accent">{group.value}</div>
-                      {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest">TOP RANK</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-card/20 border border-dashed border-border p-12 cyber-border flex flex-col items-center justify-center text-center space-y-4 min-h-[600px]">
-              <div className="w-16 h-16 bg-border/20 flex items-center justify-center rotate-45">
-                <Search className="text-muted w-8 h-8 -rotate-45" />
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-xl font-serif text-muted">等待选择数据项</h4>
-                <p className="text-muted text-xs font-mono max-w-xs">
-                  请从左侧的基础数值概览中选择一个具体项目，以查看全角色的实时能力排名。
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

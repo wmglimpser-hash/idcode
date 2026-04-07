@@ -32,13 +32,29 @@ export interface Character {
   role: 'Survivor' | 'Hunter';
   type: string;
   description: string;
-  skills: { name: string; description: string; icon?: string }[];
+  skills: { name: string; description: string; icon?: string; tags?: string[] }[];
+  presence?: { tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[];
   imageUrl: string;
   order?: number;
   traits?: CharacterTraitCategory[];
   mechanics?: { title: string; content: string; icon?: string }[];
   linkedMechanics?: { characterId: string; mechanicIndex: number }[];
   lastUpdated?: any;
+}
+
+export interface TalentDefinition {
+  id?: string;
+  role: 'Survivor' | 'Hunter';
+  nodeId: string;
+  name: string;
+  description: string;
+  targetStat?: string;
+  modifier?: string;
+  effect?: string;
+  x?: number;
+  y?: number;
+  tags?: string[];
+  updatedAt?: any;
 }
 
 export interface TraitFactor {
@@ -509,6 +525,16 @@ export const MOCK_MAPS: GameMap[] = [
     difficulty: 'Medium',
   },
 ];
+
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  affectedRole: 'Survivor' | 'Hunter' | 'Both';
+  affectedStats: string[];
+  updatedAt: any;
+  authorId: string;
+}
 
 export const DEFAULT_TAG_CONFIG = [
   { name: '移动', color: '#06b6d4', keywords: ['移动', '移速', '速度', '冲刺', '加速', '距离'] },

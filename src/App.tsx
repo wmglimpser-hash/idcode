@@ -8,8 +8,8 @@ import { WikiEditor } from './components/WikiEditor';
 import { WikiEntryView } from './components/WikiEntryView';
 import { Leaderboard } from './components/Leaderboard';
 import { MapList } from './components/MapList';
+import { TagManagement } from './components/TagManagement';
 import { TalentWeb } from './components/TalentWeb';
-import { CharacterComparison } from './components/CharacterComparison';
 import { BulkImport } from './components/BulkImport';
 import { WikiSearch } from './components/WikiSearch';
 import { WallpaperManager } from './components/WallpaperManager';
@@ -30,7 +30,7 @@ import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap } from 'lucide-react';
 
-type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'comparison';
+type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'tags';
 
 enum OperationType {
   CREATE = 'create',
@@ -295,8 +295,8 @@ export default function App() {
     { id: 'survivors', label: '求生者', icon: <ShieldCheck className="w-4 h-4" /> },
     { id: 'hunters', label: '监管者', icon: <Swords className="w-4 h-4" /> },
     { id: 'maps', label: '地图', icon: <MapIcon className="w-4 h-4" /> },
+    { id: 'tags', label: '标签系统', icon: <Settings className="w-4 h-4" /> },
     { id: 'talents', label: '天赋系统', icon: <Network className="w-4 h-4" /> },
-    { id: 'comparison', label: 'VS对比', icon: <Zap className="w-4 h-4" /> },
   ];
 
   const handleUpdateCharacter = async (charId: string, data: Partial<Character>) => {
@@ -782,9 +782,10 @@ export default function App() {
             }}
           />
         )}
-        {activeTab === 'comparison' && (
-          <CharacterComparison 
-            allCharacters={characters} 
+        {activeTab === 'tags' && (
+          <TagManagement 
+            user={user} 
+            userProfile={userProfile} 
           />
         )}
       </main>

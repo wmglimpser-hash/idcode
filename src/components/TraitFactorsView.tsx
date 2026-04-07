@@ -20,7 +20,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeFactors, setActiveFactors] = useState<Set<string>>(new Set());
-  const [availableTags, setAvailableTags] = useState<{name: string, type: string}[]>([]);
+  const [availableTags, setAvailableTags] = useState<{name: string, type: string, color?: string}[]>([]);
 
   const factors = [...localFactors, ...globalTalents];
 
@@ -28,36 +28,47 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
 
   // Collect available tags
   useEffect(() => {
-    const tags: {name: string, type: string}[] = [];
+    const tags: {name: string, type: string, color?: string}[] = [];
     
-    // 1. Common Tags
-    DEFAULT_TAG_CONFIG.forEach(tag => {
-      tags.push({ name: tag.name, type: 'other' });
-    });
-
-    // 2. Character Skills (External Traits)
+    // 1. Character Skills (External Traits)
     if (character?.skills) {
       character.skills.forEach(skill => {
         tags.push({ name: skill.name, type: 'external_trait' });
       });
     }
 
-    // 2. Talents
+    // 2. Dynamic Tags from Firestore
+    const unsubTags = onSnapshot(collection(db, 'tags'), (snapshot) => {
+      const dynamicTags = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const isRelevant = data.affectedRole === 'Both' || data.affectedRole === character?.role;
+        return isRelevant ? { name: data.name, type: 'other', color: data.color } : null;
+      }).filter(Boolean) as {name: string, type: string, color?: string}[];
+
+      setAvailableTags(prev => {
+        const skillTags = tags.filter(t => t.type === 'external_trait');
+        const talentTags = prev.filter(t => t.type === 'talent');
+        return [...skillTags, ...talentTags, ...dynamicTags];
+      });
+    });
+
+    // 3. Talents
     const unsubTalents = onSnapshot(collection(db, 'talent_definitions'), (snapshot) => {
       const talentTags = snapshot.docs.map(doc => ({
         name: doc.data().name as string,
         type: 'talent'
       }));
       
-      // Merge unique tags
       setAvailableTags(prev => {
-        const existingNames = new Set(tags.map(t => t.name));
-        const filteredTalents = talentTags.filter(t => !existingNames.has(t.name));
-        return [...tags, ...filteredTalents];
+        const otherTags = prev.filter(t => t.type !== 'talent');
+        return [...otherTags, ...talentTags];
       });
     });
 
-    return () => unsubTalents();
+    return () => {
+      unsubTags();
+      unsubTalents();
+    };
   }, [character]);
   const baseCharacter = allCharacters?.find(c => 
     c.id === (character?.role === 'Survivor' ? 'base_survivor' : 'base_hunter')
@@ -276,25 +287,79 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
     }
   };
 
-  const renderFactorCell = (factorList: TraitFactor[]) => (
-    <div className="space-y-3">
+  const renderFactorCell = (factorList: TraitFactor[], itemLabel: string, type: 'external_trait' | 'talent' | 'auxiliary_trait' | 'other') => (
+    <div className="space-y-4">
       {factorList.map(f => (
-        <label key={f.id} className="flex items-start gap-2 cursor-pointer group">
-          <input 
-            type="checkbox" 
-            className="mt-1 accent-accent"
-            checked={activeFactors.has(f.id)}
-            onChange={() => toggleFactor(f.id)}
-          />
-          <div className="flex flex-col">
-            <span className={`text-[11px] font-bold transition-colors ${activeFactors.has(f.id) ? 'text-accent' : 'text-text/80 group-hover:text-text'}`}>
-              {f.name}
-            </span>
-            <span className="text-[10px] text-muted leading-tight mt-0.5">{f.modifier ? `[${f.modifier}] ` : ''}{f.effect}</span>
-          </div>
-        </label>
+        <div key={f.id} className="flex items-start justify-between gap-2 group/item">
+          <label className="flex items-start gap-3 cursor-pointer flex-1">
+            <input 
+              type="checkbox" 
+              className="mt-1.5 w-4 h-4 accent-accent"
+              checked={activeFactors.has(f.id)}
+              onChange={() => toggleFactor(f.id)}
+            />
+            <div className="flex flex-col">
+              <span className={`text-sm font-bold transition-colors ${activeFactors.has(f.id) ? 'text-accent' : 'text-text/80 group-hover:text-text'}`}>
+                {f.name}
+              </span>
+              <span className="text-xs text-muted leading-relaxed mt-1">{f.modifier ? `[${f.modifier}] ` : ''}{f.effect}</span>
+            </div>
+          </label>
+          <button 
+            onClick={(e) => { e.preventDefault(); handleDelete(f.id); }}
+            className="text-muted hover:text-primary opacity-0 group-hover/item:opacity-100 transition-opacity p-1"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
       ))}
-      {factorList.length === 0 && <span className="text-[10px] text-muted/50 italic">-</span>}
+      
+      {/* Inline Add Dropdown */}
+      <div className="mt-3 pt-3 border-t border-border/20">
+        <select 
+          onChange={async (e) => {
+            const tagName = e.target.value;
+            if (!tagName) return;
+            const tag = availableTags.find(t => t.name === tagName);
+            if (!tag) return;
+            
+            try {
+              await addDoc(collection(db, 'trait_factors'), {
+                characterId,
+                category,
+                name: tag.name,
+                effect: `影响 ${itemLabel}`,
+                source: tag.name,
+                sourceType: type,
+                type: 'neutral',
+                targetStat: itemLabel,
+                modifier: '',
+                updatedAt: serverTimestamp()
+              });
+              e.target.value = '';
+            } catch (err) {
+              console.error("Error quick-adding factor:", err);
+            }
+          }}
+          className="text-[11px] bg-bg/50 border border-border/50 px-2 py-1 font-mono text-muted hover:text-accent hover:border-accent outline-none transition-colors w-full"
+        >
+          <option value="">+ 添加{type === 'external_trait' ? '特质' : type === 'talent' ? '天赋' : '因素'}</option>
+          {availableTags.filter(t => (type === 'other' ? t.type === 'other' : t.type === type)).map(t => (
+            <option key={`inline-${itemLabel}-${t.name}`} value={t.name}>{t.name}</option>
+          ))}
+          {type === 'auxiliary_trait' && (
+            <>
+              <option value="传送">传送</option>
+              <option value="闪现">闪现</option>
+              <option value="窥视者">窥视者</option>
+              <option value="巡视者">巡视者</option>
+              <option value="兴奋">兴奋</option>
+              <option value="失常">失常</option>
+              <option value="移形">移形</option>
+            </>
+          )}
+        </select>
+      </div>
     </div>
   );
 
@@ -314,19 +379,19 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       </div>
 
       {/* Dynamic Modifiers Table */}
-      <section className="bg-card/30 border border-border p-6 cyber-border overflow-x-auto">
-        <h3 className="text-sm font-bold text-primary font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
-          <Zap className="w-4 h-4" /> 动态修正预览_DYNAMIC_MODIFIERS
+      <section className="bg-card/30 border border-border p-8 cyber-border overflow-x-auto">
+        <h3 className="text-lg font-bold text-primary font-mono mb-8 flex items-center gap-3 uppercase tracking-widest">
+          <Zap className="w-5 h-5" /> 动态修正预览_DYNAMIC_MODIFIERS
         </h3>
-        <table className="w-full text-left border-collapse min-w-[800px]">
+        <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead>
-            <tr className="border-b border-border/50 text-[10px] text-muted font-mono uppercase tracking-widest">
-              <th className="p-3 font-normal w-1/6">特质项目</th>
-              <th className="p-3 font-normal w-1/6">基础数值</th>
-              <th className="p-3 font-normal w-1/6">外在特质</th>
-              <th className="p-3 font-normal w-1/6">天赋因素</th>
-              <th className="p-3 font-normal w-1/6">监管者辅助特质</th>
-              <th className="p-3 font-normal w-1/6 text-accent">影响后的数值</th>
+            <tr className="border-b border-border/50 text-xs text-muted font-mono uppercase tracking-widest">
+              <th className="p-4 font-normal w-[15%]">特质项目</th>
+              <th className="p-4 font-normal w-[10%]">基础数值</th>
+              <th className="p-4 font-normal w-[20%]">外在特质</th>
+              <th className="p-4 font-normal w-[20%]">天赋因素</th>
+              <th className="p-4 font-normal w-[20%]">监管者辅助特质</th>
+              <th className="p-4 font-normal w-[15%] text-accent">影响后的数值</th>
             </tr>
           </thead>
           <tbody>
@@ -356,75 +421,27 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
 
               return (
                 <tr key={idx} className={`border-b border-border/30 last:border-0 transition-colors ${isBaseDifferent ? 'bg-primary/5' : 'hover:bg-bg/50'}`}>
-                  <td className="p-3 align-top">
+                  <td className="p-4 align-top">
                     <div className="flex flex-col">
-                      <span className="text-xs font-bold text-text uppercase tracking-widest">{item.label}</span>
+                      <span className="text-sm font-bold text-text uppercase tracking-widest">{item.label}</span>
                       {isBaseDifferent && baseItem && (
-                        <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
+                        <span className="text-[10px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
                       )}
-                      
-                      {/* Quick Add Tag Dropdown */}
-                      <div className="mt-2">
-                        <select 
-                          onChange={async (e) => {
-                            const tagName = e.target.value;
-                            if (!tagName) return;
-                            const tag = availableTags.find(t => t.name === tagName);
-                            if (!tag) return;
-                            
-                            try {
-                              await addDoc(collection(db, 'trait_factors'), {
-                                characterId,
-                                category,
-                                name: tag.name,
-                                effect: `影响 ${item.label}`,
-                                source: tag.name,
-                                sourceType: tag.type,
-                                type: 'neutral',
-                                targetStat: item.label,
-                                modifier: '',
-                                updatedAt: serverTimestamp()
-                              });
-                              e.target.value = '';
-                            } catch (err) {
-                              console.error("Error quick-adding factor:", err);
-                            }
-                          }}
-                          className="text-[9px] bg-bg border border-border px-1 py-0.5 font-mono text-muted hover:text-accent hover:border-accent outline-none transition-colors w-full max-w-[120px]"
-                        >
-                          <option value="">+ 快速关联标签</option>
-                          <optgroup label="常用标签">
-                            {availableTags.filter(t => t.type === 'other' && DEFAULT_TAG_CONFIG.some(dt => dt.name === t.name)).map(t => (
-                              <option key={`qa-${t.name}`} value={t.name}>{t.name}</option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="外在特质">
-                            {availableTags.filter(t => t.type === 'external_trait').map(t => (
-                              <option key={`qa-${t.name}`} value={t.name}>{t.name}</option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="天赋系统">
-                            {availableTags.filter(t => t.type === 'talent').map(t => (
-                              <option key={`qa-${t.name}`} value={t.name}>{t.name}</option>
-                            ))}
-                          </optgroup>
-                        </select>
-                      </div>
                     </div>
                   </td>
-                  <td className="p-3 align-top">
-                    <span className={`text-xs font-mono ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>{item.value}</span>
+                  <td className="p-4 align-top">
+                    <span className={`text-sm font-mono ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>{item.value}</span>
                   </td>
-                  <td className="p-3 align-top border-l border-border/20">{renderFactorCell(externalTraits)}</td>
-                  <td className="p-3 align-top border-l border-border/20">{renderFactorCell(talentFactors)}</td>
-                  <td className="p-3 align-top border-l border-border/20">{renderFactorCell(auxiliaryTraits)}</td>
-                  <td className="p-3 align-top border-l border-border/20 bg-accent/5">
-                    <div className="flex flex-col gap-1">
-                      <span className={`text-sm font-bold font-mono ${hasChange ? 'text-accent' : 'text-text'}`}>
+                  <td className="p-4 align-top border-l border-border/20">{renderFactorCell(externalTraits, item.label, 'external_trait')}</td>
+                  <td className="p-4 align-top border-l border-border/20">{renderFactorCell(talentFactors, item.label, 'talent')}</td>
+                  <td className="p-4 align-top border-l border-border/20">{renderFactorCell(auxiliaryTraits, item.label, 'auxiliary_trait')}</td>
+                  <td className="p-4 align-top border-l border-border/20 bg-accent/5">
+                    <div className="flex flex-col gap-2">
+                      <span className={`text-lg font-bold font-mono ${hasChange ? 'text-accent' : 'text-text'}`}>
                         {modifiedValue}
                       </span>
                       {hasChange && (
-                        <span className="text-[10px] text-accent/70 font-mono">
+                        <span className="text-xs text-accent/70 font-mono">
                           ({item.value} → {modifiedValue})
                         </span>
                       )}
@@ -493,8 +510,8 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                 className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors appearance-none"
               >
                 <option value="">-- 选择特质/天赋标签 --</option>
-                <optgroup label="常用标签 COMMON_TAGS">
-                  {availableTags.filter(t => t.type === 'other' && DEFAULT_TAG_CONFIG.some(dt => dt.name === t.name)).map(t => (
+                <optgroup label="统一标签 UNIFIED_TAGS">
+                  {availableTags.filter(t => t.type === 'other').map(t => (
                     <option key={t.name} value={t.name}>{t.name}</option>
                   ))}
                 </optgroup>
@@ -573,86 +590,6 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             </button>
           </div>
         </form>
-      </section>
-
-      {/* Factors Table */}
-      <section className="bg-card/30 border border-border overflow-hidden cyber-border">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left font-mono text-sm">
-            <thead>
-              <tr className="bg-bg/80 border-b border-border">
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">因素名称_NAME</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">目标属性_TARGET</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">修正值_MOD</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">影响效果_EFFECT</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">来源类型_TYPE</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">来源_SOURCE</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest">类型_TYPE</th>
-                <th className="px-6 py-4 text-[10px] text-muted uppercase tracking-widest w-20">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted">
-                    正在扫描数据模块... SCANNING_DATA_MODULES
-                  </td>
-                </tr>
-              ) : factors.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted">
-                    <div className="flex flex-col items-center gap-2">
-                      <Info className="w-8 h-8 opacity-20" />
-                      <p className="uppercase tracking-widest text-xs">暂无影响因素记录_NO_FACTORS_FOUND</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                factors.map((factor) => (
-                  <tr key={factor.id} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-6 py-4 font-bold text-text">{factor.name}</td>
-                    <td className="px-6 py-4 text-accent text-xs">{factor.targetStat || '自动匹配'}</td>
-                    <td className="px-6 py-4 font-mono text-xs">{factor.modifier || '-'}</td>
-                    <td className="px-6 py-4 text-text/80">{factor.effect}</td>
-                    <td className="px-6 py-4 text-muted text-xs">
-                      {factor.sourceType === 'external_trait' ? '外在特质' :
-                       factor.sourceType === 'talent' ? '天赋因素' :
-                       factor.sourceType === 'auxiliary_trait' ? '监管者辅助特质' : '其他'}
-                    </td>
-                    <td className="px-6 py-4 text-muted">{factor.source}</td>
-                    <td className="px-6 py-4">
-                      {factor.type === 'positive' && (
-                        <span className="flex items-center gap-1 text-emerald-500 text-xs">
-                          <CheckCircle2 className="w-3 h-3" /> 正面
-                        </span>
-                      )}
-                      {factor.type === 'negative' && (
-                        <span className="flex items-center gap-1 text-primary text-xs">
-                          <AlertCircle className="w-3 h-3" /> 负面
-                        </span>
-                      )}
-                      {factor.type === 'neutral' && (
-                        <span className="flex items-center gap-1 text-muted text-xs">
-                          <Info className="w-3 h-3" /> 中性
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {!(factor as any).isGlobalTalent && (
-                        <button 
-                          onClick={() => handleDelete(factor.id)}
-                          className="text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
       </section>
     </div>
   );

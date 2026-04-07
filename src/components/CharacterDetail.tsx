@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Character, COLORS } from '../constants';
-import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Character, COLORS, Tag } from '../constants';
+import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Tag as TagIcon } from 'lucide-react';
 import { CharacterTraitCategory } from '../constants';
 
 type DetailTab = 'traits' | 'external' | 'mechanics';
@@ -33,9 +35,19 @@ export const CharacterDetail = ({
 
   // Local state for editing
   const [editTraits, setEditTraits] = useState<CharacterTraitCategory[]>([]);
-  const [editSkills, setEditSkills] = useState<{ name: string; description: string; icon?: string }[]>([]);
+  const [editSkills, setEditSkills] = useState<{ name: string; description: string; icon?: string; tags?: string[] }[]>([]);
+  const [editPresence, setEditPresence] = useState<{ tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[]>([]);
   const [editMechanics, setEditMechanics] = useState<{ title: string; content: string; icon?: string }[]>([]);
   const [editLinkedMechanics, setEditLinkedMechanics] = useState<{ characterId: string; mechanicIndex: number }[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
+      const tags = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tag));
+      setAvailableTags(tags);
+    });
+    return () => unsub();
+  }, []);
 
   const canEdit = !!onEdit;
 
@@ -43,8 +55,16 @@ export const CharacterDetail = ({
     if (section === 'traits') setEditTraits(JSON.parse(JSON.stringify(character.traits || [])));
     if (section === 'external') setEditSkills(JSON.parse(JSON.stringify(character.skills || [])));
     if (section === 'mechanics') {
-      setEditMechanics(JSON.parse(JSON.stringify(character.mechanics || [])));
-      setEditLinkedMechanics(JSON.parse(JSON.stringify(character.linkedMechanics || [])));
+      if (character.role === 'Hunter') {
+        setEditPresence(JSON.parse(JSON.stringify(character.presence || [
+          { tier: 0, name: '0阶', description: '', cooldown: '' },
+          { tier: 1, name: '1阶', description: '', cooldown: '' },
+          { tier: 2, name: '2阶', description: '', cooldown: '' }
+        ])));
+      } else {
+        setEditMechanics(JSON.parse(JSON.stringify(character.mechanics || [])));
+        setEditLinkedMechanics(JSON.parse(JSON.stringify(character.linkedMechanics || [])));
+      }
     }
     setEditingSection(section);
   };
@@ -57,8 +77,12 @@ export const CharacterDetail = ({
       if (editingSection === 'traits') data.traits = editTraits;
       if (editingSection === 'external') data.skills = editSkills;
       if (editingSection === 'mechanics') {
-        data.mechanics = editMechanics;
-        data.linkedMechanics = editLinkedMechanics;
+        if (character.role === 'Hunter') {
+          data.presence = editPresence;
+        } else {
+          data.mechanics = editMechanics;
+          data.linkedMechanics = editLinkedMechanics;
+        }
       }
       
       await onUpdate(character.id, data);
@@ -78,7 +102,7 @@ export const CharacterDetail = ({
   const tabs = [
     { id: 'traits', label: '特质详情', icon: <Activity className="w-4 h-4" /> },
     { id: 'external', label: '外在特质', icon: <Target className="w-4 h-4" /> },
-    { id: 'mechanics', label: '专属机制', icon: <Cpu className="w-4 h-4" /> },
+    { id: 'mechanics', label: character.role === 'Hunter' ? '存在感' : '专属机制', icon: <Cpu className="w-4 h-4" /> },
   ];
 
   return (
@@ -451,7 +475,7 @@ export const CharacterDetail = ({
                             className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
                           />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 space-y-3">
                           <input 
                             type="text"
                             value={skill.name}
@@ -474,6 +498,37 @@ export const CharacterDetail = ({
                             placeholder="特质描述..."
                             className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
                           />
+                          
+                          {/* Tag Selection */}
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
+                            {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === character.role).map(tag => {
+                              const isSelected = skill.tags?.includes(tag.name);
+                              return (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const newSkills = [...editSkills];
+                                    const currentTags = newSkills[idx].tags || [];
+                                    if (isSelected) {
+                                      newSkills[idx].tags = currentTags.filter(t => t !== tag.name);
+                                    } else {
+                                      newSkills[idx].tags = [...currentTags, tag.name];
+                                    }
+                                    setEditSkills(newSkills);
+                                  }}
+                                  className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                                    isSelected 
+                                      ? 'bg-accent/20 border-accent text-accent' 
+                                      : 'bg-bg border-border text-muted hover:border-accent/50'
+                                  }`}
+                                >
+                                  <TagIcon className="w-2.5 h-2.5" />
+                                  {tag.name}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -502,6 +557,23 @@ export const CharacterDetail = ({
                         <p className="text-muted text-sm mt-2 leading-relaxed font-mono">
                           {skill.description}
                         </p>
+                        {skill.tags && skill.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {skill.tags.map((tagName, tIdx) => {
+                              const tag = availableTags.find(t => t.name === tagName);
+                              return (
+                                <span 
+                                  key={tIdx}
+                                  className="px-2 py-0.5 text-[10px] font-mono border border-accent/30 text-accent bg-accent/5 flex items-center gap-1"
+                                  style={tag?.color ? { borderColor: `${tag.color}40`, color: tag.color, backgroundColor: `${tag.color}10` } : {}}
+                                >
+                                  <TagIcon className="w-2.5 h-2.5" />
+                                  {tagName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -514,7 +586,7 @@ export const CharacterDetail = ({
             <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
-                  <Cpu className="w-6 h-6" /> 专属机制解析
+                  <Cpu className="w-6 h-6" /> {character.role === 'Hunter' ? '存在感阶级解析' : '专属机制解析'}
                 </h2>
                 {canEdit && (
                   <div className="flex gap-2">
@@ -548,94 +620,175 @@ export const CharacterDetail = ({
 
               {editingSection === 'mechanics' ? (
                 <div className="space-y-8">
-                  <div className="space-y-6">
-                    <h3 className="text-sm font-bold text-text font-mono uppercase tracking-widest border-l-2 border-primary pl-3">
-                      核心机制_CORE_MECHANICS
-                    </h3>
-                    {editMechanics.map((mech, idx) => (
-                      <div key={idx} className="p-4 bg-bg/20 border border-border relative group">
-                        <button 
-                          onClick={() => setEditMechanics(editMechanics.filter((_, i) => i !== idx))}
-                          className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                        <div className="flex gap-4">
-                          <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
-                            {mech.icon ? (
-                              <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                            ) : (
-                              <Activity className="w-6 h-6" />
-                            )}
+                  {character.role === 'Hunter' ? (
+                    <div className="space-y-6">
+                      {editPresence.map((p, idx) => (
+                        <div key={idx} className="p-4 bg-bg/20 border border-border space-y-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono">
+                              {p.tier}阶
+                            </div>
                             <input 
                               type="text"
-                              value={mech.icon || ''}
+                              value={p.name}
                               onChange={(e) => {
-                                const newMechs = [...editMechanics];
-                                newMechs[idx].icon = e.target.value;
-                                setEditMechanics(newMechs);
+                                const newP = [...editPresence];
+                                newP[idx].name = e.target.value;
+                                setEditPresence(newP);
                               }}
-                              placeholder="图标URL"
-                              className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                              placeholder="阶级名称"
+                              className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
                             />
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                              <input 
+                                type="text"
+                                value={p.cooldown || ''}
+                                onChange={(e) => {
+                                  const newP = [...editPresence];
+                                  newP[idx].cooldown = e.target.value;
+                                  setEditPresence(newP);
+                                }}
+                                placeholder="如: 15s"
+                                className="w-20 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                              />
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <input 
-                              type="text"
-                              value={mech.title}
-                              onChange={(e) => {
-                                const newMechs = [...editMechanics];
-                                newMechs[idx].title = e.target.value;
-                                setEditMechanics(newMechs);
-                              }}
-                              placeholder="机制标题"
-                              className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
-                            />
-                            <textarea 
-                              rows={4}
-                              value={mech.content}
-                              onChange={(e) => {
-                                const newMechs = [...editMechanics];
-                                newMechs[idx].content = e.target.value;
-                                setEditMechanics(newMechs);
-                              }}
-                              placeholder="机制详细解析..."
-                              className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
-                            />
+                          <textarea 
+                            rows={3}
+                            value={p.description}
+                            onChange={(e) => {
+                              const newP = [...editPresence];
+                              newP[idx].description = e.target.value;
+                              setEditPresence(newP);
+                            }}
+                            placeholder="阶级能力描述..."
+                            className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                          />
+                          
+                          {/* Tag Selection */}
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
+                            {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === 'Hunter').map(tag => {
+                              const isSelected = p.tags?.includes(tag.name);
+                              return (
+                                <button
+                                  key={tag.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const newP = [...editPresence];
+                                    const currentTags = newP[idx].tags || [];
+                                    if (isSelected) {
+                                      newP[idx].tags = currentTags.filter(t => t !== tag.name);
+                                    } else {
+                                      newP[idx].tags = [...currentTags, tag.name];
+                                    }
+                                    setEditPresence(newP);
+                                  }}
+                                  className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                                    isSelected 
+                                      ? 'bg-accent/20 border-accent text-accent' 
+                                      : 'bg-bg border-border text-muted hover:border-accent/50'
+                                  }`}
+                                >
+                                  <TagIcon className="w-2.5 h-2.5" />
+                                  {tag.name}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
-                      </div>
-                    ))}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <button 
-                        onClick={() => setEditMechanics([...editMechanics, { title: '新机制', content: '' }])}
-                        className="py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
-                      >
-                        <Plus className="w-4 h-4" /> 添加新机制_ADD_MECHANIC
-                      </button>
-                      {character.skills.length > 0 && (
-                        <div className="relative group/import">
-                          <button 
-                            className="w-full py-2 border border-dashed border-primary/50 text-primary/70 hover:text-primary hover:border-primary transition-all font-mono text-xs flex items-center justify-center gap-2"
-                          >
-                            <Target className="w-4 h-4" /> 从外在特质导入_IMPORT
-                          </button>
-                          <div className="absolute bottom-full left-0 w-full bg-card border border-border shadow-2xl opacity-0 invisible group-hover/import:opacity-100 group-hover/import:visible transition-all z-50 mb-2 max-h-48 overflow-y-auto">
-                            {character.skills.map((skill, sIdx) => (
-                              <button
-                                key={sIdx}
-                                onClick={() => setEditMechanics([...editMechanics, { title: skill.name, content: skill.description, icon: skill.icon }])}
-                                className="w-full p-2 text-left text-[10px] font-mono hover:bg-primary/10 border-b border-border/50 last:border-0 flex items-center gap-2"
-                              >
-                                {skill.icon && <img src={skill.icon} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
-                                <span className="truncate">{skill.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <h3 className="text-sm font-bold text-text font-mono uppercase tracking-widest border-l-2 border-primary pl-3">
+                        核心机制_CORE_MECHANICS
+                      </h3>
+                      {editMechanics.map((mech, idx) => (
+                        <div key={idx} className="p-4 bg-bg/20 border border-border relative group">
+                          <button 
+                            onClick={() => setEditMechanics(editMechanics.filter((_, i) => i !== idx))}
+                            className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                          <div className="flex gap-4">
+                            <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
+                              {mech.icon ? (
+                                <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <Activity className="w-6 h-6" />
+                              )}
+                              <input 
+                                type="text"
+                                value={mech.icon || ''}
+                                onChange={(e) => {
+                                  const newMechs = [...editMechanics];
+                                  newMechs[idx].icon = e.target.value;
+                                  setEditMechanics(newMechs);
+                                }}
+                                placeholder="图标URL"
+                                className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <input 
+                                type="text"
+                                value={mech.title}
+                                onChange={(e) => {
+                                  const newMechs = [...editMechanics];
+                                  newMechs[idx].title = e.target.value;
+                                  setEditMechanics(newMechs);
+                                }}
+                                placeholder="机制标题"
+                                className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
+                              />
+                              <textarea 
+                                rows={4}
+                                value={mech.content}
+                                onChange={(e) => {
+                                  const newMechs = [...editMechanics];
+                                  newMechs[idx].content = e.target.value;
+                                  setEditMechanics(newMechs);
+                                }}
+                                placeholder="机制详细解析..."
+                                className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button 
+                          onClick={() => setEditMechanics([...editMechanics, { title: '新机制', content: '' }])}
+                          className="py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" /> 添加新机制_ADD_MECHANIC
+                        </button>
+                        {character.skills.length > 0 && (
+                          <div className="relative group/import">
+                            <button 
+                              className="w-full py-2 border border-dashed border-primary/50 text-primary/70 hover:text-primary hover:border-primary transition-all font-mono text-xs flex items-center justify-center gap-2"
+                            >
+                              <Target className="w-4 h-4" /> 从外在特质导入_IMPORT
+                            </button>
+                            <div className="absolute bottom-full left-0 w-full bg-card border border-border shadow-2xl opacity-0 invisible group-hover/import:opacity-100 group-hover/import:visible transition-all z-50 mb-2 max-h-48 overflow-y-auto">
+                              {character.skills.map((skill, sIdx) => (
+                                <button
+                                  key={sIdx}
+                                  onClick={() => setEditMechanics([...editMechanics, { title: skill.name, content: skill.description, icon: skill.icon }])}
+                                  className="w-full p-2 text-left text-[10px] font-mono hover:bg-primary/10 border-b border-border/50 last:border-0 flex items-center gap-2"
+                                >
+                                  {skill.icon && <img src={skill.icon} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
+                                  <span className="truncate">{skill.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-6 pt-6 border-t border-border/50">
                     <h3 className="text-sm font-bold text-accent font-mono uppercase tracking-widest border-l-2 border-accent pl-3">
@@ -698,34 +851,85 @@ export const CharacterDetail = ({
                 </div>
               ) : (
                 <div className="space-y-12">
-                  <div className="space-y-6">
-                    {character.mechanics && character.mechanics.length > 0 ? (
-                      character.mechanics.map((mech, index) => (
-                        <div key={index} className="flex gap-6 p-6 bg-bg/20 border border-border group hover:border-primary/50 transition-all duration-300">
-                          <div className="w-20 h-20 flex-shrink-0 bg-transparent border border-border p-2 group-hover:scale-110 transition-transform flex items-center justify-center overflow-hidden">
-                            {mech.icon ? (
-                              <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                            ) : (
-                              <Cpu className="w-8 h-8 text-primary/40" />
-                            )}
+                  {character.role === 'Hunter' ? (
+                    <div className="space-y-6">
+                      {character.presence && character.presence.length > 0 ? (
+                        character.presence.map((p, index) => (
+                          <div key={index} className="flex gap-6 p-6 bg-bg/20 border border-border group hover:border-primary/50 transition-all duration-300">
+                            <div className="w-20 h-20 flex-shrink-0 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono text-2xl group-hover:scale-110 transition-transform">
+                              {p.tier}阶
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="text-lg font-bold text-primary font-mono flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-primary rotate-45" /> {p.name}
+                                </h4>
+                                {p.cooldown && (
+                                  <span className="text-xs font-mono text-accent bg-accent/10 px-2 py-1 border border-accent/20">
+                                    CD: {p.cooldown}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted font-mono leading-relaxed whitespace-pre-wrap">
+                                {p.description}
+                              </p>
+                              {p.tags && p.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                  {p.tags.map((tagName, tIdx) => {
+                                    const tag = availableTags.find(t => t.name === tagName);
+                                    return (
+                                      <span 
+                                        key={tIdx}
+                                        className="px-2 py-0.5 text-[10px] font-mono border border-accent/30 text-accent bg-accent/5 flex items-center gap-1"
+                                        style={tag?.color ? { borderColor: `${tag.color}40`, color: tag.color, backgroundColor: `${tag.color}10` } : {}}
+                                      >
+                                        <TagIcon className="w-2.5 h-2.5" />
+                                        {tagName}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <h4 className="text-lg font-bold text-primary font-mono mb-3 flex items-center gap-2">
-                              <span className="w-2 h-2 bg-primary rotate-45" /> {mech.title}
-                            </h4>
-                            <p className="text-sm text-muted font-mono leading-relaxed whitespace-pre-wrap">
-                              {mech.content}
-                            </p>
-                          </div>
+                        ))
+                      ) : (
+                        <div className="p-12 bg-bg/20 border border-border text-center text-muted font-mono text-xs flex flex-col items-center gap-4">
+                          <Cpu className="w-12 h-12 opacity-10" />
+                          <p className="uppercase tracking-widest">该角色尚未录入存在感数据_NO_PRESENCE_DATA</p>
                         </div>
-                      ))
-                    ) : (
-                      <div className="p-12 bg-bg/20 border border-border text-center text-muted font-mono text-xs flex flex-col items-center gap-4">
-                        <Cpu className="w-12 h-12 opacity-10" />
-                        <p className="uppercase tracking-widest">该角色尚未录入详细机制_NO_MECHANICS_DATA</p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {character.mechanics && character.mechanics.length > 0 ? (
+                        character.mechanics.map((mech, index) => (
+                          <div key={index} className="flex gap-6 p-6 bg-bg/20 border border-border group hover:border-primary/50 transition-all duration-300">
+                            <div className="w-20 h-20 flex-shrink-0 bg-transparent border border-border p-2 group-hover:scale-110 transition-transform flex items-center justify-center overflow-hidden">
+                              {mech.icon ? (
+                                <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <Cpu className="w-8 h-8 text-primary/40" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-lg font-bold text-primary font-mono mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-primary rotate-45" /> {mech.title}
+                              </h4>
+                              <p className="text-sm text-muted font-mono leading-relaxed whitespace-pre-wrap">
+                                {mech.content}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-12 bg-bg/20 border border-border text-center text-muted font-mono text-xs flex flex-col items-center gap-4">
+                          <Cpu className="w-12 h-12 opacity-10" />
+                          <p className="uppercase tracking-widest">该角色尚未录入详细机制_NO_MECHANICS_DATA</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {character.linkedMechanics && character.linkedMechanics.length > 0 && (
                     <div className="space-y-6">

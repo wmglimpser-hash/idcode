@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from '../constants';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon } from 'lucide-react';
+import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag } from '../constants';
 
 interface Props {
   onSave: (data: any) => void;
@@ -27,11 +29,22 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     type: '',
     imageUrl: '',
     description: '',
-    skills: [] as { name: string; description: string }[],
+    skills: [] as { name: string; description: string; tags?: string[] }[],
+    presence: [] as { tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[],
     traits: [] as CharacterTraitCategory[],
     mechanics: [] as { title: string; content: string; icon?: string }[],
     linkedMechanics: [] as { characterId: string; mechanicIndex: number }[],
   });
+
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
+      const tags = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tag));
+      setAvailableTags(tags);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -44,6 +57,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
         imageUrl: initialData.imageUrl || '',
         description: initialData.description || '',
         skills: initialData.skills || [],
+        presence: initialData.presence || [],
         traits: initialData.traits || [],
         mechanics: initialData.mechanics || [],
         linkedMechanics: initialData.linkedMechanics || [],
@@ -53,6 +67,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
       setFormData(prev => ({
         ...prev,
         order: prev.role === 'Survivor' ? (nextSurvivorOrder || 0) : (nextHunterOrder || 0),
+        presence: prev.role === 'Hunter' ? [
+          { tier: 0, name: '0阶', description: '', cooldown: '', tags: [] },
+          { tier: 1, name: '1阶', description: '', cooldown: '', tags: [] },
+          { tier: 2, name: '2阶', description: '', cooldown: '', tags: [] }
+        ] : [],
         traits: prev.role === 'Survivor' 
           ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
           : JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE))
@@ -68,11 +87,17 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
         const newTraits = prev.role === 'Survivor'
           ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
           : JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE));
+        const newPresence = prev.role === 'Hunter' ? [
+          { tier: 0, name: '0阶', description: '', cooldown: '', tags: [] },
+          { tier: 1, name: '1阶', description: '', cooldown: '', tags: [] },
+          { tier: 2, name: '2阶', description: '', cooldown: '', tags: [] }
+        ] : [];
         
         return {
           ...prev,
           order: newOrder,
-          traits: newTraits
+          traits: newTraits,
+          presence: newPresence
         };
       });
     }
@@ -81,7 +106,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
   const addSkill = () => {
     setFormData(prev => ({
       ...prev,
-      skills: [...prev.skills, { name: '', description: '' }]
+      skills: [...prev.skills, { name: '', description: '', tags: [] }]
     }));
   };
 
@@ -179,6 +204,26 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     }));
   };
 
+  const updatePresence = (index: number, field: 'name' | 'description' | 'cooldown', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      presence: prev.presence.map((p, i) => i === index ? { ...p, [field]: value } : p)
+    }));
+  };
+
+  const updatePresenceTags = (index: number, tagName: string) => {
+    setFormData(prev => {
+      const newPresence = [...prev.presence];
+      const currentTags = newPresence[index].tags || [];
+      if (currentTags.includes(tagName)) {
+        newPresence[index].tags = currentTags.filter(t => t !== tagName);
+      } else {
+        newPresence[index].tags = [...currentTags, tagName];
+      }
+      return { ...prev, presence: newPresence };
+    });
+  };
+
   const addLinkedMechanic = () => {
     setFormData(prev => ({
       ...prev,
@@ -229,15 +274,80 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     const descMatch = text.match(/(?:描述|背景|简介)[:：]\s*([\s\S]*?)(?=\n\n|\n[^\n]*[:：]|$)/i);
     if (descMatch) data.description = descMatch[1].trim();
 
+    // Image URL
+    const imageMatch = text.match(/(?:头像|图片|立绘|IMAGE)[:：]\s*(.*)/i);
+    if (imageMatch) data.imageUrl = imageMatch[1].trim();
+
     // Skills (External Traits)
     const skillsSection = text.match(/(?:外在特质|技能)[:：]\s*([\s\S]*?)(?=\n\n\n|\n[^\n]*[:：]|$)/i);
     if (skillsSection) {
       const skillsText = skillsSection[1];
       const skillBlocks = skillsText.split(/\n(?=[^\s])/);
       skillBlocks.forEach(block => {
+        // Format: [iconUrl] Name: Description #tag1 #tag2
+        let icon = '';
+        const iconMatch = block.match(/^\[(.*?)\]/);
+        if (iconMatch) {
+          icon = iconMatch[1].trim();
+          block = block.replace(/^\[.*?\]/, '').trim();
+        }
+
+        const tags: string[] = [];
+        const tagMatches = block.match(/#(\S+)/g);
+        if (tagMatches) {
+          tagMatches.forEach(t => tags.push(t.substring(1)));
+          block = block.replace(/#\S+/g, '').trim();
+        }
+
         const [name, ...descParts] = block.split(/[:：]/);
         if (name && descParts.length > 0) {
-          data.skills.push({ name: name.trim(), description: descParts.join(':').trim() });
+          data.skills.push({ 
+            name: name.trim(), 
+            description: descParts.join(':').trim(),
+            icon,
+            tags
+          });
+        }
+      });
+    }
+
+    // Presence (Hunter only)
+    const presenceSection = text.match(/(?:存在感|技能阶级)[:：]\s*([\s\S]*?)(?=\n\n\n|\n[^\n]*[:：]|$)/i);
+    if (presenceSection) {
+      const presenceText = presenceSection[1];
+      const lines = presenceText.trim().split('\n');
+      data.presence = [];
+      lines.forEach(line => {
+        // Format: 0阶: 技能名: 描述 | 冷却: 10s #标签
+        const tierMatch = line.match(/^(\d)阶/);
+        if (tierMatch) {
+          const tier = parseInt(tierMatch[1]);
+          let content = line.replace(/^\d阶[:：]/, '').trim();
+          
+          const tags: string[] = [];
+          const tagMatches = content.match(/#(\S+)/g);
+          if (tagMatches) {
+            tagMatches.forEach(t => tags.push(t.substring(1)));
+            content = content.replace(/#\S+/g, '').trim();
+          }
+
+          let cooldown = '';
+          const cdMatch = content.match(/\|?\s*(?:冷却|CD)[:：]\s*([^#|]+)/i);
+          if (cdMatch) {
+            cooldown = cdMatch[1].trim();
+            content = content.replace(/\|?\s*(?:冷却|CD)[:：]\s*[^#|]+/i, '').trim();
+          }
+
+          const [name, ...descParts] = content.split(/[:：]/);
+          if (name && descParts.length > 0) {
+            data.presence.push({
+              tier,
+              name: name.trim(),
+              description: descParts.join(':').trim(),
+              cooldown,
+              tags
+            });
+          }
         }
       });
     }
@@ -373,20 +483,38 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
             </div>
             
             <div className="mb-4 p-3 bg-card/30 border border-border/50 text-[11px] font-mono text-muted">
-              <p className="mb-1 text-accent">JSON 示例：</p>
-              <code className="block mb-2">
-                [{"{ \"name\": \"艾玛\", \"title\": \"园丁\", \"role\": \"Survivor\" }"}]
-              </code>
-              <p className="mb-1 text-accent">智能文本示例：</p>
-              <code>
-                姓名：艾玛·伍兹<br/>
-                称号：园丁<br/>
-                阵营：求生者<br/>
-                ---<br/>
-                姓名：里奥·贝克<br/>
-                称号：厂长<br/>
-                阵营：监管者
-              </code>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="mb-1 text-accent">JSON 格式示例：</p>
+                  <pre className="bg-bg/50 p-2 overflow-x-auto text-[9px]">
+{`{
+  "name": "艾玛",
+  "role": "Survivor",
+  "imageUrl": "http://...",
+  "skills": [
+    {
+      "name": "巧手成蹄",
+      "description": "...",
+      "icon": "http://...",
+      "tags": ["辅助", "修机"]
+    }
+  ]
+}`}
+                  </pre>
+                </div>
+                <div>
+                  <p className="mb-1 text-accent">智能文本示例：</p>
+                  <pre className="bg-bg/50 p-2 overflow-x-auto text-[9px]">
+{`姓名：艾玛·伍兹
+立绘：http://...
+阵营：求生者
+外在特质：
+[http://...] 巧手成蹄：描述内容 #辅助 #修机
+存在感：
+0阶：技能名：描述 | 冷却：10s #标签`}
+                  </pre>
+                </div>
+              </div>
             </div>
 
             <textarea 
@@ -625,69 +753,164 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                     value={skill.description}
                     onChange={(e) => updateSkill(index, 'description', e.target.value)}
                     placeholder="特质描述..."
-                    className="w-full bg-transparent text-xs text-muted outline-none resize-none"
+                    className="w-full bg-transparent text-xs text-muted outline-none resize-none mb-3"
                   />
+                  
+                  {/* Tag Selection */}
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
+                    {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === formData.role).map(tag => {
+                      const isSelected = skill.tags?.includes(tag.name);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            const newSkills = [...formData.skills];
+                            const currentTags = newSkills[index].tags || [];
+                            if (isSelected) {
+                              newSkills[index].tags = currentTags.filter(t => t !== tag.name);
+                            } else {
+                              newSkills[index].tags = [...currentTags, tag.name];
+                            }
+                            setFormData({ ...formData, skills: newSkills });
+                          }}
+                          className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                            isSelected 
+                              ? 'bg-accent/20 border-accent text-accent' 
+                              : 'bg-bg border-border text-muted hover:border-accent/50'
+                          }`}
+                        >
+                          <TagIcon className="w-2.5 h-2.5" />
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Mechanics */}
+          {/* Mechanics or Presence */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">进阶机制 (MECHANICS)</h3>
-              <button 
-                type="button"
-                onClick={addMechanic}
-                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
-              >
-                <Plus className="w-3 h-3" /> 添加机制
-              </button>
+              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">
+                {formData.role === 'Hunter' ? '存在感阶级 (PRESENCE)' : '进阶机制 (MECHANICS)'}
+              </h3>
+              {formData.role !== 'Hunter' && (
+                <button 
+                  type="button"
+                  onClick={addMechanic}
+                  className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                >
+                  <Plus className="w-3 h-3" /> 添加机制
+                </button>
+              )}
             </div>
             <div className="space-y-4">
-              {formData.mechanics.map((mech, index) => (
-                <div key={index} className="p-4 bg-bg/50 border border-border relative group">
-                  <button 
-                    type="button"
-                    onClick={() => removeMechanic(index)}
-                    className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                  <div className="flex gap-4 mb-2">
-                    <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
-                      {mech.icon ? (
-                        <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                      ) : (
-                        <ImageIcon className="w-6 h-6" />
-                      )}
-                      <input 
-                        type="text"
-                        value={mech.icon || ''}
-                        onChange={(e) => updateMechanic(index, 'icon', e.target.value)}
-                        placeholder="图标URL"
-                        className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input 
-                        type="text"
-                        value={mech.title}
-                        onChange={(e) => updateMechanic(index, 'title', e.target.value)}
-                        placeholder="机制标题（如：博弈技巧）"
-                        className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
-                      />
+              {formData.role === 'Hunter' ? (
+                <div className="space-y-4">
+                  {formData.presence.map((p, index) => (
+                    <div key={index} className="p-4 bg-bg/50 border border-border space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono">
+                          {p.tier}阶
+                        </div>
+                        <input 
+                          type="text"
+                          value={p.name}
+                          onChange={(e) => updatePresence(index, 'name', e.target.value)}
+                          placeholder="阶级名称"
+                          className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                          <input 
+                            type="text"
+                            value={p.cooldown || ''}
+                            onChange={(e) => updatePresence(index, 'cooldown', e.target.value)}
+                            placeholder="如: 15s"
+                            className="w-20 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                          />
+                        </div>
+                      </div>
                       <textarea 
-                        rows={2}
-                        value={mech.content}
-                        onChange={(e) => updateMechanic(index, 'content', e.target.value)}
-                        placeholder="机制详细解析..."
-                        className="w-full bg-transparent text-xs text-muted outline-none resize-none"
+                        rows={3}
+                        value={p.description}
+                        onChange={(e) => updatePresence(index, 'description', e.target.value)}
+                        placeholder="阶级能力描述..."
+                        className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
                       />
+                      
+                      {/* Tag Selection */}
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
+                        {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === 'Hunter').map(tag => {
+                          const isSelected = p.tags?.includes(tag.name);
+                          return (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              onClick={() => updatePresenceTags(index, tag.name)}
+                              className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                                isSelected 
+                                  ? 'bg-accent/20 border-accent text-accent' 
+                                  : 'bg-bg border-border text-muted hover:border-accent/50'
+                              }`}
+                            >
+                              <TagIcon className="w-2.5 h-2.5" />
+                              {tag.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                formData.mechanics.map((mech, index) => (
+                  <div key={index} className="p-4 bg-bg/50 border border-border relative group">
+                    <button 
+                      type="button"
+                      onClick={() => removeMechanic(index)}
+                      className="absolute top-2 right-2 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <div className="flex gap-4 mb-2">
+                      <div className="w-16 h-16 bg-transparent border border-border flex items-center justify-center text-muted relative group/icon overflow-hidden">
+                        {mech.icon ? (
+                          <img src={mech.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                        ) : (
+                          <ImageIcon className="w-6 h-6" />
+                        )}
+                        <input 
+                          type="text"
+                          value={mech.icon || ''}
+                          onChange={(e) => updateMechanic(index, 'icon', e.target.value)}
+                          placeholder="图标URL"
+                          className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input 
+                          type="text"
+                          value={mech.title}
+                          onChange={(e) => updateMechanic(index, 'title', e.target.value)}
+                          placeholder="机制标题（如：博弈技巧）"
+                          className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
+                        />
+                        <textarea 
+                          rows={2}
+                          value={mech.content}
+                          onChange={(e) => updateMechanic(index, 'content', e.target.value)}
+                          placeholder="机制详细解析..."
+                          className="w-full bg-transparent text-xs text-muted outline-none resize-none"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

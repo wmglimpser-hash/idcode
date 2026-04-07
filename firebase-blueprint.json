@@ -52,6 +52,7 @@
         "description": { "type": "string" },
         "imageUrl": { "type": "string" },
         "skills": { "type": "array" },
+        "presence": { "type": "array" },
         "traits": { "type": "array" },
         "mechanics": { "type": "array" },
         "lastUpdated": {
@@ -105,6 +106,7 @@
         "targetStat": { "type": "string" },
         "modifier": { "type": "string" },
         "effect": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
         "x": { "type": "number", "description": "Optional override for X coordinate" },
         "y": { "type": "number", "description": "Optional override for Y coordinate" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -169,6 +171,20 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "content", "authorId"]
+    },
+    "Tag": {
+      "title": "Unified Tag",
+      "description": "A tag that can be applied to characters, traits, or talents",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "color": { "type": "string" },
+        "affectedRole": { "type": "string", "enum": ["Survivor", "Hunter", "Both"] },
+        "affectedStats": { "type": "array", "items": { "type": "string" } },
+        "authorId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "affectedRole", "authorId"]
     }
   },
   "firestore": {
@@ -219,6 +235,10 @@
     "map_resources": {
       "schema": "MapResource",
       "description": "Independent map resource entries"
+    },
+    "tags": {
+      "schema": "Tag",
+      "description": "Unified tag system"
     }
   }
 }

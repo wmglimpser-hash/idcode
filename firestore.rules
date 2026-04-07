@@ -52,22 +52,26 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        (request.auth.token.email == "wmglimpser@gmail.com" || 
+        ((request.auth.token.keys().hasAll(['email']) && request.auth.token.email.lower() == "wmglimpser@gmail.com") || 
          (userExists() && getUserData().role == 'admin'));
     }
 
     function isContributor() {
       return isAuthenticated() && 
-        (request.auth.token.email == "wmglimpser@gmail.com" || 
+        ((request.auth.token.keys().hasAll(['email']) && request.auth.token.email.lower() == "wmglimpser@gmail.com") || 
          (userExists() && getUserData().role in ['contributor', 'admin']));
     }
 
     function isValidCharacter(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+      return data.name is string && data.name.size() > 0 &&
+             (data.title == null || data.title is string) &&
              data.role in ['Survivor', 'Hunter'] &&
-             (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() < 1000)) &&
-             (data.description == null || (data.description is string && data.description.size() < 5000));
+             (data.imageUrl == null || data.imageUrl is string) &&
+             (data.description == null || data.description is string) &&
+             (data.skills == null || data.skills is list) &&
+             (data.presence == null || data.presence is list) &&
+             (data.traits == null || data.traits is list) &&
+             (data.mechanics == null || data.mechanics is list);
     }
 
     function isValidTraitFactor(data) {
@@ -101,6 +105,14 @@ service cloud.firestore {
              data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
              data.authorId is string && data.authorId.size() > 0 &&
              (data.mapId == null || (data.mapId is string && data.mapId.size() < 100));
+    }
+
+    function isValidTag(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
+             data.affectedRole in ['Survivor', 'Hunter', 'Both'] &&
+             data.authorId is string && data.authorId.size() > 0 &&
+             (data.color == null || (data.color is string && data.color.size() < 20)) &&
+             (data.affectedStats == null || data.affectedStats is list);
     }
 
     // Users Collection
@@ -193,6 +205,14 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isContributor() && isValidMapResource(request.resource.data);
       allow update: if isContributor() && isValidMapResource(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Tags Collection
+    match /tags/{tagId} {
+      allow read: if true;
+      allow create: if isContributor() && isValidTag(request.resource.data);
+      allow update: if isContributor() && isValidTag(request.resource.data);
       allow delete: if isAdmin();
     }
   }
