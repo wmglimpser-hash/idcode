@@ -29,7 +29,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     type: '',
     imageUrl: '',
     description: '',
-    skills: [] as { name: string; description: string; tags?: string[] }[],
+    skills: [] as { name: string; description: string; icon?: string; tags?: string[] }[],
     presence: [] as { tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[],
     traits: [] as CharacterTraitCategory[],
     mechanics: [] as { title: string; content: string; icon?: string }[],
@@ -37,6 +37,8 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
   });
 
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [skillsImportMode, setSkillsImportMode] = useState(false);
+  const [skillsImportText, setSkillsImportText] = useState('');
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
@@ -117,11 +119,57 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     }));
   };
 
-  const updateSkill = (index: number, field: 'name' | 'description', value: string) => {
+  const updateSkill = (index: number, field: 'name' | 'description' | 'icon', value: string) => {
     setFormData(prev => ({
       ...prev,
       skills: prev.skills.map((s, i) => i === index ? { ...s, [field]: value } : s)
     }));
+  };
+
+  const parseSkillsOnly = (text: string) => {
+    const skills: any[] = [];
+    const skillBlocks = text.split(/\n(?=[^\s])/).filter(b => b.trim());
+    
+    skillBlocks.forEach(block => {
+      // Format: [iconUrl] Name: Description #tag1 #tag2
+      let icon = '';
+      const iconMatch = block.match(/^\[(.*?)\]/);
+      if (iconMatch) {
+        icon = iconMatch[1].trim();
+        block = block.replace(/^\[.*?\]/, '').trim();
+      }
+
+      const tags: string[] = [];
+      const tagMatches = block.match(/#(\S+)/g);
+      if (tagMatches) {
+        tagMatches.forEach(t => tags.push(t.substring(1)));
+        block = block.replace(/#\S+/g, '').trim();
+      }
+
+      const [name, ...descParts] = block.split(/[:：]/);
+      if (name && descParts.length > 0) {
+        skills.push({ 
+          name: name.trim(), 
+          description: descParts.join(':').trim(),
+          icon,
+          tags
+        });
+      }
+    });
+    return skills;
+  };
+
+  const handleSkillsSmartImport = () => {
+    if (!skillsImportText.trim()) return;
+    const parsedSkills = parseSkillsOnly(skillsImportText);
+    if (parsedSkills.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        skills: [...prev.skills, ...parsedSkills]
+      }));
+      setSkillsImportText('');
+      setSkillsImportMode(false);
+    }
   };
 
   const addTraitCategory = () => {
@@ -252,6 +300,10 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
       mechanics: []
     };
 
+    // ID field (Numeric)
+    const idMatch = text.match(/(?:角色ID|ID|档案ID)[:：]\s*(\d+)/i);
+    if (idMatch) data.order = parseInt(idMatch[1]);
+
     // Basic fields
     const nameMatch = text.match(/(?:姓名|角色|名字)[:：]\s*(.*)/i);
     if (nameMatch) data.name = nameMatch[1].trim();
@@ -260,9 +312,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     if (titleMatch) data.title = titleMatch[1].trim();
 
     const roleMatch = text.match(/(?:阵营|角色类型)[:：]\s*(求生者|监管者|Survivor|Hunter)/i);
+    let detectedRole = formData.role; // Default to current form role
     if (roleMatch) {
       const roleStr = roleMatch[1].trim();
-      data.role = (roleStr === '监管者' || roleStr.toLowerCase() === 'hunter') ? 'Hunter' : 'Survivor';
+      detectedRole = (roleStr === '监管者' || roleStr.toLowerCase() === 'hunter') ? 'Hunter' : 'Survivor';
+      data.role = detectedRole;
     }
 
     const orderMatch = text.match(/(?:角色ID|排序|ID)[:：]\s*(\d+)/i);
@@ -358,7 +412,8 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
       const traitsText = traitsSection[1];
       const lines = traitsText.trim().split('\n');
       
-      const template = JSON.parse(JSON.stringify(data.role === 'Hunter' ? HUNTER_TRAITS_TEMPLATE : SURVIVOR_TRAITS_TEMPLATE));
+      // Use detected role for template selection
+      const template = JSON.parse(JSON.stringify(detectedRole === 'Hunter' ? HUNTER_TRAITS_TEMPLATE : SURVIVOR_TRAITS_TEMPLATE));
       
       lines.forEach(line => {
         const parts = line.split(/[:：\s]+/).filter(Boolean);
@@ -371,7 +426,12 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
           for (const cat of template) {
             for (const item of cat.items) {
               if (label.includes(item.label) || item.label.includes(label)) {
-                item.value = value;
+                if (item.value === '' || item.value === 'N/A') {
+                  item.value = value;
+                } else {
+                  // If already has a value, add as a new item to the same category
+                  cat.items.push({ label, value });
+                }
                 matched = true;
                 break;
               }
@@ -431,7 +491,25 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
       } else {
         // If multiple, save them all immediately via onSave
         setSaving(true);
-        await onSave(charactersToSave);
+        
+        // Match existing characters by name or numeric ID (order) to support partial updates
+        const processedCharacters = charactersToSave.map(newChar => {
+          const existing = allCharacters?.find(c => 
+            (newChar.order && c.order === newChar.order) || 
+            (c.name === newChar.name) || 
+            (newChar.title && c.title === newChar.title)
+          );
+          if (existing) {
+            return {
+              ...existing,
+              ...newChar,
+              id: existing.id // Keep the same ID for update
+            };
+          }
+          return newChar;
+        });
+
+        await onSave(processedCharacters);
         setSaving(false);
         setImportMode(false);
       }
@@ -488,15 +566,27 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                   <p className="mb-1 text-accent">JSON 格式示例：</p>
                   <pre className="bg-bg/50 p-2 overflow-x-auto text-[9px]">
 {`{
-  "name": "艾玛",
+  "order": 1,
+  "name": "艾玛·伍兹",
+  "title": "园丁",
   "role": "Survivor",
-  "imageUrl": "http://...",
+  "type": "辅助/牵制",
+  "imageUrl": "https://picsum.photos/seed/gardener/400/600",
+  "description": "通过破坏狂欢之椅来延缓队友被淘汰的时间。",
   "skills": [
     {
       "name": "巧手成蹄",
-      "description": "...",
-      "icon": "http://...",
+      "description": "园丁随身携带工具箱，可以破坏狂欢之椅。",
+      "icon": "https://icon-url.com/skill1.png",
       "tags": ["辅助", "修机"]
+    }
+  ],
+  "traits": [
+    {
+      "category": "移动能力",
+      "items": [
+        { "label": "跑动速度", "value": "3.8米/秒" }
+      ]
     }
   ]
 }`}
@@ -505,14 +595,22 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                 <div>
                   <p className="mb-1 text-accent">智能文本示例：</p>
                   <pre className="bg-bg/50 p-2 overflow-x-auto text-[9px]">
-{`姓名：艾玛·伍兹
-立绘：http://...
+{`角色ID：1
+姓名：艾玛·伍兹
+称号：园丁
+立绘：https://picsum.photos/seed/gardener/400/600
 阵营：求生者
+定位：辅助/牵制
+描述：通过破坏狂欢之椅来延缓队友被淘汰的时间。
 外在特质：
-[http://...] 巧手成蹄：描述内容 #辅助 #修机
+[https://icon-url.com/skill1.png] 巧手成蹄：园丁随身携带工具箱，可以破坏狂欢之椅。 #辅助 #修机
+数值：
+跑动速度：3.8米/秒
+快速翻窗时长：1.08秒
 存在感：
 0阶：技能名：描述 | 冷却：10s #标签`}
                   </pre>
+                  <p className="mt-2 text-[9px] text-primary/70">注：角色ID为数字，系统将根据ID自动匹配并更新现有角色数据。</p>
                 </div>
               </div>
             </div>
@@ -722,7 +820,16 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
           {/* External Traits (Skills) */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
+              <div className="flex items-center gap-4">
+                <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
+                <button 
+                  type="button"
+                  onClick={() => setSkillsImportMode(!skillsImportMode)}
+                  className="flex items-center gap-1 text-[10px] font-mono text-primary hover:text-accent transition-colors"
+                >
+                  <FileText className="w-3 h-3" /> {skillsImportMode ? '取消识别' : '智能识别导入'}
+                </button>
+              </div>
               <button 
                 type="button"
                 onClick={addSkill}
@@ -731,6 +838,31 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                 <Plus className="w-3 h-3" /> 添加特质
               </button>
             </div>
+
+            {skillsImportMode && (
+              <div className="p-4 bg-primary/5 border border-primary/20 space-y-3 animate-in fade-in slide-in-from-top-2">
+                <p className="text-[10px] font-mono text-muted">
+                  格式：[图标URL] 特质名称：描述内容 #标签1 #标签2 (每行一个特质)
+                </p>
+                <textarea 
+                  rows={4}
+                  value={skillsImportText}
+                  onChange={(e) => setSkillsImportText(e.target.value)}
+                  placeholder="[http://...] 巧手成蹄：描述内容 #辅助 #修机"
+                  className="w-full bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-primary"
+                />
+                <div className="flex justify-end">
+                  <button 
+                    type="button"
+                    onClick={handleSkillsSmartImport}
+                    className="px-4 py-1 bg-primary text-white text-[10px] font-mono hover:bg-primary/80"
+                  >
+                    确认导入_CONFIRM
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {formData.skills.map((skill, index) => (
                 <div key={index} className="p-4 bg-bg/50 border border-border relative group">
@@ -741,13 +873,37 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
-                  <input 
-                    type="text"
-                    value={skill.name}
-                    onChange={(e) => updateSkill(index, 'name', e.target.value)}
-                    placeholder="特质名称"
-                    className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
-                  />
+                  
+                  <div className="flex gap-3 mb-3">
+                    <div className="w-12 h-12 bg-card border border-border flex-shrink-0 relative group/icon">
+                      {skill.icon ? (
+                        <img src={skill.icon} alt={skill.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted">
+                          <ImageIcon className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/icon:opacity-100 transition-opacity flex items-center justify-center p-1">
+                        <input 
+                          type="text"
+                          value={skill.icon || ''}
+                          onChange={(e) => updateSkill(index, 'icon', e.target.value)}
+                          placeholder="图标URL"
+                          className="w-full bg-transparent text-[8px] text-accent outline-none text-center"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <input 
+                        type="text"
+                        value={skill.name}
+                        onChange={(e) => updateSkill(index, 'name', e.target.value)}
+                        placeholder="特质名称"
+                        className="w-full bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1"
+                      />
+                    </div>
+                  </div>
+
                   <textarea 
                     rows={2}
                     value={skill.description}
@@ -756,35 +912,60 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                     className="w-full bg-transparent text-xs text-muted outline-none resize-none mb-3"
                   />
                   
-                  {/* Tag Selection */}
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
-                    {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === formData.role).map(tag => {
-                      const isSelected = skill.tags?.includes(tag.name);
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => {
-                            const newSkills = [...formData.skills];
-                            const currentTags = newSkills[index].tags || [];
-                            if (isSelected) {
-                              newSkills[index].tags = currentTags.filter(t => t !== tag.name);
-                            } else {
-                              newSkills[index].tags = [...currentTags, tag.name];
+                  {/* Tag Selection & Custom Tags */}
+                  <div className="space-y-3 pt-2 border-t border-border/30">
+                    <div className="flex flex-wrap gap-2">
+                      {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === formData.role).map(tag => {
+                        const isSelected = skill.tags?.includes(tag.name);
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => {
+                              const newSkills = [...formData.skills];
+                              const currentTags = newSkills[index].tags || [];
+                              if (isSelected) {
+                                newSkills[index].tags = currentTags.filter(t => t !== tag.name);
+                              } else {
+                                newSkills[index].tags = [...currentTags, tag.name];
+                              }
+                              setFormData({ ...formData, skills: newSkills });
+                            }}
+                            className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                              isSelected 
+                                ? 'bg-accent/20 border-accent text-accent' 
+                                : 'bg-bg border-border text-muted hover:border-accent/50'
+                            }`}
+                          >
+                            <TagIcon className="w-2.5 h-2.5" />
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="text"
+                        placeholder="添加自定义标签 (回车确认)"
+                        className="flex-1 bg-bg/30 border border-border/50 px-2 py-1 text-[10px] font-mono outline-none focus:border-primary/50"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = e.currentTarget.value.trim();
+                            if (val) {
+                              const newSkills = [...formData.skills];
+                              const currentTags = newSkills[index].tags || [];
+                              if (!currentTags.includes(val)) {
+                                newSkills[index].tags = [...currentTags, val];
+                                setFormData({ ...formData, skills: newSkills });
+                              }
+                              e.currentTarget.value = '';
                             }
-                            setFormData({ ...formData, skills: newSkills });
-                          }}
-                          className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
-                            isSelected 
-                              ? 'bg-accent/20 border-accent text-accent' 
-                              : 'bg-bg border-border text-muted hover:border-accent/50'
-                          }`}
-                        >
-                          <TagIcon className="w-2.5 h-2.5" />
-                          {tag.name}
-                        </button>
-                      );
-                    })}
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

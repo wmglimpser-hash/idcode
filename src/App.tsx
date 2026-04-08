@@ -28,7 +28,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap } from 'lucide-react';
+import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap, Trash2 } from 'lucide-react';
 
 type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'tags';
 
@@ -91,6 +91,21 @@ export default function App() {
   const [viewingExtension, setViewingExtension] = useState<{ character: Character; type: 'talent' | 'auxiliary' } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isEditingCharacter, setIsEditingCharacter] = useState(false);
+  const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([]);
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'danger' | 'info';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
   
   // Wiki State
   const [selectedWikiEntry, setSelectedWikiEntry] = useState<WikiEntry | null>(null);
@@ -333,14 +348,24 @@ export default function App() {
         for (const data of charData) {
           validateChar(data);
           try {
-            await addDoc(collection(db, 'characters'), {
-              ...data,
-              imageUrl: data.imageUrl || `https://picsum.photos/seed/${data.name}/400/600`,
-              skills: data.skills && data.skills.length > 0 
-                ? data.skills 
-                : [{ name: '初始技能', description: '该角色尚未配置详细技能说明。' }],
-              lastUpdated: serverTimestamp()
-            });
+            if (data.id && !MOCK_CHARACTERS.some(m => m.id === data.id)) {
+              // Update existing DB character
+              await setDoc(doc(db, 'characters', data.id), {
+                ...data,
+                lastUpdated: serverTimestamp()
+              }, { merge: true });
+            } else {
+              // Create new or update mock (by creating a DB override)
+              const docRef = data.id ? doc(db, 'characters', data.id) : doc(collection(db, 'characters'));
+              await setDoc(docRef, {
+                ...data,
+                imageUrl: data.imageUrl || `https://picsum.photos/seed/${data.name}/400/600`,
+                skills: data.skills && data.skills.length > 0 
+                  ? data.skills 
+                  : (data.skills || [{ name: '初始技能', description: '该角色尚未配置详细技能说明。' }]),
+                lastUpdated: serverTimestamp()
+              }, { merge: true });
+            }
           } catch (err) {
             handleFirestoreError(err, OperationType.WRITE, 'characters');
           }
@@ -391,23 +416,83 @@ export default function App() {
 
   const handleDeleteCharacter = async (char: Character) => {
     if (!isAdminUser) {
-      alert("只有管理员可以删除档案。");
+      setConfirmModal({
+        show: true,
+        title: '权限不足',
+        message: '只有管理员可以删除档案。',
+        onConfirm: () => setConfirmModal(prev => ({ ...prev, show: false })),
+        type: 'info'
+      });
       return;
     }
 
-    try {
-      const isMock = MOCK_CHARACTERS.some(m => m.id === char.id);
-      if (isMock) {
-        // Soft delete for mock characters so they don't reappear from the local constant
-        await setDoc(doc(db, 'characters', char.id), { deleted: true, lastUpdated: serverTimestamp() });
-      } else {
-        // Hard delete for purely DB characters
-        await deleteDoc(doc(db, 'characters', char.id));
+    setConfirmModal({
+      show: true,
+      title: '确认删除',
+      message: `确定要删除角色 ${char.name} 吗？此操作不可撤销。`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const isMock = MOCK_CHARACTERS.some(m => m.id === char.id);
+          if (isMock) {
+            await setDoc(doc(db, 'characters', char.id), { deleted: true, lastUpdated: serverTimestamp() });
+          } else {
+            await deleteDoc(doc(db, 'characters', char.id));
+          }
+          setSelectedCharacter(null);
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        } catch (err) {
+          handleFirestoreError(err, OperationType.DELETE, `characters/${char.id}`);
+        }
       }
-      setSelectedCharacter(null);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `characters/${char.id}`);
+    });
+  };
+
+  const handleBatchDelete = async () => {
+    if (!isAdminUser) {
+      setConfirmModal({
+        show: true,
+        title: '权限不足',
+        message: '只有管理员可以删除档案。',
+        onConfirm: () => setConfirmModal(prev => ({ ...prev, show: false })),
+        type: 'info'
+      });
+      return;
     }
+
+    if (selectedCharacterIds.length === 0) return;
+
+    setConfirmModal({
+      show: true,
+      title: '批量删除确认',
+      message: `确定要删除选中的 ${selectedCharacterIds.length} 个角色吗？此操作不可撤销。`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          for (const id of selectedCharacterIds) {
+            const isMock = MOCK_CHARACTERS.some(m => m.id === id);
+            if (isMock) {
+              await setDoc(doc(db, 'characters', id), { deleted: true, lastUpdated: serverTimestamp() });
+            } else {
+              await deleteDoc(doc(db, 'characters', id));
+            }
+          }
+          setSelectedCharacterIds([]);
+          setIsBatchMode(false);
+          setSelectedCharacter(null);
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        } catch (err) {
+          console.error("Batch delete error:", err);
+          setConfirmModal({
+            show: true,
+            title: '删除失败',
+            message: '部分角色删除失败，请检查网络或权限。',
+            onConfirm: () => setConfirmModal(prev => ({ ...prev, show: false })),
+            type: 'info'
+          });
+        }
+      }
+    });
   };
 
   const handleSyncSurvivorTraits = async () => {
@@ -626,6 +711,58 @@ export default function App() {
 
         {(activeTab === 'survivors' || activeTab === 'hunters') && (
           <div className="space-y-12 relative z-10">
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center gap-4">
+                <h3 className="text-sm font-mono text-accent/70 uppercase tracking-widest">
+                  {activeTab === 'survivors' ? '求生者名录_SURVIVORS' : '监管者名录_HUNTERS'}
+                </h3>
+                {isAdminUser && (
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        setIsBatchMode(!isBatchMode);
+                        setSelectedCharacterIds([]);
+                      }}
+                      className={`text-[10px] font-mono px-2 py-1 border transition-all ${
+                        isBatchMode 
+                          ? 'bg-primary border-primary text-white' 
+                          : 'border-border text-muted hover:text-accent hover:border-accent'
+                      }`}
+                    >
+                      {isBatchMode ? '取消选择_CANCEL' : '批量管理_BATCH'}
+                    </button>
+                    {isBatchMode && (
+                      <button 
+                        onClick={() => {
+                          const currentList = (activeTab === 'survivors' ? survivors : hunters).filter(c => !c.id.startsWith('base_'));
+                          if (selectedCharacterIds.length === currentList.length) {
+                            setSelectedCharacterIds([]);
+                          } else {
+                            setSelectedCharacterIds(currentList.map(c => c.id));
+                          }
+                        }}
+                        className="text-[10px] font-mono px-2 py-1 border border-border text-muted hover:text-accent hover:border-accent transition-all"
+                      >
+                        {selectedCharacterIds.length === (activeTab === 'survivors' ? survivors : hunters).filter(c => !c.id.startsWith('base_')).length ? '取消全选_DESELECT' : '全选_SELECT_ALL'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {isBatchMode && selectedCharacterIds.length > 0 && (
+                <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4">
+                  <span className="text-[10px] font-mono text-accent">已选择 {selectedCharacterIds.length} 个角色</span>
+                  <button 
+                    onClick={handleBatchDelete}
+                    className="flex items-center gap-1 px-3 py-1 bg-primary/20 border border-primary text-primary text-[10px] font-mono hover:bg-primary hover:text-white transition-all"
+                  >
+                    <Trash2 className="w-3 h-3" /> 批量删除_DELETE
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="relative group/nav pb-8">
               <button 
                 onClick={() => scroll('left')}
@@ -642,28 +779,45 @@ export default function App() {
                   <button
                     key={char.id}
                     onClick={() => {
-                      setSelectedCharacter(char);
-                      setShowForm(false);
-                      setIsEditingCharacter(false);
-                      setViewingFactors(null);
-                      setViewingExtension(null);
+                      if (isBatchMode) {
+                        setSelectedCharacterIds(prev => 
+                          prev.includes(char.id) 
+                            ? prev.filter(id => id !== char.id) 
+                            : [...prev, char.id]
+                        );
+                      } else {
+                        setSelectedCharacter(char);
+                        setShowForm(false);
+                        setIsEditingCharacter(false);
+                        setViewingFactors(null);
+                        setViewingExtension(null);
+                      }
                     }}
                     className={`group relative w-20 h-20 flex-shrink-0 transition-all duration-200 ${
-                      selectedCharacter?.id === char.id && !showForm && !isEditingCharacter
+                      (isBatchMode && selectedCharacterIds.includes(char.id)) || (!isBatchMode && selectedCharacter?.id === char.id && !showForm && !isEditingCharacter)
                         ? 'scale-110 z-20' 
                         : 'hover:scale-105'
                     }`}
                   >
                     <div className={`absolute inset-0 border bg-transparent transition-colors duration-200 ${
-                      selectedCharacter?.id === char.id && !showForm && !isEditingCharacter 
-                        ? 'border-accent' 
+                      (isBatchMode && selectedCharacterIds.includes(char.id)) || (!isBatchMode && selectedCharacter?.id === char.id && !showForm && !isEditingCharacter)
+                        ? 'border-accent shadow-[0_0_15px_rgba(0,243,255,0.3)]' 
                         : 'border-border/20'
                     }`} />
+                    
+                    {isBatchMode && (
+                      <div className={`absolute top-1 right-1 w-4 h-4 border flex items-center justify-center z-30 transition-colors ${
+                        selectedCharacterIds.includes(char.id) ? 'bg-accent border-accent' : 'bg-black/50 border-white/30'
+                      }`}>
+                        {selectedCharacterIds.includes(char.id) && <ShieldCheck className="w-3 h-3 text-bg" />}
+                      </div>
+                    )}
+
                     <div className="absolute inset-0 overflow-hidden">
                       <img 
                         src={char.imageUrl} 
                         className={`w-full h-full object-contain transition-all duration-200 ${
-                          selectedCharacter?.id === char.id && !showForm && !isEditingCharacter
+                          (isBatchMode && selectedCharacterIds.includes(char.id)) || (!isBatchMode && selectedCharacter?.id === char.id && !showForm && !isEditingCharacter)
                             ? 'brightness-100' 
                             : 'brightness-0 opacity-50 group-hover:brightness-100 group-hover:opacity-100'
                         }`} 
@@ -761,6 +915,7 @@ export default function App() {
             onRefresh={() => handleSyncCharacterOrders(false)}
             isAdmin={user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin'}
             initialTrait={leaderboardTrait}
+            onUpdate={handleUpdateCharacter}
           />
         )}
 
@@ -816,6 +971,39 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-card border border-border shadow-2xl p-6 space-y-6">
+            <div className="space-y-2">
+              <h3 className={`text-xl font-serif font-bold ${confirmModal.type === 'danger' ? 'text-primary' : 'text-accent'}`}>
+                {confirmModal.title}
+              </h3>
+              <p className="text-sm text-muted font-mono leading-relaxed">
+                {confirmModal.message}
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-4 pt-4">
+              <button 
+                onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                className="px-6 py-2 border border-border text-muted text-xs font-mono hover:text-text transition-colors"
+              >
+                取消_CANCEL
+              </button>
+              <button 
+                onClick={confirmModal.onConfirm}
+                className={`px-6 py-2 font-mono text-xs text-white transition-all hover:scale-105 ${
+                  confirmModal.type === 'danger' ? 'bg-primary' : 'bg-accent text-bg'
+                }`}
+              >
+                确认_CONFIRM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Nav */}
       <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around z-50">

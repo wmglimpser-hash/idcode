@@ -185,6 +185,19 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "affectedRole", "authorId"]
+    },
+    "CustomMetric": {
+      "title": "Custom Metric",
+      "description": "A user-defined metric that sums multiple traits for ranking",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["Survivor", "Hunter"] },
+        "traitLabels": { "type": "array", "items": { "type": "string" } },
+        "authorId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "role", "traitLabels", "authorId"]
     }
   },
   "firestore": {
@@ -239,6 +252,10 @@
     "tags": {
       "schema": "Tag",
       "description": "Unified tag system"
+    },
+    "custom_metrics": {
+      "schema": "CustomMetric",
+      "description": "User-defined ranking metrics"
     }
   }
 }

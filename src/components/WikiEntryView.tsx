@@ -219,10 +219,10 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Template Mode: Character Example */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="aspect-[3/4] bg-card cyber-border overflow-hidden relative group">
+            <div className="bg-card cyber-border overflow-hidden relative group bg-bg/30 flex items-center justify-center">
               <img 
                 src={content?.imageUrl || 'https://picsum.photos/seed/idv/400/600'} 
-                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700" 
+                className="w-full h-auto object-contain grayscale hover:grayscale-0 transition-all duration-700" 
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60" />

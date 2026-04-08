@@ -3,7 +3,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query,
 import { db, auth } from '../firebase';
 import { Save, Trash2, Plus, Info, ShieldCheck, Swords, Network, ExternalLink, FileText, FileJson, Search, List, X, Edit3, Wand2, Tag, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TalentNode, WikiEntry, DEFAULT_TAG_CONFIG, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from '../constants';
+import { TalentNode, WikiEntry, DEFAULT_TAG_CONFIG, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag as TagType } from '../constants';
 import { BulkImport } from './BulkImport';
 
 interface TalentDefinition {
@@ -151,6 +151,16 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
       setEditForm({...editForm, targetStats: [...current, stat]});
     }
   };
+
+  const [availableTags, setAvailableTags] = useState<TagType[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
+      const tags = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TagType));
+      setAvailableTags(tags);
+    });
+    return () => unsub();
+  }, []);
 
   const [treeNodes, setTreeNodes] = useState<(TalentNode & { x: number; y: number })[]>(DEFAULT_NODES);
 
@@ -601,9 +611,45 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     </button>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-[9px] text-muted font-mono uppercase mr-1">选择颜色:</span>
-                    {TAG_COLORS.map(color => (
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="text-[9px] text-muted font-mono uppercase mr-1">选择全局标签:</span>
+                      {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === role).map(tag => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            const currentTags = editForm.tags || [];
+                            const newTagColors = { ...(editForm.tagColors || {}) };
+                            
+                            if (currentTags.includes(tag.name)) {
+                              setEditForm({
+                                ...editForm,
+                                tags: currentTags.filter(t => t !== tag.name)
+                              });
+                            } else {
+                              newTagColors[tag.name] = tag.color;
+                              setEditForm({
+                                ...editForm,
+                                tags: [...currentTags, tag.name],
+                                tagColors: newTagColors
+                              });
+                            }
+                          }}
+                          className={`px-2 py-0.5 text-[9px] font-mono uppercase border transition-all ${
+                            editForm.tags?.includes(tag.name)
+                              ? 'bg-accent/20 border-accent text-accent'
+                              : 'bg-bg/50 border-border text-muted hover:border-accent/30'
+                          }`}
+                          style={editForm.tags?.includes(tag.name) ? { borderColor: tag.color, color: tag.color, backgroundColor: tag.color + '20' } : {}}
+                        >
+                          {tag.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="text-[9px] text-muted font-mono uppercase mr-1">自定义颜色:</span>
+                      {TAG_COLORS.map(color => (
                       <button
                         key={color.name}
                         type="button"

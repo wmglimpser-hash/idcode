@@ -1,16 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Character, CharacterTraitCategory } from '../constants';
-import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator } from 'lucide-react';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
 import { CharacterComparison } from './CharacterComparison';
+
+interface CustomMetric {
+  id: string;
+  name: string;
+  role: 'Survivor' | 'Hunter';
+  traitLabels: string[];
+  authorId: string;
+}
 
 interface Props {
   characters: Character[];
   onRefresh?: () => void;
   isAdmin?: boolean;
   initialTrait?: { role: 'Survivor' | 'Hunter', label: string } | null;
+  onUpdate?: (charId: string, data: Partial<Character>) => Promise<void>;
 }
 
-export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Props) => {
+export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUpdate }: Props) => {
   const [showComparison, setShowComparison] = useState(false);
   const [role, setRole] = useState<'Survivor' | 'Hunter'>(initialTrait?.role || 'Survivor');
   const [selectedTrait, setSelectedTrait] = useState<{ category: string, label: string } | null>(() => {
@@ -21,6 +32,33 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
+  const [selectedCustomMetric, setSelectedCustomMetric] = useState<CustomMetric | null>(null);
+  const [showMetricForm, setShowMetricForm] = useState(false);
+  const [newMetric, setNewMetric] = useState<{ name: string, traitLabels: string[] }>({ name: '', traitLabels: [] });
+  const [editingRemark, setEditingRemark] = useState<{ charId: string, traitLabel: string, valueStr: string, currentRemark: string } | null>(null);
+
+  // Fetch custom metrics
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'custom_metrics'), (snapshot) => {
+      const metrics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomMetric));
+      setCustomMetrics(metrics.filter(m => m.role === role));
+    });
+    return () => unsub();
+  }, [role]);
+
+  // Fetch character remarks (independent per trait value)
+  const [traitRemarks, setTraitRemarks] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'trait_remarks'), (snapshot) => {
+      const remarks: Record<string, string> = {};
+      snapshot.docs.forEach(doc => {
+        remarks[doc.id] = doc.data().remark;
+      });
+      setTraitRemarks(remarks);
+    });
+    return () => unsub();
+  }, []);
 
   // Update state if initialTrait changes (e.g. from comparison page)
   React.useEffect(() => {
@@ -38,6 +76,58 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
+  const handleCreateMetric = async () => {
+    if (!newMetric.name || newMetric.traitLabels.length === 0) return;
+    if (!auth.currentUser) {
+      alert("请先登录以保存自定义项。");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'custom_metrics'), {
+        name: newMetric.name,
+        role: role,
+        traitLabels: newMetric.traitLabels,
+        authorId: auth.currentUser.uid,
+        updatedAt: serverTimestamp()
+      });
+      setNewMetric({ name: '', traitLabels: [] });
+      setShowMetricForm(false);
+    } catch (err) {
+      console.error("Error creating custom metric:", err);
+    }
+  };
+
+  const handleDeleteMetric = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("确定要删除这个自定义项吗？")) return;
+    try {
+      await deleteDoc(doc(db, 'custom_metrics', id));
+      if (selectedCustomMetric?.id === id) {
+        setSelectedCustomMetric(null);
+      }
+    } catch (err) {
+      console.error("Error deleting custom metric:", err);
+    }
+  };
+
+  const handleSaveRemark = async () => {
+    if (!editingRemark) return;
+    const remarkId = `${editingRemark.charId}_${editingRemark.traitLabel}_${editingRemark.valueStr}`.replace(/[.#$/[\]]/g, '_');
+    try {
+      await setDoc(doc(db, 'trait_remarks', remarkId), {
+        charId: editingRemark.charId,
+        traitLabel: editingRemark.traitLabel,
+        valueStr: editingRemark.valueStr,
+        remark: editingRemark.currentRemark,
+        updatedAt: serverTimestamp()
+      });
+      setEditingRemark(null);
+    } catch (err) {
+      console.error("Error saving remark:", err);
+    }
+  };
+
   const baseInfo = useMemo(() => {
     const id = role === 'Survivor' ? 'base_survivor' : 'base_hunter';
     return characters.find(c => c.id === id);
@@ -50,6 +140,9 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
   // Helper to extract numeric value for sorting
   const extractValue = (valStr: string): number => {
     if (!valStr || valStr === 'N/A') return -Infinity;
+    // Handle cases like "4.64 / 4.82" by taking the first number if not already split
+    // But since we split before calling this, it should be fine.
+    // We use a more robust regex for numbers
     const match = valStr.match(/(-?\d+(\.\d+)?)/);
     return match ? parseFloat(match[1]) : -Infinity;
   };
@@ -63,13 +156,19 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
         const label = item.label;
         const uniqueValues = new Set<number>();
         factionCharacters.forEach(char => {
-          const charItem = char.traits?.flatMap(t => t.items).find(i => i.label === label);
-          if (charItem && charItem.value && charItem.value !== 'N/A') {
-            const numVal = extractValue(charItem.value);
-            if (numVal !== -Infinity) {
-              uniqueValues.add(numVal);
+          const matchingItems = char.traits?.flatMap(t => t.items).filter(i => i.label === label) || [];
+          matchingItems.forEach(charItem => {
+            if (charItem && charItem.value && charItem.value !== 'N/A') {
+              // Support multiple values split by '/' or other separators
+              const parts = charItem.value.split(/[/／、,，]/);
+              parts.forEach(part => {
+                const numVal = extractValue(part.trim());
+                if (numVal !== -Infinity) {
+                  uniqueValues.add(numVal);
+                }
+              });
             }
-          }
+          });
         });
         counts[label] = uniqueValues.size;
       });
@@ -78,48 +177,80 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
   }, [baseInfo, factionCharacters]);
 
   const groupedRankedData = useMemo(() => {
-    if (!selectedTrait) return [];
+    if (!selectedTrait && !selectedCustomMetric) return [];
 
-    const data = factionCharacters
-      .map(char => {
-        // Find item by label across all categories to avoid category name mismatch
-        const item = char.traits?.flatMap(t => t.items).find(i => i.label === selectedTrait.label);
-        
-        return {
-          id: char.id,
-          name: char.name,
-          title: char.title,
-          imageUrl: char.imageUrl,
-          value: item ? item.value : 'N/A',
-          numericValue: item ? extractValue(item.value) : -Infinity
-        };
-      })
-      .sort((a, b) => {
-        if (a.numericValue === b.numericValue) return 0;
-        // Always put N/A (-Infinity) at the bottom regardless of sort order
-        if (a.numericValue === -Infinity) return 1;
-        if (b.numericValue === -Infinity) return -1;
-        
-        return sortOrder === 'asc' ? a.numericValue - b.numericValue : b.numericValue - a.numericValue;
-      });
+    const explodedData: any[] = [];
 
-    const groups: { rank: number, value: string, numericValue: number, characters: typeof data }[] = [];
+    factionCharacters.forEach(char => {
+      if (selectedCustomMetric) {
+        const charTraits = char.traits?.flatMap(t => t.items) || [];
+        const values = selectedCustomMetric.traitLabels.map(label => {
+          const item = charTraits.find(i => i.label === label);
+          return item ? extractValue(item.value) : 0;
+        });
+        
+        const validValues = values.filter(v => v !== -Infinity);
+        if (validValues.length > 0) {
+          const numericValue = validValues.reduce((sum, v) => sum + v, 0);
+          explodedData.push({
+            id: char.id,
+            name: char.name,
+            title: char.title,
+            imageUrl: char.imageUrl,
+            value: numericValue.toString(),
+            numericValue
+          });
+        }
+      } else if (selectedTrait) {
+        const matchingItems = char.traits?.flatMap(t => t.items).filter(i => i.label === selectedTrait.label) || [];
+        
+        if (matchingItems.length > 0) {
+          matchingItems.forEach(item => {
+            if (item && item.value && item.value !== 'N/A') {
+              // Support multiple values split by '/', '／', '、', or commas
+              const parts = item.value.split(/[/／、,，]/);
+              parts.forEach(part => {
+                const trimmedPart = part.trim();
+                if (!trimmedPart) return;
+                
+                const numVal = extractValue(trimmedPart);
+                // Only add if it contains a valid number
+                if (numVal !== -Infinity) {
+                  explodedData.push({
+                    id: char.id,
+                    name: char.name,
+                    title: char.title,
+                    imageUrl: char.imageUrl,
+                    value: trimmedPart,
+                    numericValue: numVal
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+    });
+
+    const sortedData = explodedData.sort((a, b) => {
+      if (a.numericValue === b.numericValue) return 0;
+      if (a.numericValue === -Infinity) return 1;
+      if (b.numericValue === -Infinity) return -1;
+      
+      return sortOrder === 'asc' ? a.numericValue - b.numericValue : b.numericValue - a.numericValue;
+    });
+
+    const groups: { rank: number, value: string, numericValue: number, characters: any[] }[] = [];
     
     let currentRank = 1;
-    data.forEach((item, index) => {
-      // Skip characters with N/A or Infinity values from being ranked normally
+    sortedData.forEach((item, index) => {
       if (item.value === 'N/A' || item.numericValue === -Infinity) {
-        groups.push({
-          rank: 999, // Unranked
-          value: 'N/A',
-          numericValue: item.numericValue,
-          characters: [item]
-        });
         return;
       }
 
-      if (index > 0 && item.numericValue === data[index - 1].numericValue) {
-        groups[groups.length - 1].characters.push(item);
+      if (index > 0 && item.numericValue === sortedData[index - 1].numericValue) {
+        const lastGroup = groups[groups.length - 1];
+        lastGroup.characters.push(item);
       } else {
         groups.push({
           rank: currentRank,
@@ -131,9 +262,8 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
       }
     });
 
-    // Filter out unranked if needed, or keep them at the bottom
-    return groups.filter(g => g.rank !== 999);
-  }, [factionCharacters, selectedTrait, sortOrder]);
+    return groups;
+  }, [factionCharacters, selectedTrait, selectedCustomMetric, sortOrder]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -194,16 +324,109 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Base Info Section */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-4 space-y-6">
             <div className="bg-card/30 border border-border p-6 cyber-border relative overflow-hidden flex flex-col h-[800px]">
-              <div className="absolute top-0 right-0 p-2 opacity-10">
+              <div className="absolute top-0 right-0 p-2 opacity-10 pointer-events-none">
                 <Activity className="w-24 h-24" />
               </div>
-              <h3 className="text-xl font-serif text-accent mb-6 flex items-center gap-2 flex-shrink-0">
-                <Shield className="w-5 h-5" /> 阵营基础数值概览
-              </h3>
+              <div className="flex justify-between items-center mb-6 flex-shrink-0">
+                <h3 className="text-xl font-serif text-accent flex items-center gap-2">
+                  <Shield className="w-5 h-5" /> 阵营基础数值概览
+                </h3>
+                <button 
+                  onClick={() => setShowMetricForm(prev => !prev)}
+                  className={`p-1.5 border transition-all ${showMetricForm ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(255,0,60,0.3)]' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
+                  title="创建自定义计算项"
+                >
+                  <Calculator className="w-4 h-4" />
+                </button>
+              </div>
+
+              {showMetricForm && (
+                <div className="mb-6 p-4 bg-primary/5 border border-primary/30 space-y-4 animate-in slide-in-from-top-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-mono text-primary uppercase">创建自定义计算项</span>
+                    <button onClick={() => setShowMetricForm(false)} className="text-muted hover:text-primary"><X className="w-3 h-3" /></button>
+                  </div>
+                  <input 
+                    type="text"
+                    placeholder="计算项名称 (如: 综合生存力)"
+                    value={newMetric.name}
+                    onChange={(e) => setNewMetric({ ...newMetric, name: e.target.value })}
+                    className="w-full bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-primary"
+                  />
+                  <div className="max-h-40 overflow-y-auto border border-border/30 p-2 space-y-1 bg-bg/20">
+                    {baseInfo?.traits?.flatMap(t => t.items).map(item => (
+                      <label key={item.label} className="flex items-center gap-2 text-[10px] font-mono text-muted hover:text-text cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={newMetric.traitLabels.includes(item.label)}
+                          onChange={(e) => {
+                            const labels = e.target.checked 
+                              ? [...newMetric.traitLabels, item.label]
+                              : newMetric.traitLabels.filter(l => l !== item.label);
+                            setNewMetric({ ...newMetric, traitLabels: labels });
+                          }}
+                          className="w-3 h-3 accent-primary"
+                        />
+                        {item.label}
+                      </label>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={handleCreateMetric}
+                    disabled={!newMetric.name || newMetric.traitLabels.length === 0}
+                    className="w-full py-2 bg-primary text-white text-[10px] font-mono hover:bg-primary/80 disabled:opacity-50"
+                  >
+                    保存计算项_SAVE
+                  </button>
+                </div>
+              )}
               
               <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-8">
+                {/* Custom Metrics Section */}
+                {customMetrics.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-xs text-accent font-bold uppercase tracking-widest border-b border-accent/20 pb-1 flex items-center gap-2">
+                      <Calculator className="w-3 h-3" /> 自定义计算项
+                    </div>
+                    <div className="grid grid-cols-1 gap-1">
+                      {customMetrics.map((metric) => (
+                        <div 
+                          key={metric.id} 
+                          onClick={() => {
+                            setSelectedCustomMetric(metric);
+                            setSelectedTrait(null);
+                          }}
+                          className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
+                            selectedCustomMetric?.id === metric.id 
+                              ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
+                              : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-mono font-bold">{metric.name}</span>
+                            <span className="text-[8px] text-muted uppercase tracking-tighter">
+                              {metric.traitLabels.join(' + ')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isAdmin && (
+                              <button 
+                                onClick={(e) => handleDeleteMetric(metric.id, e)}
+                                className="p-1 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                            {selectedCustomMetric?.id === metric.id && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {baseInfo?.traits && baseInfo.traits.length > 0 ? (
                   <>
                     {baseInfo.traits.map((cat, i) => (
@@ -215,7 +438,10 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
                           {cat.items.map((item, j) => (
                             <div 
                               key={j} 
-                              onClick={() => setSelectedTrait({ category: cat.category, label: item.label })}
+                              onClick={() => {
+                                setSelectedTrait({ category: cat.category, label: item.label });
+                                setSelectedCustomMetric(null);
+                              }}
                               className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
                                 selectedTrait?.label === item.label 
                                   ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
@@ -249,13 +475,17 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
           </div>
 
           {/* Ranking Section */}
-          <div className="lg:col-span-7 space-y-6">
-            {selectedTrait ? (
+          <div className="lg:col-span-8 space-y-6">
+            {selectedTrait || selectedCustomMetric ? (
               <div className="bg-card/30 border border-border p-6 cyber-border h-[800px] flex flex-col">
                 <div className="flex justify-between items-end mb-8 border-b border-border pb-4 flex-shrink-0">
                   <div>
-                    <div className="text-[10px] text-primary font-bold uppercase mb-1">{selectedTrait.category}</div>
-                    <h3 className="text-2xl font-serif text-accent cyber-glow-text">{selectedTrait.label} 排行榜</h3>
+                    <div className="text-[10px] text-primary font-bold uppercase mb-1">
+                      {selectedCustomMetric ? '自定义计算项' : selectedTrait?.category}
+                    </div>
+                    <h3 className="text-2xl font-serif text-accent cyber-glow-text">
+                      {selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label} 排行榜
+                    </h3>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <button
@@ -290,32 +520,74 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait }: Pr
                       
                       {/* Characters (Parallel) */}
                       <div className="flex flex-wrap gap-4 flex-grow">
-                        {groupedRankedData.length === 1 ? (
-                          <div className="flex items-center gap-3 bg-bg/40 px-6 py-3 border border-border/30 hover:border-accent/50 transition-all group">
-                            <div className="flex flex-col justify-center">
-                              <div className="text-lg font-bold text-accent group-hover:text-primary transition-colors tracking-widest">
-                                {role === 'Survivor' ? '所有求生者' : '所有监管者'}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          group.characters.map(char => (
-                            <div key={char.id} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px]">
-                              <div className="w-12 h-12 cyber-border overflow-hidden flex-shrink-0">
+                        {group.characters.map((char, idx) => {
+                          const traitLabel = selectedTrait?.label || selectedCustomMetric?.name || 'custom';
+                          const remarkId = `${char.id}_${traitLabel}_${char.value}`.replace(/[.#$/[\]]/g, '_');
+                          const remark = traitRemarks[remarkId] || '';
+                          const isEditing = editingRemark?.charId === char.id && editingRemark?.valueStr === char.value;
+
+                          return (
+                            <div key={`${char.id}-${idx}`} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px] relative">
+                              <div 
+                                className={`w-12 h-12 cyber-border overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isAdmin ? 'hover:ring-2 hover:ring-accent' : ''}`}
+                                onClick={() => {
+                                  if (isAdmin) {
+                                    setEditingRemark({ 
+                                      charId: char.id, 
+                                      traitLabel: traitLabel,
+                                      valueStr: char.value,
+                                      currentRemark: remark 
+                                    });
+                                  }
+                                }}
+                                title={isAdmin ? "点击编辑独立备注" : undefined}
+                              >
                                 <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
                               </div>
-                              <div className="flex flex-col justify-center">
-                                <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors">{char.title}</div>
+                              <div className="flex flex-col justify-center min-w-0 flex-grow">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1">
+                                    <input 
+                                      autoFocus
+                                      type="text"
+                                      value={editingRemark.currentRemark}
+                                      onChange={(e) => setEditingRemark({ ...editingRemark, currentRemark: e.target.value })}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveRemark();
+                                        if (e.key === 'Escape') setEditingRemark(null);
+                                      }}
+                                      className="w-full bg-bg border border-accent text-[10px] px-1 py-0.5 outline-none font-mono"
+                                      placeholder="输入独立备注..."
+                                    />
+                                    <button onClick={handleSaveRemark} className="text-accent hover:text-primary"><Check className="w-3 h-3" /></button>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col">
+                                    <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors truncate">
+                                      {char.title}
+                                      {remark && (
+                                        <span className="ml-1 text-[10px] text-primary font-mono opacity-80">[{remark}]</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          ))
-                        )}
+                          );
+                        })}
                       </div>
 
                       {/* Value */}
-                      <div className="text-right flex-shrink-0 min-w-[80px]">
-                        <div className="text-xl font-mono font-bold text-accent">{group.value}</div>
-                        {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest">TOP RANK</div>}
+                      <div className="text-right flex-shrink-0 min-w-[100px]">
+                        <div className="text-xl font-mono font-bold text-accent">
+                          {group.value.split(/[（(]/)[0].trim()}
+                        </div>
+                        {group.value && (group.value.includes('(') || group.value.includes('（')) && (
+                          <div className="text-[10px] text-muted font-normal leading-tight mt-1">
+                            {group.value.substring(group.value.search(/[（(]/))}
+                          </div>
+                        )}
+                        {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest mt-1">TOP RANK</div>}
                       </div>
                     </div>
                   ))}

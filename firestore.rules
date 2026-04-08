@@ -52,26 +52,18 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        ((request.auth.token.keys().hasAll(['email']) && request.auth.token.email.lower() == "wmglimpser@gmail.com") || 
+        (request.auth.token.email.matches('(?i)wmglimpser@gmail.com') || 
          (userExists() && getUserData().role == 'admin'));
     }
 
     function isContributor() {
       return isAuthenticated() && 
-        ((request.auth.token.keys().hasAll(['email']) && request.auth.token.email.lower() == "wmglimpser@gmail.com") || 
+        (request.auth.token.email.matches('(?i)wmglimpser@gmail.com') || 
          (userExists() && getUserData().role in ['contributor', 'admin']));
     }
 
     function isValidCharacter(data) {
-      return data.name is string && data.name.size() > 0 &&
-             (data.title == null || data.title is string) &&
-             data.role in ['Survivor', 'Hunter'] &&
-             (data.imageUrl == null || data.imageUrl is string) &&
-             (data.description == null || data.description is string) &&
-             (data.skills == null || data.skills is list) &&
-             (data.presence == null || data.presence is list) &&
-             (data.traits == null || data.traits is list) &&
-             (data.mechanics == null || data.mechanics is list);
+      return data is map && data.keys().hasAll(['name', 'role']);
     }
 
     function isValidTraitFactor(data) {
@@ -115,6 +107,13 @@ service cloud.firestore {
              (data.affectedStats == null || data.affectedStats is list);
     }
 
+    function isValidCustomMetric(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['Survivor', 'Hunter'] &&
+             data.traitLabels is list && data.traitLabels.size() > 0 && data.traitLabels.size() < 20 &&
+             data.authorId is string && data.authorId == request.auth.uid;
+    }
+
     // Users Collection
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -143,8 +142,8 @@ service cloud.firestore {
     // Characters Collection
     match /characters/{charId} {
       allow read: if true;
-      allow create: if isContributor() && isValidCharacter(request.resource.data);
-      allow update: if isContributor() && isValidCharacter(request.resource.data);
+      allow create: if isAuthenticated() && isValidCharacter(request.resource.data);
+      allow update: if isAuthenticated() && isValidCharacter(request.resource.data);
       allow delete: if isAdmin();
     }
 
@@ -214,6 +213,20 @@ service cloud.firestore {
       allow create: if isContributor() && isValidTag(request.resource.data);
       allow update: if isContributor() && isValidTag(request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    // Custom Metrics Collection
+    match /custom_metrics/{metricId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidCustomMetric(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.authorId == request.auth.uid && isValidCustomMetric(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // Trait Remarks Collection
+    match /trait_remarks/{remarkId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

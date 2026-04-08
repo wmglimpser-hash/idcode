@@ -109,11 +109,11 @@ export const CharacterDetail = ({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Left: Image and Basic Info */}
       <div className="lg:col-span-4 space-y-6">
-        <div className="relative group overflow-hidden cyber-border">
+        <div className="relative group overflow-hidden cyber-border bg-bg/30 flex items-center justify-center">
           <img 
             src={character.imageUrl} 
             alt={character.name} 
-            className="w-full aspect-[2/3] object-cover transition-transform duration-700 group-hover:scale-110"
+            className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-105"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-80" />

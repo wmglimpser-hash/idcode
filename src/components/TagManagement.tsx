@@ -84,7 +84,8 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
 
   const allStats = [
     ...SURVIVOR_TRAITS_TEMPLATE.flatMap(c => c.items.map(i => i.label)),
-    ...HUNTER_TRAITS_TEMPLATE.flatMap(c => c.items.map(i => i.label))
+    ...HUNTER_TRAITS_TEMPLATE.flatMap(c => c.items.map(i => i.label)),
+    '存在感', '技能冷却', '技能范围', '充能速度', '博弈能力', '牵制时长', '辅助能力'
   ].filter((v, i, a) => a.indexOf(v) === i);
 
   return (

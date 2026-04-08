@@ -288,10 +288,10 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                 </AnimatePresence>
               </div>
 
-              <div className="aspect-[2/3] border border-border overflow-hidden relative group">
+              <div className="border border-border overflow-hidden relative group bg-bg/30 flex items-center justify-center">
                 <img 
                   src={selectedSurvivor.imageUrl} 
-                  className="w-full h-full object-cover transition-all duration-500" 
+                  className="w-full h-auto object-contain transition-all duration-500" 
                   referrerPolicy="no-referrer" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60" />
@@ -503,10 +503,10 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                 </AnimatePresence>
               </div>
 
-              <div className="aspect-[2/3] border border-border overflow-hidden relative group">
+              <div className="border border-border overflow-hidden relative group bg-bg/30 flex items-center justify-center">
                 <img 
                   src={selectedHunter.imageUrl} 
-                  className="w-full h-full object-cover transition-all duration-500" 
+                  className="w-full h-auto object-contain transition-all duration-500" 
                   referrerPolicy="no-referrer" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60" />
