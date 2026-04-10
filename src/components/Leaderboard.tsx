@@ -37,6 +37,35 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
   const [showMetricForm, setShowMetricForm] = useState(false);
   const [newMetric, setNewMetric] = useState<{ name: string, traitLabels: string[] }>({ name: '', traitLabels: [] });
   const [editingRemark, setEditingRemark] = useState<{ charId: string, traitLabel: string, valueStr: string, currentRemark: string } | null>(null);
+  const [leaderboardConfig, setLeaderboardConfig] = useState<{ survivorTraits: CharacterTraitCategory[], hunterTraits: CharacterTraitCategory[] }>({ survivorTraits: [], hunterTraits: [] });
+  const [isEditingConfig, setIsEditingConfig] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newItemLabel, setNewItemLabel] = useState('');
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+
+  // Fetch leaderboard config
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'system_configs', 'leaderboard'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setLeaderboardConfig({
+          survivorTraits: data.survivorTraits || [],
+          hunterTraits: data.hunterTraits || []
+        });
+      } else {
+        // Fallback to base characters if config doesn't exist
+        const survivorBase = characters.find(c => c.id === 'base_survivor');
+        const hunterBase = characters.find(c => c.id === 'base_hunter');
+        setLeaderboardConfig({
+          survivorTraits: survivorBase?.traits || [],
+          hunterTraits: hunterBase?.traits || []
+        });
+      }
+    }, (error) => {
+      console.error("Error fetching leaderboard config:", error);
+    });
+    return () => unsub();
+  }, [characters]);
 
   // Fetch custom metrics
   useEffect(() => {
@@ -128,11 +157,6 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
     }
   };
 
-  const baseInfo = useMemo(() => {
-    const id = role === 'Survivor' ? 'base_survivor' : 'base_hunter';
-    return characters.find(c => c.id === id);
-  }, [characters, role]);
-
   const factionCharacters = useMemo(() => {
     return characters.filter(c => c.role === role && !c.id.startsWith('base_'));
   }, [characters, role]);
@@ -147,11 +171,60 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
     return match ? parseFloat(match[1]) : -Infinity;
   };
 
+  const handleSaveConfig = async (newConfig: { survivorTraits: CharacterTraitCategory[], hunterTraits: CharacterTraitCategory[] }) => {
+    try {
+      await setDoc(doc(db, 'system_configs', 'leaderboard'), {
+        ...newConfig,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Error saving leaderboard config:", err);
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const newConfig = { ...leaderboardConfig };
+    const traits = role === 'Survivor' ? newConfig.survivorTraits : newConfig.hunterTraits;
+    traits.push({ category: newCategoryName.trim(), items: [] });
+    handleSaveConfig(newConfig);
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCategory = (index: number) => {
+    if (!window.confirm("确定要删除这个分类及其所有项目吗？")) return;
+    const newConfig = { ...leaderboardConfig };
+    const traits = role === 'Survivor' ? newConfig.survivorTraits : newConfig.hunterTraits;
+    traits.splice(index, 1);
+    handleSaveConfig(newConfig);
+  };
+
+  const handleAddItem = (catIndex: number) => {
+    if (!newItemLabel.trim()) return;
+    const newConfig = { ...leaderboardConfig };
+    const traits = role === 'Survivor' ? newConfig.survivorTraits : newConfig.hunterTraits;
+    traits[catIndex].items.push({ label: newItemLabel.trim(), value: '0' });
+    handleSaveConfig(newConfig);
+    setNewItemLabel('');
+    setActiveCategoryIndex(null);
+  };
+
+  const handleDeleteItem = (catIndex: number, itemIndex: number) => {
+    const newConfig = { ...leaderboardConfig };
+    const traits = role === 'Survivor' ? newConfig.survivorTraits : newConfig.hunterTraits;
+    traits[catIndex].items.splice(itemIndex, 1);
+    handleSaveConfig(newConfig);
+  };
+
+  const currentTraits = useMemo(() => {
+    return role === 'Survivor' ? leaderboardConfig.survivorTraits : leaderboardConfig.hunterTraits;
+  }, [leaderboardConfig, role]);
+
   const traitCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    if (!baseInfo?.traits) return counts;
+    if (!currentTraits) return counts;
 
-    baseInfo.traits.forEach(cat => {
+    currentTraits.forEach(cat => {
       cat.items.forEach(item => {
         const label = item.label;
         const uniqueValues = new Set<number>();
@@ -174,7 +247,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
       });
     });
     return counts;
-  }, [baseInfo, factionCharacters]);
+  }, [currentTraits, factionCharacters]);
 
   const groupedRankedData = useMemo(() => {
     if (!selectedTrait && !selectedCustomMetric) return [];
@@ -333,14 +406,49 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                 <h3 className="text-xl font-serif text-accent flex items-center gap-2">
                   <Shield className="w-5 h-5" /> 阵营基础数值概览
                 </h3>
-                <button 
-                  onClick={() => setShowMetricForm(prev => !prev)}
-                  className={`p-1.5 border transition-all ${showMetricForm ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(255,0,60,0.3)]' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
-                  title="创建自定义计算项"
-                >
-                  <Calculator className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button 
+                      onClick={() => setIsEditingConfig(!isEditingConfig)}
+                      className={`p-1.5 border transition-all ${isEditingConfig ? 'bg-accent border-accent text-bg shadow-[0_0_10px_rgba(0,243,255,0.3)]' : 'border-accent/30 text-accent hover:bg-accent/10'}`}
+                      title="管理概览项目"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setShowMetricForm(prev => !prev)}
+                    className={`p-1.5 border transition-all ${showMetricForm ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(255,0,60,0.3)]' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
+                    title="创建自定义计算项"
+                  >
+                    <Calculator className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
+
+              {isEditingConfig && isAdmin && (
+                <div className="mb-6 p-4 bg-accent/5 border border-accent/30 space-y-4 animate-in slide-in-from-top-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-mono text-accent uppercase font-bold">管理概览项目</span>
+                    <button onClick={() => setIsEditingConfig(false)} className="text-muted hover:text-accent"><X className="w-3 h-3" /></button>
+                  </div>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      placeholder="新分类名称..."
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="flex-1 bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-accent"
+                    />
+                    <button 
+                      onClick={handleAddCategory}
+                      className="px-3 py-2 bg-accent text-bg text-[10px] font-mono font-bold hover:bg-accent/80"
+                    >
+                      添加分类
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {showMetricForm && (
                 <div className="mb-6 p-4 bg-primary/5 border border-primary/30 space-y-4 animate-in slide-in-from-top-2">
@@ -356,7 +464,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                     className="w-full bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-primary"
                   />
                   <div className="max-h-40 overflow-y-auto border border-border/30 p-2 space-y-1 bg-bg/20">
-                    {baseInfo?.traits?.flatMap(t => t.items).map(item => (
+                    {currentTraits?.flatMap(t => t.items).map(item => (
                       <label key={item.label} className="flex items-center gap-2 text-[10px] font-mono text-muted hover:text-text cursor-pointer">
                         <input 
                           type="checkbox"
@@ -427,37 +535,88 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   </div>
                 )}
 
-                {baseInfo?.traits && baseInfo.traits.length > 0 ? (
+                {currentTraits && currentTraits.length > 0 ? (
                   <>
-                    {baseInfo.traits.map((cat, i) => (
+                    {currentTraits.map((cat, i) => (
                       <div key={i} className="space-y-3">
-                        <div className="text-xs text-primary font-bold uppercase tracking-widest border-b border-primary/20 pb-1">
-                          {cat.category}
+                        <div className="text-xs text-primary font-bold uppercase tracking-widest border-b border-primary/20 pb-1 flex justify-between items-center">
+                          <span>{cat.category}</span>
+                          {isEditingConfig && isAdmin && (
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => setActiveCategoryIndex(activeCategoryIndex === i ? null : i)}
+                                className="text-accent hover:text-accent/80"
+                                title="添加项目"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteCategory(i)}
+                                className="text-primary hover:text-primary/80"
+                                title="删除分类"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
                         </div>
+
+                        {isEditingConfig && isAdmin && activeCategoryIndex === i && (
+                          <div className="flex gap-2 p-2 bg-accent/5 border border-accent/20 animate-in slide-in-from-top-1">
+                            <input 
+                              type="text"
+                              placeholder="新项目名称..."
+                              value={newItemLabel}
+                              onChange={(e) => setNewItemLabel(e.target.value)}
+                              className="flex-1 bg-bg/50 border border-border p-1 text-[10px] font-mono outline-none focus:border-accent"
+                              autoFocus
+                            />
+                            <button 
+                              onClick={() => handleAddItem(i)}
+                              className="px-2 py-1 bg-accent text-bg text-[10px] font-mono font-bold"
+                            >
+                              添加
+                            </button>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-1 gap-1">
                           {cat.items.map((item, j) => (
                             <div 
                               key={j} 
                               onClick={() => {
-                                setSelectedTrait({ category: cat.category, label: item.label });
-                                setSelectedCustomMetric(null);
+                                if (!isEditingConfig) {
+                                  setSelectedTrait({ category: cat.category, label: item.label });
+                                  setSelectedCustomMetric(null);
+                                }
                               }}
-                              className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
+                              className={`flex justify-between items-center p-3 border transition-all group ${
                                 selectedTrait?.label === item.label 
                                   ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
                                   : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
-                              }`}
+                              } ${isEditingConfig ? 'cursor-default' : 'cursor-pointer'}`}
                             >
                               <span className="text-sm font-mono font-bold">{item.label}</span>
                               <div className="flex items-center gap-2">
-                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border ${
-                                  selectedTrait?.label === item.label 
-                                    ? 'bg-accent/20 border-accent/50 text-accent' 
-                                    : 'bg-bg/50 border-border/50 text-muted group-hover:text-text/80'
-                                }`}>
-                                  {traitCounts[item.label] || 0} 项
-                                </span>
-                                {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                                {isEditingConfig && isAdmin ? (
+                                  <button 
+                                    onClick={() => handleDeleteItem(i, j)}
+                                    className="p-1 text-muted hover:text-primary"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                ) : (
+                                  <>
+                                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border ${
+                                      selectedTrait?.label === item.label 
+                                        ? 'bg-accent/20 border-accent/50 text-accent' 
+                                        : 'bg-bg/50 border-border/50 text-muted group-hover:text-text/80'
+                                    }`}>
+                                      {traitCounts[item.label] || 0} 项
+                                    </span>
+                                    {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                                  </>
+                                )}
                               </div>
                             </div>
                           ))}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon, Edit2 } from 'lucide-react';
-import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE } from '../constants';
+import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
 
 interface Props {
   onSave: (data: any) => void;
@@ -796,25 +796,28 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {cat.items.map((item, itemIndex) => (
-                      <div key={itemIndex} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
+                    {cat.items
+                      .map((item, originalIdx) => ({ ...item, originalIdx }))
+                      .filter(item => formData.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label))
+                      .map((item) => (
+                      <div key={item.originalIdx} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
                         <input 
                           type="text"
                           value={item.label}
-                          onChange={(e) => updateTraitItem(catIndex, itemIndex, 'label', e.target.value)}
+                          onChange={(e) => updateTraitItem(catIndex, item.originalIdx, 'label', e.target.value)}
                           placeholder="标签"
                           className="w-24 bg-transparent text-xs text-muted outline-none border-r border-border/30 pr-2"
                         />
                         <input 
                           type="text"
                           value={item.value}
-                          onChange={(e) => updateTraitItem(catIndex, itemIndex, 'value', e.target.value)}
+                          onChange={(e) => updateTraitItem(catIndex, item.originalIdx, 'value', e.target.value)}
                           placeholder="数值"
                           className="flex-1 bg-transparent text-xs text-accent outline-none"
                         />
                         <button 
                           type="button"
-                          onClick={() => removeTraitItem(catIndex, itemIndex)}
+                          onClick={() => removeTraitItem(catIndex, item.originalIdx)}
                           className="text-muted hover:text-primary"
                         >
                           <Trash2 className="w-3 h-3" />

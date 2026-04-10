@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query, where, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as UserIcon, Shield, LayoutGrid, Table as TableIcon, Search, ExternalLink, ChevronRight, Info, ShieldCheck } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory } from '../constants';
+import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
 import { renameTagGlobal, deleteTagGlobal } from '../services/tagService';
 
 interface TagManagementProps {
@@ -205,7 +205,11 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
   };
 
   const availableStats = [
-    ...(form.affectedRole === 'Survivor' ? survivorTraits : hunterTraits).flatMap(c => c.items.map(i => i.label)),
+    ...(form.affectedRole === 'Survivor' ? survivorTraits : hunterTraits)
+      .flatMap(c => c.items
+        .filter(i => form.affectedRole !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(i.label))
+        .map(i => i.label)
+      ),
     ...customStats
   ].filter((v, i, a) => a.indexOf(v) === i);
 
@@ -302,53 +306,11 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
             await setDoc(doc(db, 'tags', tag.id), { ...tag, affectedStats: newStats }, { merge: true });
           }
         }
-
-        // Update ALL characters that have these traits to keep them in sync
-        const charsSnap = await getDocs(collection(db, 'characters'));
-        const batchPromises = charsSnap.docs.map(async (charDoc) => {
-          const charData = charDoc.data() as Character;
-          if (charData.role === role && charData.traits) {
-            const updatedTraits = charData.traits.map((cat, cIdx) => {
-              if (cIdx === categoryIndex) {
-                return {
-                  ...cat,
-                  items: cat.items.map((item, iIdx) => {
-                    if (iIdx === itemIndex && item.label === oldLabel) {
-                      return { label: newLabel, value: newValue };
-                    }
-                    return item;
-                  })
-                };
-              }
-              return cat;
-            });
-            return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
-          }
-          return Promise.resolve();
-        });
-        await Promise.all(batchPromises);
       } else {
         // Editing a category name
         const newCategoryName = traitEditForm.label.trim();
         if (!newCategoryName) return;
         template[categoryIndex].category = newCategoryName;
-
-        // Update ALL characters' category names
-        const charsSnap = await getDocs(collection(db, 'characters'));
-        const batchPromises = charsSnap.docs.map(async (charDoc) => {
-          const charData = charDoc.data() as Character;
-          if (charData.role === role && charData.traits) {
-            const updatedTraits = charData.traits.map((cat, cIdx) => {
-              if (cIdx === categoryIndex) {
-                return { ...cat, category: newCategoryName };
-              }
-              return cat;
-            });
-            return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
-          }
-          return Promise.resolve();
-        });
-        await Promise.all(batchPromises);
       }
 
       await setDoc(doc(db, 'system_configs', 'trait_templates'), {
@@ -371,7 +333,7 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
     setConfirmModal({
       show: true,
       title: '确认删除特质项目',
-      message: `确定要删除特质项目 "${itemToDelete.label}" 吗？此操作将从所有角色中移除该项。`,
+      message: `确定要删除特质项目 "${itemToDelete.label}" 吗？`,
       type: 'danger',
       onConfirm: async () => {
         template[categoryIndex].items.splice(itemIndex, 1);
@@ -382,25 +344,6 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
             [role.toLowerCase()]: template
           }, { merge: true });
 
-          // Update ALL characters
-          const charsSnap = await getDocs(collection(db, 'characters'));
-          const batchPromises = charsSnap.docs.map(async (charDoc) => {
-            const charData = charDoc.data() as Character;
-            if (charData.role === role && charData.traits) {
-              const updatedTraits = charData.traits.map((cat, cIdx) => {
-                if (cIdx === categoryIndex) {
-                  return {
-                    ...cat,
-                    items: cat.items.filter((_, iIdx) => iIdx !== itemIndex)
-                  };
-                }
-                return cat;
-              });
-              return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
-            }
-            return Promise.resolve();
-          });
-          await Promise.all(batchPromises);
           setConfirmModal(prev => ({ ...prev, show: false }));
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
@@ -423,26 +366,6 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
         [role.toLowerCase()]: template
       }, { merge: true });
 
-      // Update ALL characters
-      const charsSnap = await getDocs(collection(db, 'characters'));
-      const batchPromises = charsSnap.docs.map(async (charDoc) => {
-        const charData = charDoc.data() as Character;
-        if (charData.role === role && charData.traits) {
-          const updatedTraits = charData.traits.map((cat, cIdx) => {
-            if (cIdx === categoryIndex) {
-              return {
-                ...cat,
-                items: [...cat.items, newItem]
-              };
-            }
-            return cat;
-          });
-          return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
-        }
-        return Promise.resolve();
-      });
-      await Promise.all(batchPromises);
-      
       // Enter edit mode for the new item
       setEditingTrait({ role, categoryIndex, itemIndex: template[categoryIndex].items.length - 1 });
       setTraitEditForm({ label: newItem.label, value: newItem.value });
@@ -465,18 +388,6 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
         [role.toLowerCase()]: template
       }, { merge: true });
 
-      // Update ALL characters
-      const charsSnap = await getDocs(collection(db, 'characters'));
-      const batchPromises = charsSnap.docs.map(async (charDoc) => {
-        const charData = charDoc.data() as Character;
-        if (charData.role === role && charData.traits) {
-          const updatedTraits = [...charData.traits, newCategory];
-          return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
-        }
-        return Promise.resolve();
-      });
-      await Promise.all(batchPromises);
-
       // Enter edit mode for the new category
       setEditingTrait({ role, categoryIndex: template.length - 1 });
       setTraitEditForm({ label: newCategory.category, value: '' });
@@ -495,7 +406,7 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
     setConfirmModal({
       show: true,
       title: '确认删除特质分类',
-      message: `确定要删除特质分类 "${catToDelete.category}" 吗？此操作将从所有角色中移除该分类及其所有项目。`,
+      message: `确定要删除特质分类 "${catToDelete.category}" 吗？`,
       type: 'danger',
       onConfirm: async () => {
         template.splice(categoryIndex, 1);
@@ -506,17 +417,6 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
             [role.toLowerCase()]: template
           }, { merge: true });
 
-          // Update ALL characters
-          const charsSnap = await getDocs(collection(db, 'characters'));
-          const batchPromises = charsSnap.docs.map(async (charDoc) => {
-            const charData = charDoc.data() as Character;
-            if (charData.role === role && charData.traits) {
-              const updatedTraits = charData.traits.filter((_, cIdx) => cIdx !== categoryIndex);
-              return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
-            }
-            return Promise.resolve();
-          });
-          await Promise.all(batchPromises);
           setConfirmModal(prev => ({ ...prev, show: false }));
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
@@ -738,12 +638,18 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                   </thead>
                   <tbody>
                     {(matrixRole === 'Survivor' ? survivorTraits : hunterTraits).map((cat, catIdx) => {
-                      const rowSpan = Math.max(1, cat.items.length);
+                      const filteredItems = cat.items
+                        .map((item, idx) => ({ ...item, originalIdx: idx }))
+                        .filter(item => matrixRole !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label));
+                      
+                      if (filteredItems.length === 0) return null;
+                      
+                      const rowSpan = Math.max(1, filteredItems.length);
                       const isEditingCat = editingTrait?.role === matrixRole && editingTrait?.categoryIndex === catIdx && editingTrait?.itemIndex === undefined;
                       
                       return (
                         <React.Fragment key={`${matrixRole}-${catIdx}`}>
-                          {cat.items.length === 0 ? (
+                          {filteredItems.length === 0 ? (
                             <tr className="border-b border-border/50 group hover:bg-white/5 transition-colors">
                               <td className="px-5 py-5 border-r border-border/50">
                                 <div className="flex items-center justify-between group/cat">
@@ -795,12 +701,12 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                               <td colSpan={3} className="px-5 py-5 text-xs font-mono italic text-muted/30">暂无项目_NO_ITEMS</td>
                             </tr>
                           ) : (
-                            cat.items.map((item, itemIdx) => {
-                              const isEditing = editingTrait?.role === matrixRole && editingTrait?.categoryIndex === catIdx && editingTrait?.itemIndex === itemIdx;
+                            filteredItems.map((item, itemIdx) => {
+                              const isEditing = editingTrait?.role === matrixRole && editingTrait?.categoryIndex === catIdx && editingTrait?.itemIndex === item.originalIdx;
                               const associatedTags = tags.filter(t => t.affectedStats?.includes(item.label));
                               
                               return (
-                                <tr key={`${matrixRole}-${catIdx}-${itemIdx}`} className="border-b border-border/50 group hover:bg-white/5 transition-colors">
+                                <tr key={`${matrixRole}-${catIdx}-${item.originalIdx}`} className="border-b border-border/50 group hover:bg-white/5 transition-colors">
                                   {itemIdx === 0 && (
                                     <td rowSpan={rowSpan} className="px-5 py-5 border-r border-border/50 align-top bg-bg/10">
                                       <div className="flex items-center justify-between group/cat">
@@ -865,7 +771,7 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                             <button 
                                               onClick={() => {
-                                                setEditingTrait({ role: matrixRole, categoryIndex: catIdx, itemIndex: itemIdx });
+                                                setEditingTrait({ role: matrixRole, categoryIndex: catIdx, itemIndex: item.originalIdx });
                                                 setTraitEditForm({ label: item.label, value: item.value });
                                               }}
                                               className="p-1 text-muted hover:text-accent"
@@ -873,7 +779,7 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                                               <Edit2 size={12} />
                                             </button>
                                             <button 
-                                              onClick={() => handleDeleteTraitItem(matrixRole, catIdx, itemIdx)}
+                                              onClick={() => handleDeleteTraitItem(matrixRole, catIdx, item.originalIdx)}
                                               className="p-1 text-muted hover:text-primary"
                                             >
                                               <Trash2 size={12} />

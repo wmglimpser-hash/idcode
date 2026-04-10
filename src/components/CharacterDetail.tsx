@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Character, COLORS, Tag } from '../constants';
+import { Character, COLORS, Tag, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
 import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Tag as TagIcon } from 'lucide-react';
 import { CharacterTraitCategory } from '../constants';
 
@@ -299,14 +299,17 @@ export const CharacterDetail = ({
                         </button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {cat.items.map((item, itemIdx) => (
-                          <div key={itemIdx} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
+                        {cat.items
+                          .map((item, originalIdx) => ({ ...item, originalIdx }))
+                          .filter(item => character.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label))
+                          .map((item) => (
+                          <div key={item.originalIdx} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
                             <input 
                               type="text"
                               value={item.label}
                               onChange={(e) => {
                                 const newTraits = [...editTraits];
-                                newTraits[catIdx].items[itemIdx].label = e.target.value;
+                                newTraits[catIdx].items[item.originalIdx].label = e.target.value;
                                 setEditTraits(newTraits);
                               }}
                               className="w-24 bg-transparent text-xs text-muted outline-none border-r border-border/30 pr-2"
@@ -316,30 +319,16 @@ export const CharacterDetail = ({
                               value={item.value}
                               onChange={(e) => {
                                 const newTraits = [...editTraits];
-                                newTraits[catIdx].items[itemIdx].value = e.target.value;
+                                newTraits[catIdx].items[item.originalIdx].value = e.target.value;
                                 setEditTraits(newTraits);
                               }}
                               className="flex-1 bg-transparent text-xs text-accent outline-none"
                               placeholder="数值"
                             />
-                            <input 
-                              type="number"
-                              step="0.1"
-                              min="0"
-                              max="5"
-                              value={item.rating || 3}
-                              onChange={(e) => {
-                                const newTraits = [...editTraits];
-                                newTraits[catIdx].items[itemIdx].rating = parseFloat(e.target.value);
-                                setEditTraits(newTraits);
-                              }}
-                              className="w-12 bg-transparent text-xs text-primary outline-none border-l border-border/30 pl-2"
-                              placeholder="评分"
-                            />
                             <button 
                               onClick={() => {
                                 const newTraits = [...editTraits];
-                                newTraits[catIdx].items = newTraits[catIdx].items.filter((_, idx) => idx !== itemIdx);
+                                newTraits[catIdx].items = newTraits[catIdx].items.filter((_, idx) => idx !== item.originalIdx);
                                 setEditTraits(newTraits);
                               }}
                               className="text-muted hover:text-primary"
@@ -374,7 +363,9 @@ export const CharacterDetail = ({
                         )}
                       </h3>
                       <div className="space-y-1">
-                        {cat.items.map((item, j) => {
+                        {cat.items
+                          .filter(item => character.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label))
+                          .map((item, j) => {
                           const baseCat = baseCharacter?.traits?.find(bc => 
                             bc.category.split(' ')[0] === cat.category.split(' ')[0]
                           );
@@ -386,7 +377,6 @@ export const CharacterDetail = ({
                               key={j} 
                               label={item.label} 
                               value={item.value} 
-                              rating={item.rating}
                               isDifferent={!!isDifferent}
                               baseValue={character.role === 'Survivor' ? baseItem?.value : undefined}
                             />
@@ -982,7 +972,7 @@ export const CharacterDetail = ({
   );
 };
 
-const BaseStatItem = ({ label, value, rating, isDifferent, baseValue }: { label: string; value: string; rating?: number; isDifferent?: boolean; baseValue?: string }) => (
+const BaseStatItem = ({ label, value, isDifferent, baseValue }: { label: string; value: string; isDifferent?: boolean; baseValue?: string }) => (
   <div className={`flex flex-col py-2 border-b border-border/30 last:border-0 hover:bg-white/5 px-2 transition-colors ${isDifferent ? 'bg-primary/5' : ''}`}>
     <div className="flex justify-between items-center mb-1">
       <span className="text-muted text-xs">{label}</span>
@@ -993,13 +983,5 @@ const BaseStatItem = ({ label, value, rating, isDifferent, baseValue }: { label:
         )}
       </div>
     </div>
-    {rating !== undefined && (
-      <div className="h-1 bg-bg border border-border/50 relative overflow-hidden">
-        <div 
-          className="absolute inset-y-0 left-0 bg-accent/40 transition-all duration-500"
-          style={{ width: `${(rating / 5) * 100}%` }}
-        />
-      </div>
-    )}
   </div>
 );

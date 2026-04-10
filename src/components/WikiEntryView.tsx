@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { WikiEntry, Revision } from '../constants';
+import { WikiEntry, Revision, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
 import { Book, Clock, User, Shield, Zap, Search, Heart, Edit3, Activity, Save, X, Network } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -247,19 +247,24 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
                 </p>
                 {content?.traits && content.traits.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {content.traits.map((cat: any, i: number) => (
-                      <div key={i} className="p-3 bg-bg/50 border border-border/50">
-                        <div className="text-[10px] text-primary font-bold mb-2 uppercase">{cat.category}</div>
-                        <div className="space-y-1">
-                          {cat.items.map((item: any, j: number) => (
-                            <div key={j} className="flex justify-between text-[10px] font-mono">
-                              <span className="text-muted">{item.label}</span>
-                              <span className="text-text">{item.value}</span>
-                            </div>
-                          ))}
+                    {content.traits.map((cat: any, i: number) => {
+                      const filteredItems = cat.items.filter((item: any) => content?.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label));
+                      if (filteredItems.length === 0) return null;
+                      
+                      return (
+                        <div key={i} className="p-3 bg-bg/50 border border-border/50">
+                          <div className="text-[10px] text-primary font-bold mb-2 uppercase">{cat.category}</div>
+                          <div className="space-y-1">
+                            {filteredItems.map((item: any, j: number) => (
+                              <div key={j} className="flex justify-between text-[10px] font-mono">
+                                <span className="text-muted">{item.label}</span>
+                                <span className="text-text">{item.value}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

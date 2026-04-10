@@ -17,7 +17,6 @@ export const COLORS = {
 export interface CharacterTraitItem {
   label: string;
   value: string;
-  rating?: number;
 }
 
 export interface CharacterTraitCategory {
@@ -86,7 +85,6 @@ export const SURVIVOR_TRAITS_TEMPLATE: CharacterTraitCategory[] = [
     category: '破译 DECODING',
     items: [
       { label: '密码机破译时长', value: '81秒' },
-      { label: '破译完美判定额外增长进度', value: '1.00%' },
       { label: '破译触电回退进度', value: '1.00%' },
       { label: '破译触电无法破译时长', value: '2.0秒' },
       { label: '大门开启时长', value: '18.0秒' }
@@ -138,7 +136,6 @@ export const SURVIVOR_TRAITS_MODERN_TEMPLATE: CharacterTraitCategory[] = [
     category: '破译 DECODING',
     items: [
       { label: '密码机破译时长', value: '81秒' },
-      { label: '破译完美判定额外增长进度', value: '1.00%' },
       { label: '破译触电回退进度', value: '1.00%' },
       { label: '破译触电无法破译时长', value: '2.0秒' },
       { label: '大门开启时长', value: '18.0秒' }
@@ -175,6 +172,8 @@ export const SURVIVOR_TRAITS_MODERN_TEMPLATE: CharacterTraitCategory[] = [
     ]
   }
 ];
+
+export const EXCLUDED_SURVIVOR_TRAITS = ['破译完美判定额外增长进度', '校准概率', '校准区域'];
 
 export const HUNTER_TRAITS_TEMPLATE: CharacterTraitCategory[] = [
   {
