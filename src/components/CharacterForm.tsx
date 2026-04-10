@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon } from 'lucide-react';
-import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag } from '../constants';
+import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon, Edit2 } from 'lucide-react';
+import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE } from '../constants';
 
 interface Props {
   onSave: (data: any) => void;
@@ -37,6 +37,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
   });
 
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [traitTemplates, setTraitTemplates] = useState<{ survivor: CharacterTraitCategory[], hunter: CharacterTraitCategory[] } | null>(null);
   const [skillsImportMode, setSkillsImportMode] = useState(false);
   const [skillsImportText, setSkillsImportText] = useState('');
 
@@ -44,6 +45,15 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
       const tags = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tag));
       setAvailableTags(tags);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'system_configs', 'trait_templates'), (snapshot) => {
+      if (snapshot.exists()) {
+        setTraitTemplates(snapshot.data() as any);
+      }
     });
     return () => unsub();
   }, []);
@@ -75,11 +85,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
           { tier: 2, name: '2阶', description: '', cooldown: '', tags: [] }
         ] : [],
         traits: prev.role === 'Survivor' 
-          ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
-          : JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE))
+          ? JSON.parse(JSON.stringify(traitTemplates?.survivor || SURVIVOR_TRAITS_MODERN_TEMPLATE)) 
+          : JSON.parse(JSON.stringify(traitTemplates?.hunter || HUNTER_TRAITS_TEMPLATE))
       }));
     }
-  }, [initialData, nextSurvivorOrder, nextHunterOrder]);
+  }, [initialData, nextSurvivorOrder, nextHunterOrder, traitTemplates]);
 
   // Handle role change to update fixed categories and order
   useEffect(() => {
@@ -87,8 +97,8 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
       setFormData(prev => {
         const newOrder = prev.role === 'Survivor' ? (nextSurvivorOrder || 0) : (nextHunterOrder || 0);
         const newTraits = prev.role === 'Survivor'
-          ? JSON.parse(JSON.stringify(SURVIVOR_TRAITS_TEMPLATE)) 
-          : JSON.parse(JSON.stringify(HUNTER_TRAITS_TEMPLATE));
+          ? JSON.parse(JSON.stringify(traitTemplates?.survivor || SURVIVOR_TRAITS_MODERN_TEMPLATE)) 
+          : JSON.parse(JSON.stringify(traitTemplates?.hunter || HUNTER_TRAITS_TEMPLATE));
         const newPresence = prev.role === 'Hunter' ? [
           { tier: 0, name: '0阶', description: '', cooldown: '', tags: [] },
           { tier: 1, name: '1阶', description: '', cooldown: '', tags: [] },

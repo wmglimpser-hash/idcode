@@ -198,6 +198,16 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "role", "traitLabels", "authorId"]
+    },
+    "SystemConfig": {
+      "title": "System Configuration",
+      "description": "Global configuration data for the application",
+      "type": "object",
+      "properties": {
+        "survivor": { "type": "array" },
+        "hunter": { "type": "array" },
+        "customStats": { "type": "array", "items": { "type": "string" } }
+      }
     }
   },
   "firestore": {
@@ -256,6 +266,10 @@
     "custom_metrics": {
       "schema": "CustomMetric",
       "description": "User-defined ranking metrics"
+    },
+    "system_configs": {
+      "schema": "SystemConfig",
+      "description": "Global system configurations"
     }
   }
 }

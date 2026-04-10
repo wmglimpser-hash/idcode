@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { DEFAULT_TAG_CONFIG } from '../constants';
+import { syncTags } from '../services/tagService';
 import { X, Save, AlertTriangle, FileJson, Sparkles, Wand2, RefreshCcw } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -136,6 +137,11 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
           await updateDoc(doc(db, 'entries', entryRef.id), {
             currentRevisionId: revRef.id
           });
+
+          // 4. Sync tags to global tag system
+          if (item.tags && item.tags.length > 0) {
+            await syncTags(item.tags, 'Both', auth.currentUser.uid);
+          }
         } else {
           // Talent Definition mode
           const targetRole = item.role || role || 'Survivor';
@@ -148,6 +154,11 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
             .filter(config => config.keywords.some(k => text.includes(k)))
             .map(config => config.name);
           const combinedTags = Array.from(new Set([...(item.tags || []), ...autoTags]));
+
+          // Sync tags to global tag system
+          if (combinedTags.length > 0) {
+            await syncTags(combinedTags, targetRole as any, auth.currentUser.uid);
+          }
 
           await setDoc(doc(db, 'talent_definitions', docId), {
             ...item,

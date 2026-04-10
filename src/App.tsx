@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE } from './constants';
+import { syncTags } from './services/tagService';
 import { CharacterForm } from './components/CharacterForm';
 import { CharacterDetail } from './components/CharacterDetail';
 import { TraitFactorsView } from './components/TraitFactorsView';
@@ -26,62 +27,12 @@ import {
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
-import { db, auth } from './firebase';
+import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap, Trash2 } from 'lucide-react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'tags';
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
 
 export default function App() {
   const [characters, setCharacters] = useState<Character[]>(MOCK_CHARACTERS);
@@ -342,11 +293,34 @@ export default function App() {
       }
     };
 
+    const extractTags = (data: any) => {
+      const tags = new Set<string>();
+      if (Array.isArray(data.skills)) {
+        data.skills.forEach((s: any) => {
+          if (Array.isArray(s.tags)) {
+            s.tags.forEach((t: string) => { if (t) tags.add(t); });
+          }
+        });
+      }
+      if (Array.isArray(data.presence)) {
+        data.presence.forEach((p: any) => {
+          if (Array.isArray(p.tags)) {
+            p.tags.forEach((t: string) => { if (t) tags.add(t); });
+          }
+        });
+      }
+      return Array.from(tags);
+    };
+
     try {
       if (Array.isArray(charData)) {
         // Bulk save multiple characters
         for (const data of charData) {
           validateChar(data);
+          const tags = extractTags(data);
+          if (tags.length > 0 && user) {
+            await syncTags(tags, data.role, user.uid);
+          }
           try {
             if (data.id && !MOCK_CHARACTERS.some(m => m.id === data.id)) {
               // Update existing DB character
@@ -372,6 +346,10 @@ export default function App() {
         }
       } else if (isEditingCharacter && selectedCharacter) {
         validateChar(charData);
+        const tags = extractTags(charData);
+        if (tags.length > 0 && user) {
+          await syncTags(tags, charData.role, user.uid);
+        }
         try {
           await setDoc(doc(db, 'characters', selectedCharacter.id), {
             ...charData,
@@ -382,6 +360,10 @@ export default function App() {
         }
       } else {
         validateChar(charData);
+        const tags = extractTags(charData);
+        if (tags.length > 0 && user) {
+          await syncTags(tags, charData.role, user.uid);
+        }
         try {
           await addDoc(collection(db, 'characters'), {
             ...charData,
@@ -531,10 +513,11 @@ export default function App() {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-bg text-text font-sans selection:bg-primary selection:text-white relative bg-cover bg-center bg-fixed bg-no-repeat transition-all duration-500"
-      style={{ backgroundImage: 'var(--bg-overlay), var(--bg-image)' }}
-    >
+    <ErrorBoundary>
+      <div 
+        className="min-h-screen bg-bg text-text font-sans selection:bg-primary selection:text-white relative bg-cover bg-center bg-fixed bg-no-repeat transition-all duration-500"
+        style={{ backgroundImage: 'var(--bg-overlay), var(--bg-image)' }}
+      >
       <div className="scanline" />
       
       {/* Header */}
@@ -1020,5 +1003,6 @@ export default function App() {
         ))}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

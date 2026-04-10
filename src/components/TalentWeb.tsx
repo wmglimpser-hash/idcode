@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query, where, updateDoc, getDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { Save, Trash2, Plus, Info, ShieldCheck, Swords, Network, ExternalLink, FileText, FileJson, Search, List, X, Edit3, Wand2, Tag, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TalentNode, WikiEntry, DEFAULT_TAG_CONFIG, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag as TagType } from '../constants';
+import { syncTags } from '../services/tagService';
 import { BulkImport } from './BulkImport';
 
 interface TalentDefinition {
@@ -136,10 +137,10 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [bulkTagInput, setBulkTagInput] = useState('');
-  const [bulkTagColor, setBulkTagColor] = useState('');
   const [tagToRename, setTagToRename] = useState<string | null>(null);
   const [newTagName, setNewTagName] = useState('');
   const [selectedTalentIds, setSelectedTalentIds] = useState<string[]>([]);
+  const [bulkSelectedTags, setBulkSelectedTags] = useState<string[]>([]);
   const [zoom, setZoom] = useState(1);
   const [showStatSelector, setShowStatSelector] = useState(false);
 
@@ -158,6 +159,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
       const tags = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TagType));
       setAvailableTags(tags);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'tags');
     });
     return () => unsub();
   }, []);
@@ -185,7 +188,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
         setTreeNodes(DEFAULT_NODES);
       }
     }, (error) => {
-      console.error("Error fetching talent tree layout:", error);
+      handleFirestoreError(error, OperationType.GET, `talent_tree_layout/${role}`);
     });
     return () => unsub();
   }, [role]);
@@ -612,8 +615,19 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   </div>
                   
                     <div className="flex flex-wrap gap-2 items-center">
-                      <span className="text-[9px] text-muted font-mono uppercase mr-1">选择全局标签:</span>
-                      {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === role).map(tag => (
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-[9px] text-muted font-mono uppercase">选择全局标签:</span>
+                        {editForm.tags && editForm.tags.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, tags: [], tagColors: {} })}
+                            className="text-[9px] text-primary hover:underline font-mono uppercase"
+                          >
+                            清空所有_CLEAR_ALL
+                          </button>
+                        )}
+                      </div>
+                      {availableTags.map(tag => (
                         <button
                           key={tag.id}
                           type="button"
@@ -903,48 +917,56 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
     });
     const allTalents = Array.from(allTalentsMap.values());
 
-    const handleAutoTagAll = async () => {
-      if (!isContributor) return;
-      
-      setSaving(true);
-      try {
-        const batch = [];
-        for (const talent of allTalents) {
-          const text = (talent.name + (talent.description || '')).toLowerCase();
-          const matchingConfigs = DEFAULT_TAG_CONFIG
-            .filter(config => config.keywords.some(k => text.includes(k)));
-          
-          const autoTags = matchingConfigs.map(config => config.name);
-          const currentTags = talent.talentData.tags || [];
-          const combinedTags = Array.from(new Set([...currentTags, ...autoTags]));
-          
-          if (combinedTags.length > currentTags.length) {
-            const newTagColors = { ...(talent.talentData.tagColors || {}) };
-            matchingConfigs.forEach(config => {
-              if (!newTagColors[config.name]) {
-                newTagColors[config.name] = config.color;
-              }
-            });
+  const handleBulkRemoveTags = async () => {
+    const tagsToRemove = [...bulkSelectedTags];
+    if (bulkTagInput.trim()) {
+      tagsToRemove.push(bulkTagInput.trim());
+    }
 
-            const docId = `${talent.talentData.role.toLowerCase()}_${talent.talentData.nodeId}`;
-            batch.push(setDoc(doc(db, 'talent_definitions', docId), {
-              ...talent.talentData,
-              tags: combinedTags,
+    if (selectedTalentIds.length === 0 || tagsToRemove.length === 0) return;
+    
+    setSaving(true);
+    try {
+      const batch = [];
+      
+      for (const talentId of selectedTalentIds) {
+        const talent = talents.find(t => t.id === talentId);
+        if (talent) {
+          const currentTags = talent.tags || [];
+          const newTags = currentTags.filter(t => !tagsToRemove.includes(t));
+          
+          if (newTags.length !== currentTags.length) {
+            const newTagColors = { ...(talent.tagColors || {}) };
+            tagsToRemove.forEach(tagName => {
+              delete newTagColors[tagName];
+            });
+            
+            batch.push(updateDoc(doc(db, 'talent_definitions', talentId), {
+              tags: newTags,
               tagColors: newTagColors,
               updatedAt: serverTimestamp()
-            }, { merge: true }));
+            }));
           }
         }
-        
-        if (batch.length > 0) {
-          await Promise.all(batch);
-        }
-      } catch (err) {
-        console.error("Auto-tag all error:", err);
-      } finally {
-        setSaving(false);
       }
-    };
+      
+      if (batch.length > 0) {
+        await Promise.all(batch);
+        showStatus(`已从 ${selectedTalentIds.length} 个天赋中移除标签`);
+      } else {
+        showStatus("所选天赋不包含这些标签");
+      }
+      
+      setBulkTagInput('');
+      setBulkSelectedTags([]);
+      setSelectedTalentIds([]);
+    } catch (error) {
+      console.error("Error bulk removing tags:", error);
+      showStatus("批量移除标签失败", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
 
     const filteredTalents = allTalents.filter(t => {
       const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1086,50 +1108,67 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   <span className="text-[10px] font-mono text-muted">已选择: {selectedTalentIds.length}</span>
                 </div>
                 {selectedTalentIds.length > 0 && (
-                  <div className="flex items-center gap-2 bg-bg/50 p-1 border border-border">
-                    <input
-                      type="text"
-                      value={bulkTagInput}
-                      onChange={(e) => setBulkTagInput(e.target.value)}
-                      placeholder="新标签..."
-                      className="bg-transparent border-none px-2 py-1 text-[10px] font-mono outline-none w-24"
-                    />
-                    <div className="flex gap-1">
-                      {TAG_COLORS.map(color => (
+                  <div className="flex flex-col gap-3 bg-bg/50 p-3 border border-border">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={bulkTagInput}
+                        onChange={(e) => setBulkTagInput(e.target.value)}
+                        placeholder="输入标签名..."
+                        className="bg-bg border border-border px-2 py-1 text-[10px] font-mono outline-none w-32 focus:border-accent"
+                      />
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <button
+                        onClick={handleBulkTag}
+                        disabled={saving || (bulkSelectedTags.length === 0 && !bulkTagInput.trim())}
+                        className="px-3 py-1 bg-accent text-bg hover:bg-accent/80 transition-all text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
+                      >
+                        应用标签_APPLY
+                      </button>
+                      <button
+                        onClick={handleBulkRemoveTags}
+                        disabled={saving || (bulkSelectedTags.length === 0 && !bulkTagInput.trim())}
+                        className="px-3 py-1 bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
+                      >
+                        移除标签_REMOVE
+                      </button>
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <button
+                        onClick={handleBulkDelete}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
+                      >
+                        <Trash2 size={12} />
+                        批量删除天赋_DELETE
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-border/30">
+                      <span className="text-[9px] text-muted font-mono uppercase mr-1">选择全局标签:</span>
+                      {availableTags.map(tag => (
                         <button
-                          key={color.name}
-                          onClick={() => setBulkTagColor(color.value)}
-                          className={`w-3 h-3 border ${bulkTagColor === color.value ? 'border-white' : 'border-transparent'}`}
-                          style={{ backgroundColor: color.value || '#333' }}
-                        />
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            if (bulkSelectedTags.includes(tag.name)) {
+                              setBulkSelectedTags(bulkSelectedTags.filter(t => t !== tag.name));
+                            } else {
+                              setBulkSelectedTags([...bulkSelectedTags, tag.name]);
+                            }
+                          }}
+                          className={`px-2 py-0.5 text-[9px] font-mono uppercase border transition-all ${
+                            bulkSelectedTags.includes(tag.name)
+                              ? 'bg-accent/20 border-accent text-accent'
+                              : 'bg-bg/50 border-border text-muted hover:border-accent/30'
+                          }`}
+                          style={bulkSelectedTags.includes(tag.name) ? { borderColor: tag.color, color: tag.color, backgroundColor: tag.color + '20' } : {}}
+                        >
+                          {tag.name}
+                        </button>
                       ))}
                     </div>
-                    <button
-                      onClick={handleBulkTag}
-                      disabled={saving || !bulkTagInput.trim()}
-                      className="px-2 py-1 bg-accent/20 text-accent hover:bg-accent hover:text-bg transition-all text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
-                    >
-                      添加标签_ADD_TAG
-                    </button>
-                    <div className="w-px h-4 bg-border mx-1" />
-                    <button
-                      onClick={handleBulkDelete}
-                      disabled={saving}
-                      className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
-                    >
-                      <Trash2 size={12} />
-                      批量删除_BULK_DELETE
-                    </button>
                   </div>
                 )}
-                <button
-                  onClick={handleAutoTagAll}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg transition-all text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
-                >
-                  <Wand2 size={12} />
-                  自动标记所有_AUTO_TAG_ALL
-                </button>
               </div>
             </div>
           )}
@@ -1757,6 +1796,11 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
 
       // Save talent definition if name is provided
       if (finalName && finalName !== '未命名天赋') {
+        // Sync tags to global tag system
+        if (editForm.tags && editForm.tags.length > 0 && auth.currentUser) {
+          await syncTags(editForm.tags, role, auth.currentUser.uid);
+        }
+
         if (!finalTalentId) {
           // Create new talent
           const newTalentRef = doc(collection(db, 'talent_definitions'));
@@ -2019,23 +2063,35 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
   };
 
   const handleBulkTag = async () => {
-    if (selectedTalentIds.length === 0 || !bulkTagInput.trim()) return;
+    if (selectedTalentIds.length === 0 || (bulkSelectedTags.length === 0 && !bulkTagInput.trim())) return;
     
     setSaving(true);
     try {
-      const newTag = bulkTagInput.trim();
+      const tagsToAdd = [...bulkSelectedTags];
+      if (bulkTagInput.trim()) {
+        tagsToAdd.push(bulkTagInput.trim());
+      }
+
       const batch = [];
       
       for (const talentId of selectedTalentIds) {
         const talent = talents.find(t => t.id === talentId);
         if (talent) {
           const currentTags = talent.tags || [];
-          if (!currentTags.includes(newTag)) {
-            const newTags = [...currentTags, newTag];
+          const newTags = Array.from(new Set([...currentTags, ...tagsToAdd]));
+          
+          if (newTags.length !== currentTags.length) {
             const newTagColors = { ...(talent.tagColors || {}) };
-            if (bulkTagColor) {
-              newTagColors[newTag] = bulkTagColor;
-            }
+            
+            // Apply colors for new tags
+            tagsToAdd.forEach(tagName => {
+              if (!newTagColors[tagName]) {
+                const globalTag = availableTags.find(t => t.name === tagName);
+                if (globalTag) {
+                  newTagColors[tagName] = globalTag.color;
+                }
+              }
+            });
             
             batch.push(updateDoc(doc(db, 'talent_definitions', talentId), {
               tags: newTags,
@@ -2048,12 +2104,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
       
       if (batch.length > 0) {
         await Promise.all(batch);
-        showStatus(`已为 ${batch.length} 个天赋添加标签 "${newTag}"`);
+        showStatus(`已为 ${selectedTalentIds.length} 个天赋更新标签`);
       } else {
-        showStatus("所选天赋已包含该标签");
+        showStatus("所选天赋已包含这些标签");
       }
       
       setBulkTagInput('');
+      setBulkSelectedTags([]);
       setSelectedTalentIds([]);
     } catch (error) {
       console.error("Error bulk tagging talents:", error);

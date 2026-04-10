@@ -228,5 +228,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // System Configs Collection
+    match /system_configs/{configId} {
+      allow read: if true;
+      allow write: if isContributor();
+    }
   }
 }

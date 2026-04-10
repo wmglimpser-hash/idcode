@@ -1,30 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
-import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as UserIcon, Shield } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as UserIcon, Shield, LayoutGrid, Table as TableIcon, Search, ExternalLink, ChevronRight, Info, ShieldCheck } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { Tag, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from '../constants';
+import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory } from '../constants';
+import { renameTagGlobal, deleteTagGlobal } from '../services/tagService';
 
 interface TagManagementProps {
   user?: FirebaseUser | null;
   userProfile?: any;
 }
 
+type ViewMode = 'matrix' | 'gallery';
+
 export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
   const [tags, setTags] = useState<Tag[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [talents, setTalents] = useState<TalentDefinition[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('matrix');
+  const [matrixRole, setMatrixRole] = useState<'Survivor' | 'Hunter'>('Survivor');
+  const [survivorTraits, setSurvivorTraits] = useState<CharacterTraitCategory[]>(SURVIVOR_TRAITS_MODERN_TEMPLATE);
+  const [hunterTraits, setHunterTraits] = useState<CharacterTraitCategory[]>(HUNTER_TRAITS_TEMPLATE);
+  const [customStats, setCustomStats] = useState<string[]>(['存在感', '技能冷却', '技能范围', '充能速度', '博弈能力', '牵制时长', '辅助能力']);
+  const [newCustomStat, setNewCustomStat] = useState('');
+  const [editingTrait, setEditingTrait] = useState<{ role: 'Survivor' | 'Hunter', categoryIndex: number, itemIndex?: number } | null>(null);
+  const [traitEditForm, setTraitEditForm] = useState({ label: '', value: '' });
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedTagForSearch, setSelectedTagForSearch] = useState<Tag | null>(null);
+  const [searchResults, setSearchResults] = useState<{ characters: Character[], talents: TalentDefinition[] }>({ characters: [], talents: [] });
+  const searchResultsRef = useRef<HTMLDivElement>(null);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'danger' | 'info';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
 
   const [form, setForm] = useState<Partial<Tag>>({
     name: '',
     color: '#00f3ff',
-    affectedRole: 'Both',
+    affectedRole: 'Survivor',
     affectedStats: []
   });
 
   const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
   const isContributor = userProfile?.role === 'contributor' || isAdminUser;
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'system_configs', 'trait_templates'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.survivor) setSurvivorTraits(data.survivor);
+        if (data.hunter) setHunterTraits(data.hunter);
+        if (data.customStats) setCustomStats(data.customStats);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'system_configs/trait_templates');
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'tags'), (snapshot) => {
@@ -33,42 +78,119 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
         ...doc.data()
       })) as Tag[];
       setTags(loadedTags);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'tags');
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const unsubscribeChars = onSnapshot(collection(db, 'characters'), (snapshot) => {
+      setCharacters(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Character)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'characters');
+    });
+    const unsubscribeTalents = onSnapshot(collection(db, 'talent_definitions'), (snapshot) => {
+      setTalents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TalentDefinition)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'talent_definitions');
+    });
+    return () => {
+      unsubscribeChars();
+      unsubscribeTalents();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedTagForSearch) {
+      const tagName = selectedTagForSearch.name;
+      const matchedChars = characters.filter(c => 
+        c.skills?.some(s => s.tags?.includes(tagName)) || 
+        c.presence?.some(p => p.tags?.includes(tagName))
+      );
+      const matchedTalents = talents.filter(t => t.tags?.includes(tagName));
+      setSearchResults({ characters: matchedChars, talents: matchedTalents });
+    }
+  }, [selectedTagForSearch, characters, talents]);
+
+  useEffect(() => {
+    if (selectedTagForSearch && searchResultsRef.current) {
+      searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedTagForSearch]);
 
   const handleSave = async () => {
     if (!form.name || !user) {
       alert("请填写标签名称");
       return;
     }
-    setSaving(true);
-    try {
-      const docId = editingId || `tag_${Date.now()}`;
-      await setDoc(doc(db, 'tags', docId), {
-        ...form,
-        authorId: user.uid,
-        updatedAt: serverTimestamp()
-      });
-      setShowAddForm(false);
-      setEditingId(null);
-      setForm({ name: '', color: '#00f3ff', affectedRole: 'Both', affectedStats: [] });
-    } catch (error) {
-      console.error("Error saving tag:", error);
-      alert("保存失败");
-    } finally {
-      setSaving(false);
+    
+    const executeSave = async () => {
+      setSaving(true);
+      try {
+        if (editingId) {
+          const oldTag = tags.find(t => t.id === editingId);
+          if (oldTag && oldTag.name !== form.name) {
+            await renameTagGlobal(oldTag.name, form.name!);
+          }
+        }
+
+        const docId = editingId || `tag_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        await setDoc(doc(db, 'tags', docId), {
+          ...form,
+          authorId: user.uid,
+          updatedAt: serverTimestamp()
+        });
+        setShowAddForm(false);
+        setEditingId(null);
+        setForm({ name: '', color: '#00f3ff', affectedRole: 'Survivor', affectedStats: [] });
+        setConfirmModal(prev => ({ ...prev, show: false }));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'tags');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    if (editingId) {
+      const oldTag = tags.find(t => t.id === editingId);
+      if (oldTag && oldTag.name !== form.name) {
+        setConfirmModal({
+          show: true,
+          title: '确认更改名称',
+          message: `检测到标签名称已更改。是否要全局更新所有使用 "${oldTag.name}" 的角色和天赋为 "${form.name}"？`,
+          onConfirm: executeSave,
+          type: 'info'
+        });
+        return;
+      }
     }
+
+    executeSave();
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("确定要删除这个标签吗？")) return;
-    try {
-      await deleteDoc(doc(db, 'tags', id));
-    } catch (error) {
-      console.error("Error deleting tag:", error);
-      alert("删除失败");
-    }
+    const tagToDelete = tags.find(t => t.id === id);
+    if (!tagToDelete) return;
+
+    setConfirmModal({
+      show: true,
+      title: '确认删除标签',
+      message: `确定要删除标签 "${tagToDelete.name}" 吗？此操作将同时从所有角色和天赋中移除该标签。`,
+      type: 'danger',
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await deleteTagGlobal(tagToDelete.name);
+          await deleteDoc(doc(db, 'tags', id));
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `tags/${id}`);
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const toggleStat = (stat: string) => {
@@ -82,31 +204,366 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
     });
   };
 
-  const allStats = [
-    ...SURVIVOR_TRAITS_TEMPLATE.flatMap(c => c.items.map(i => i.label)),
-    ...HUNTER_TRAITS_TEMPLATE.flatMap(c => c.items.map(i => i.label)),
-    '存在感', '技能冷却', '技能范围', '充能速度', '博弈能力', '牵制时长', '辅助能力'
+  const availableStats = [
+    ...(form.affectedRole === 'Survivor' ? survivorTraits : hunterTraits).flatMap(c => c.items.map(i => i.label)),
+    ...customStats
   ].filter((v, i, a) => a.indexOf(v) === i);
+
+  const handleAddCustomStat = async () => {
+    if (!newCustomStat.trim() || !isContributor) return;
+    const updatedStats = [...customStats, newCustomStat.trim()].filter((v, i, a) => a.indexOf(v) === i);
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+        customStats: updatedStats
+      }, { merge: true });
+      setNewCustomStat('');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'system_configs/trait_templates');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteCustomStat = async (statToDelete: string) => {
+    if (!isContributor) return;
+    
+    setConfirmModal({
+      show: true,
+      title: '确认删除属性',
+      message: `确定要删除属性 "${statToDelete}" 吗？此操作将从所有标签的关联属性中移除该项。`,
+      type: 'danger',
+      onConfirm: async () => {
+        const updatedStats = customStats.filter(s => s !== statToDelete);
+        try {
+          setSaving(true);
+          await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+            customStats: updatedStats
+          }, { merge: true });
+
+          // Update all tags that use this stat
+          const tagsToUpdate = tags.filter(t => t.affectedStats?.includes(statToDelete));
+          const updatePromises = tagsToUpdate.map(tag => {
+            const newStats = tag.affectedStats?.filter(s => s !== statToDelete) || [];
+            return setDoc(doc(db, 'tags', tag.id), { ...tag, affectedStats: newStats }, { merge: true });
+          });
+          await Promise.all(updatePromises);
+          
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, 'system_configs/trait_templates');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
+
+  const handleRemoveTagFromStat = async (stat: string, tagId: string) => {
+    if (!isContributor) return;
+    const tag = tags.find(t => t.id === tagId);
+    if (tag) {
+      const newStats = tag.affectedStats.filter(s => s !== stat);
+      try {
+        await setDoc(doc(db, 'tags', tag.id), {
+          ...tag,
+          affectedStats: newStats,
+          updatedAt: serverTimestamp()
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `tags/${tag.id}`);
+      }
+    }
+  };
+
+  const handleSaveTrait = async () => {
+    if (!editingTrait || !isContributor) return;
+    const { role, categoryIndex, itemIndex } = editingTrait;
+    const template = role === 'Survivor' ? [...survivorTraits] : [...hunterTraits];
+    
+    try {
+      setSaving(true);
+      
+      if (itemIndex !== undefined) {
+        // Editing an item
+        const oldLabel = template[categoryIndex].items[itemIndex].label;
+        const newLabel = traitEditForm.label.trim();
+        const newValue = traitEditForm.value.trim();
+
+        if (!newLabel) return;
+
+        template[categoryIndex].items[itemIndex] = { label: newLabel, value: newValue };
+
+        // If label changed, update tags that reference it
+        if (oldLabel !== newLabel) {
+          const tagsToUpdate = tags.filter(t => t.affectedStats?.includes(oldLabel));
+          for (const tag of tagsToUpdate) {
+            const newStats = tag.affectedStats.map(s => s === oldLabel ? newLabel : s);
+            await setDoc(doc(db, 'tags', tag.id), { ...tag, affectedStats: newStats }, { merge: true });
+          }
+        }
+
+        // Update ALL characters that have these traits to keep them in sync
+        const charsSnap = await getDocs(collection(db, 'characters'));
+        const batchPromises = charsSnap.docs.map(async (charDoc) => {
+          const charData = charDoc.data() as Character;
+          if (charData.role === role && charData.traits) {
+            const updatedTraits = charData.traits.map((cat, cIdx) => {
+              if (cIdx === categoryIndex) {
+                return {
+                  ...cat,
+                  items: cat.items.map((item, iIdx) => {
+                    if (iIdx === itemIndex && item.label === oldLabel) {
+                      return { label: newLabel, value: newValue };
+                    }
+                    return item;
+                  })
+                };
+              }
+              return cat;
+            });
+            return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
+          }
+          return Promise.resolve();
+        });
+        await Promise.all(batchPromises);
+      } else {
+        // Editing a category name
+        const newCategoryName = traitEditForm.label.trim();
+        if (!newCategoryName) return;
+        template[categoryIndex].category = newCategoryName;
+
+        // Update ALL characters' category names
+        const charsSnap = await getDocs(collection(db, 'characters'));
+        const batchPromises = charsSnap.docs.map(async (charDoc) => {
+          const charData = charDoc.data() as Character;
+          if (charData.role === role && charData.traits) {
+            const updatedTraits = charData.traits.map((cat, cIdx) => {
+              if (cIdx === categoryIndex) {
+                return { ...cat, category: newCategoryName };
+              }
+              return cat;
+            });
+            return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
+          }
+          return Promise.resolve();
+        });
+        await Promise.all(batchPromises);
+      }
+
+      await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+        [role.toLowerCase()]: template
+      }, { merge: true });
+
+      setEditingTrait(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTraitItem = async (role: 'Survivor' | 'Hunter', categoryIndex: number, itemIndex: number) => {
+    if (!isContributor) return;
+    const template = role === 'Survivor' ? [...survivorTraits] : [...hunterTraits];
+    const itemToDelete = template[categoryIndex].items[itemIndex];
+    
+    setConfirmModal({
+      show: true,
+      title: '确认删除特质项目',
+      message: `确定要删除特质项目 "${itemToDelete.label}" 吗？此操作将从所有角色中移除该项。`,
+      type: 'danger',
+      onConfirm: async () => {
+        template[categoryIndex].items.splice(itemIndex, 1);
+
+        try {
+          setSaving(true);
+          await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+            [role.toLowerCase()]: template
+          }, { merge: true });
+
+          // Update ALL characters
+          const charsSnap = await getDocs(collection(db, 'characters'));
+          const batchPromises = charsSnap.docs.map(async (charDoc) => {
+            const charData = charDoc.data() as Character;
+            if (charData.role === role && charData.traits) {
+              const updatedTraits = charData.traits.map((cat, cIdx) => {
+                if (cIdx === categoryIndex) {
+                  return {
+                    ...cat,
+                    items: cat.items.filter((_, iIdx) => iIdx !== itemIndex)
+                  };
+                }
+                return cat;
+              });
+              return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
+            }
+            return Promise.resolve();
+          });
+          await Promise.all(batchPromises);
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
+
+  const handleAddTraitItem = async (role: 'Survivor' | 'Hunter', categoryIndex: number) => {
+    if (!isContributor) return;
+    const template = role === 'Survivor' ? [...survivorTraits] : [...hunterTraits];
+    const newItem = { label: '新特质项目', value: '0' };
+    template[categoryIndex].items.push(newItem);
+
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+        [role.toLowerCase()]: template
+      }, { merge: true });
+
+      // Update ALL characters
+      const charsSnap = await getDocs(collection(db, 'characters'));
+      const batchPromises = charsSnap.docs.map(async (charDoc) => {
+        const charData = charDoc.data() as Character;
+        if (charData.role === role && charData.traits) {
+          const updatedTraits = charData.traits.map((cat, cIdx) => {
+            if (cIdx === categoryIndex) {
+              return {
+                ...cat,
+                items: [...cat.items, newItem]
+              };
+            }
+            return cat;
+          });
+          return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(batchPromises);
+      
+      // Enter edit mode for the new item
+      setEditingTrait({ role, categoryIndex, itemIndex: template[categoryIndex].items.length - 1 });
+      setTraitEditForm({ label: newItem.label, value: newItem.value });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddTraitCategory = async (role: 'Survivor' | 'Hunter') => {
+    if (!isContributor) return;
+    const template = role === 'Survivor' ? [...survivorTraits] : [...hunterTraits];
+    const newCategory = { category: '新特质分类', items: [] };
+    template.push(newCategory);
+
+    try {
+      setSaving(true);
+      await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+        [role.toLowerCase()]: template
+      }, { merge: true });
+
+      // Update ALL characters
+      const charsSnap = await getDocs(collection(db, 'characters'));
+      const batchPromises = charsSnap.docs.map(async (charDoc) => {
+        const charData = charDoc.data() as Character;
+        if (charData.role === role && charData.traits) {
+          const updatedTraits = [...charData.traits, newCategory];
+          return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(batchPromises);
+
+      // Enter edit mode for the new category
+      setEditingTrait({ role, categoryIndex: template.length - 1 });
+      setTraitEditForm({ label: newCategory.category, value: '' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTraitCategory = async (role: 'Survivor' | 'Hunter', categoryIndex: number) => {
+    if (!isContributor) return;
+    const template = role === 'Survivor' ? [...survivorTraits] : [...hunterTraits];
+    const catToDelete = template[categoryIndex];
+
+    setConfirmModal({
+      show: true,
+      title: '确认删除特质分类',
+      message: `确定要删除特质分类 "${catToDelete.category}" 吗？此操作将从所有角色中移除该分类及其所有项目。`,
+      type: 'danger',
+      onConfirm: async () => {
+        template.splice(categoryIndex, 1);
+
+        try {
+          setSaving(true);
+          await setDoc(doc(db, 'system_configs', 'trait_templates'), {
+            [role.toLowerCase()]: template
+          }, { merge: true });
+
+          // Update ALL characters
+          const charsSnap = await getDocs(collection(db, 'characters'));
+          const batchPromises = charsSnap.docs.map(async (charDoc) => {
+            const charData = charDoc.data() as Character;
+            if (charData.role === role && charData.traits) {
+              const updatedTraits = charData.traits.filter((_, cIdx) => cIdx !== categoryIndex);
+              return setDoc(charDoc.ref, { traits: updatedTraits }, { merge: true });
+            }
+            return Promise.resolve();
+          });
+          await Promise.all(batchPromises);
+          setConfirmModal(prev => ({ ...prev, show: false }));
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, 'system_configs/trait_templates');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-3xl font-serif text-accent">统一标签系统</h2>
-          <p className="text-muted font-mono text-xs tracking-widest uppercase">全局标签管理与影响因素定义</p>
+          <h2 className="text-4xl font-serif text-accent">统一标签系统</h2>
+          <p className="text-muted font-mono text-sm tracking-widest uppercase">全局标签管理与影响因素定义</p>
         </div>
-        {isContributor && (
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setForm({ name: '', color: '#00f3ff', affectedRole: 'Both', affectedStats: [] });
-              setShowAddForm(true);
-            }}
-            className="px-4 py-2 bg-accent text-bg font-bold font-mono text-xs uppercase tracking-widest hover:bg-accent/80 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> 新增标签
-          </button>
-        )}
+        
+        <div className="flex items-center gap-4">
+          <div className="flex bg-card/50 p-1 border border-border">
+            <button 
+              onClick={() => setViewMode('matrix')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-mono uppercase tracking-widest transition-all ${viewMode === 'matrix' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-text'}`}
+            >
+              <TableIcon size={16} /> 表格模式_MATRIX
+            </button>
+            <button 
+              onClick={() => setViewMode('gallery')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-mono uppercase tracking-widest transition-all ${viewMode === 'gallery' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-text'}`}
+            >
+              <LayoutGrid size={16} /> 标签模式_GALLERY
+            </button>
+          </div>
+
+          {isContributor && (
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setForm({ name: '', color: '#00f3ff', affectedRole: 'Survivor', affectedStats: [] });
+                setShowAddForm(true);
+              }}
+              className="px-6 py-2.5 bg-accent text-bg font-bold font-mono text-sm uppercase tracking-widest hover:bg-accent/80 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" /> 新增标签
+            </button>
+          )}
+        </div>
       </div>
 
       {showAddForm && (
@@ -118,66 +575,101 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs text-muted font-mono uppercase tracking-widest">标签名称 NAME</label>
+              <div className="space-y-3">
+                <label className="text-sm text-muted font-mono uppercase tracking-widest font-bold">标签名称 NAME</label>
                 <input 
                   type="text" 
                   value={form.name} 
                   onChange={e => setForm({...form, name: e.target.value})} 
-                  className="w-full bg-bg border border-border px-4 py-3 text-sm focus:border-accent outline-none text-text font-bold" 
+                  className="w-full bg-bg border border-border px-5 py-4 text-base focus:border-accent outline-none text-text font-bold" 
                   placeholder="例如：加速、破译、控制..."
                 />
               </div>
               
-              <div className="space-y-2">
-                <label className="text-xs text-muted font-mono uppercase tracking-widest">标签颜色 COLOR</label>
-                <div className="flex gap-3 items-center">
+              <div className="space-y-3">
+                <label className="text-sm text-muted font-mono uppercase tracking-widest font-bold">标签颜色 COLOR</label>
+                <div className="flex gap-4 items-center">
                   <input 
                     type="color" 
                     value={form.color} 
                     onChange={e => setForm({...form, color: e.target.value})} 
-                    className="w-12 h-12 bg-transparent border-none cursor-pointer"
+                    className="w-14 h-14 bg-transparent border-none cursor-pointer"
                   />
                   <input 
                     type="text" 
                     value={form.color} 
                     onChange={e => setForm({...form, color: e.target.value})} 
-                    className="flex-1 bg-bg border border-border px-4 py-2 text-sm font-mono focus:border-accent outline-none text-text"
+                    className="flex-1 bg-bg border border-border px-5 py-3 text-sm font-mono focus:border-accent outline-none text-text"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs text-muted font-mono uppercase tracking-widest">影响阵营 AFFECTED_ROLE</label>
-                <div className="flex gap-2">
-                  {(['Survivor', 'Hunter', 'Both'] as const).map(role => (
+              <div className="space-y-3">
+                <label className="text-sm text-muted font-mono uppercase tracking-widest font-bold">影响阵营 AFFECTED_ROLE</label>
+                <div className="flex gap-3">
+                  {(['Survivor', 'Hunter'] as const).map(role => (
                     <button
                       key={role}
-                      onClick={() => setForm({...form, affectedRole: role})}
-                      className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-widest border transition-all ${
+                      onClick={() => setForm({...form, affectedRole: role, affectedStats: []})}
+                      className={`flex-1 py-3 text-xs font-mono uppercase tracking-widest border transition-all ${
                         form.affectedRole === role ? 'bg-accent text-bg border-accent font-bold' : 'bg-bg text-muted border-border hover:border-accent/50'
                       }`}
                     >
-                      {role === 'Survivor' ? '求生者' : role === 'Hunter' ? '监管者' : '全阵营'}
+                      {role === 'Survivor' ? '求生者' : '监管者'}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs text-muted font-mono uppercase tracking-widest">影响属性 AFFECTED_STATS (可多选)</label>
-              <div className="bg-bg border border-border p-4 h-[240px] overflow-y-auto grid grid-cols-2 gap-2 custom-scrollbar">
-                {allStats.map(stat => (
-                  <button
-                    key={stat}
-                    onClick={() => toggleStat(stat)}
-                    className={`px-2 py-1.5 text-[10px] text-left font-mono transition-all border ${
-                      form.affectedStats?.includes(stat) ? 'bg-accent/20 text-accent border-accent' : 'bg-card/50 text-muted border-border/50 hover:border-accent/30'
-                    }`}
+            <div className="space-y-3">
+              <label className="text-sm text-muted font-mono uppercase tracking-widest font-bold">影响属性 AFFECTED_STATS (可多选)</label>
+              
+              {isContributor && (
+                <div className="flex gap-2 mb-4">
+                  <input 
+                    type="text"
+                    value={newCustomStat}
+                    onChange={e => setNewCustomStat(e.target.value)}
+                    placeholder="新增自定义属性..."
+                    className="flex-1 bg-bg border border-border px-4 py-2 text-xs font-mono outline-none focus:border-accent"
+                  />
+                  <button 
+                    onClick={handleAddCustomStat}
+                    disabled={!newCustomStat.trim() || saving}
+                    className="px-4 py-2 bg-accent/10 border border-accent/30 text-accent text-xs font-mono hover:bg-accent hover:text-bg transition-all disabled:opacity-50"
                   >
-                    {stat}
+                    添加
                   </button>
+                </div>
+              )}
+
+              <div className="bg-bg border border-border p-5 h-[320px] overflow-y-auto grid grid-cols-2 gap-3 custom-scrollbar">
+                {availableStats.map(stat => (
+                  <div key={stat} className="relative group">
+                    <button
+                      onClick={() => toggleStat(stat)}
+                      className={`w-full px-3 py-2.5 text-xs text-left font-mono transition-all border ${
+                        form.affectedStats?.includes(stat) ? 'bg-accent/20 text-accent border-accent font-bold' : 'bg-card/50 text-muted border-border/50 hover:border-accent/30'
+                      }`}
+                    >
+                      {stat}
+                    </button>
+                    {isContributor && customStats.includes(stat) && (
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteCustomStat(stat);
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted hover:text-primary z-20 transition-all"
+                        title="删除属性"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -195,71 +687,459 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {tags.map(tag => (
-          <div key={tag.id} className="bg-card/30 cyber-border p-6 hover:border-accent transition-all group relative">
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: tag.color }} />
-                <h3 className="text-xl font-serif text-text">{tag.name}</h3>
+      {/* Main Content View */}
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {viewMode === 'matrix' ? (
+          <div className="space-y-8">
+            <div className="flex gap-6 border-b border-border">
+              <button 
+                onClick={() => setMatrixRole('Survivor')}
+                className={`pb-3 px-8 text-sm font-mono uppercase tracking-widest transition-all flex items-center gap-3 ${
+                  matrixRole === 'Survivor' ? 'text-accent border-b-2 border-accent font-bold' : 'text-muted hover:text-text'
+                }`}
+              >
+                <UserIcon size={16} /> 求生者阵营 SURVIVORS
+              </button>
+              <button 
+                onClick={() => setMatrixRole('Hunter')}
+                className={`pb-3 px-8 text-sm font-mono uppercase tracking-widest transition-all flex items-center gap-3 ${
+                  matrixRole === 'Hunter' ? 'text-primary border-b-2 border-primary font-bold' : 'text-muted hover:text-text'
+                }`}
+              >
+                <Shield size={16} /> 监管者阵营 HUNTERS
+              </button>
+            </div>
+
+            {/* Matrix Table */}
+            <div className="bg-card/30 cyber-border overflow-hidden">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-bg/50">
+                <h3 className="text-xl font-serif text-text flex items-center gap-3">
+                  <div className={`w-1.5 h-6 ${matrixRole === 'Survivor' ? 'bg-accent' : 'bg-primary'}`} />
+                  {matrixRole === 'Survivor' ? '求生者特质详情 SURVIVOR_TRAITS' : '监管者特质详情 HUNTER_TRAITS'}
+                </h3>
+                {isContributor && (
+                  <button 
+                    onClick={() => handleAddTraitCategory(matrixRole)}
+                    className={`px-4 py-2 border border-dashed text-xs font-mono uppercase tracking-widest transition-all flex items-center gap-2 ${matrixRole === 'Survivor' ? 'border-accent/50 text-accent hover:bg-accent/10' : 'border-primary/50 text-primary hover:bg-primary/10'}`}
+                  >
+                    <Plus size={14} /> 添加分类 ADD_CATEGORY
+                  </button>
+                )}
               </div>
-              {isContributor && (
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => {
-                      setEditingId(tag.id);
-                      setForm(tag);
-                      setShowAddForm(true);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="p-1.5 text-muted hover:text-accent transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(tag.id)}
-                    className="p-1.5 text-muted hover:text-primary transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-bg/30">
+                      <th className="px-5 py-4 text-[10px] font-mono uppercase tracking-[0.2em] text-muted font-bold w-48">分类 CATEGORY</th>
+                      <th className="px-5 py-4 text-[10px] font-mono uppercase tracking-[0.2em] text-muted font-bold w-64">特质项目 TRAIT_ITEM</th>
+                      <th className="px-5 py-4 text-[10px] font-mono uppercase tracking-[0.2em] text-muted font-bold w-24">基础值 BASE</th>
+                      <th className="px-5 py-4 text-[10px] font-mono uppercase tracking-[0.2em] text-muted font-bold">关联标签 ASSOCIATED_TAGS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(matrixRole === 'Survivor' ? survivorTraits : hunterTraits).map((cat, catIdx) => {
+                      const rowSpan = Math.max(1, cat.items.length);
+                      const isEditingCat = editingTrait?.role === matrixRole && editingTrait?.categoryIndex === catIdx && editingTrait?.itemIndex === undefined;
+                      
+                      return (
+                        <React.Fragment key={`${matrixRole}-${catIdx}`}>
+                          {cat.items.length === 0 ? (
+                            <tr className="border-b border-border/50 group hover:bg-white/5 transition-colors">
+                              <td className="px-5 py-5 border-r border-border/50">
+                                <div className="flex items-center justify-between group/cat">
+                                  {isEditingCat ? (
+                                    <input 
+                                      type="text" 
+                                      value={traitEditForm.label}
+                                      onChange={e => setTraitEditForm({ ...traitEditForm, label: e.target.value })}
+                                      className="bg-bg border border-accent px-2 py-1 text-sm font-serif text-text outline-none w-full"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <span className="text-sm font-serif text-text font-bold">{cat.category}</span>
+                                  )}
+                                  {isContributor && (
+                                    <div className="flex items-center gap-1">
+                                      {isEditingCat ? (
+                                        <button onClick={handleSaveTrait} className="p-1 text-accent"><Check size={12} /></button>
+                                      ) : (
+                                        <>
+                                          <button 
+                                            onClick={() => {
+                                              setEditingTrait({ role: matrixRole, categoryIndex: catIdx });
+                                              setTraitEditForm({ label: cat.category, value: '' });
+                                            }}
+                                            className="p-1 text-muted hover:text-accent opacity-0 group-hover/cat:opacity-100"
+                                          >
+                                            <Edit2 size={10} />
+                                          </button>
+                                          <button 
+                                            onClick={() => handleDeleteTraitCategory(matrixRole, catIdx)}
+                                            className="p-1 text-muted hover:text-primary opacity-0 group-hover/cat:opacity-100"
+                                          >
+                                            <Trash2 size={10} />
+                                          </button>
+                                          <button 
+                                            onClick={() => handleAddTraitItem(matrixRole, catIdx)}
+                                            className="p-1 text-muted hover:text-accent opacity-0 group-hover/cat:opacity-100"
+                                            title="添加项目"
+                                          >
+                                            <Plus size={10} />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td colSpan={3} className="px-5 py-5 text-xs font-mono italic text-muted/30">暂无项目_NO_ITEMS</td>
+                            </tr>
+                          ) : (
+                            cat.items.map((item, itemIdx) => {
+                              const isEditing = editingTrait?.role === matrixRole && editingTrait?.categoryIndex === catIdx && editingTrait?.itemIndex === itemIdx;
+                              const associatedTags = tags.filter(t => t.affectedStats?.includes(item.label));
+                              
+                              return (
+                                <tr key={`${matrixRole}-${catIdx}-${itemIdx}`} className="border-b border-border/50 group hover:bg-white/5 transition-colors">
+                                  {itemIdx === 0 && (
+                                    <td rowSpan={rowSpan} className="px-5 py-5 border-r border-border/50 align-top bg-bg/10">
+                                      <div className="flex items-center justify-between group/cat">
+                                        {isEditingCat ? (
+                                          <input 
+                                            type="text" 
+                                            value={traitEditForm.label}
+                                            onChange={e => setTraitEditForm({ ...traitEditForm, label: e.target.value })}
+                                            className="bg-bg border border-accent px-2 py-1 text-sm font-serif text-text outline-none w-full"
+                                            autoFocus
+                                          />
+                                        ) : (
+                                          <span className="text-sm font-serif text-text font-bold">{cat.category}</span>
+                                        )}
+                                        {isContributor && (
+                                          <div className="flex items-center gap-1">
+                                            {isEditingCat ? (
+                                              <button onClick={handleSaveTrait} className="p-1 text-accent"><Check size={12} /></button>
+                                            ) : (
+                                              <>
+                                                <button 
+                                                  onClick={() => {
+                                                    setEditingTrait({ role: matrixRole, categoryIndex: catIdx });
+                                                    setTraitEditForm({ label: cat.category, value: '' });
+                                                  }}
+                                                  className="p-1 text-muted hover:text-accent opacity-0 group-hover/cat:opacity-100"
+                                                >
+                                                  <Edit2 size={10} />
+                                                </button>
+                                                <button 
+                                                  onClick={() => handleDeleteTraitCategory(matrixRole, catIdx)}
+                                                  className="p-1 text-muted hover:text-primary opacity-0 group-hover/cat:opacity-100"
+                                                >
+                                                  <Trash2 size={10} />
+                                                </button>
+                                                <button 
+                                                  onClick={() => handleAddTraitItem(matrixRole, catIdx)}
+                                                  className="p-1 text-muted hover:text-accent opacity-0 group-hover/cat:opacity-100"
+                                                  title="添加项目"
+                                                >
+                                                  <Plus size={10} />
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </td>
+                                  )}
+                                  <td className="px-5 py-5 border-r border-border/50">
+                                    {isEditing ? (
+                                      <input 
+                                        type="text" 
+                                        value={traitEditForm.label}
+                                        onChange={e => setTraitEditForm({ ...traitEditForm, label: e.target.value })}
+                                        className="bg-bg border border-accent px-2 py-1 text-sm font-serif text-text outline-none w-full"
+                                      />
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        {item.label}
+                                        {isContributor && (
+                                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button 
+                                              onClick={() => {
+                                                setEditingTrait({ role: matrixRole, categoryIndex: catIdx, itemIndex: itemIdx });
+                                                setTraitEditForm({ label: item.label, value: item.value });
+                                              }}
+                                              className="p-1 text-muted hover:text-accent"
+                                            >
+                                              <Edit2 size={12} />
+                                            </button>
+                                            <button 
+                                              onClick={() => handleDeleteTraitItem(matrixRole, catIdx, itemIdx)}
+                                              className="p-1 text-muted hover:text-primary"
+                                            >
+                                              <Trash2 size={12} />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-5 py-5 text-sm font-mono text-muted/80">
+                                    {isEditing ? (
+                                      <input 
+                                        type="text" 
+                                        value={traitEditForm.value}
+                                        onChange={e => setTraitEditForm({ ...traitEditForm, value: e.target.value })}
+                                        className="bg-bg border border-accent px-2 py-1 text-sm font-mono text-muted outline-none w-full"
+                                      />
+                                    ) : (
+                                      item.value
+                                    )}
+                                  </td>
+                                  <td className="px-5 py-5">
+                                    {isEditing ? (
+                                      <div className="flex gap-2">
+                                        <button 
+                                          onClick={handleSaveTrait}
+                                          className="px-3 py-1 bg-accent text-bg text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-accent/80 transition-all"
+                                        >
+                                          保存 SAVE
+                                        </button>
+                                        <button 
+                                          onClick={() => setEditingTrait(null)}
+                                          className="px-3 py-1 bg-card border border-border text-muted text-[10px] font-mono uppercase tracking-widest hover:text-text transition-all"
+                                        >
+                                          取消 CANCEL
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-2.5 items-center">
+                                        {associatedTags.map(tag => (
+                                          <div 
+                                            key={tag.id} 
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-bg border border-border group/tag shadow-sm"
+                                            style={{ borderLeftColor: tag.color, borderLeftWidth: '4px' }}
+                                          >
+                                            <span className="text-xs font-mono text-text font-bold">{tag.name}</span>
+                                            {isContributor && (
+                                              <button 
+                                                onClick={() => handleRemoveTagFromStat(item.label, tag.id)}
+                                                className="p-1 text-muted hover:text-primary transition-colors"
+                                              >
+                                                <X size={12} />
+                                              </button>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {tags.map(tag => (
+                <div 
+                  key={tag.id} 
+                  onClick={() => setSelectedTagForSearch(tag)}
+                  className={`bg-card/30 cyber-border p-6 hover:border-accent transition-all group relative cursor-pointer ${selectedTagForSearch?.id === tag.id ? 'border-accent ring-1 ring-accent/30 shadow-[0_0_20px_rgba(0,243,255,0.1)]' : ''}`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: tag.color }} />
+                      <h3 className="text-xl font-serif text-text">{tag.name}</h3>
+                    </div>
+                    {isContributor && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingId(tag.id);
+                            setForm(tag);
+                            setShowAddForm(true);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="p-1.5 text-muted hover:text-accent transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(tag.id);
+                          }}
+                          className="p-1.5 text-muted hover:text-primary transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-3">
+                      {tag.affectedRole === 'Survivor' ? <UserIcon className="w-4 h-4 text-accent" /> : <Shield className="w-4 h-4 text-primary" />}
+                      <span className="text-xs font-mono text-muted uppercase tracking-widest font-bold">
+                        {tag.affectedRole === 'Survivor' ? '求生者阵营' : '监管者阵营'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {tag.affectedStats?.map(stat => (
+                        <span key={stat} className="text-xs font-mono px-2.5 py-1 bg-bg border border-border text-muted/90 font-medium">
+                          {stat}
+                        </span>
+                      ))}
+                      {(!tag.affectedStats || tag.affectedStats.length === 0) && (
+                        <span className="text-xs font-mono italic text-muted/40">未定义影响属性</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-8 pt-4 border-t border-border/30 flex justify-between items-center text-[10px] font-mono text-muted/40 uppercase tracking-tighter">
+                    <span>UID: {tag.id.slice(-8)}</span>
+                    <span>UPDATE: {tag.updatedAt?.toDate().toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+              
+              {tags.length === 0 && !showAddForm && (
+                <div className="col-span-full py-20 text-center border border-dashed border-border/50">
+                  <TagIcon className="w-12 h-12 text-muted/20 mx-auto mb-4" />
+                  <p className="text-muted font-mono text-sm uppercase tracking-widest">暂无标签数据_NO_TAGS_FOUND</p>
                 </div>
               )}
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                {tag.affectedRole === 'Survivor' ? <UserIcon className="w-3 h-3 text-accent" /> : tag.affectedRole === 'Hunter' ? <Shield className="w-3 h-3 text-primary" /> : <Filter className="w-3 h-3 text-gold" />}
-                <span className="text-[10px] font-mono text-muted uppercase tracking-widest">
-                  {tag.affectedRole === 'Survivor' ? '求生者阵营' : tag.affectedRole === 'Hunter' ? '监管者阵营' : '全阵营适用'}
-                </span>
-              </div>
+            {/* Search Results Section */}
+            {selectedTagForSearch && (
+              <div ref={searchResultsRef} className="mt-12 border-t border-border pt-12 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex justify-between items-center mb-10">
+                  <div className="flex items-center gap-5">
+                    <div className="w-1.5 h-10 bg-accent" />
+                    <div>
+                      <h3 className="text-3xl font-serif text-text flex items-center gap-4">
+                        <Search className="text-accent" size={28} /> 标签关联内容: <span className="text-accent">{selectedTagForSearch.name}</span>
+                      </h3>
+                      <p className="text-sm font-mono text-muted uppercase tracking-[0.2em] mt-2 font-bold">FOUND {searchResults.characters.length} CHARACTERS & {searchResults.talents.length} TALENTS</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedTagForSearch(null)}
+                    className="text-muted hover:text-text flex items-center gap-3 text-xs font-mono uppercase tracking-widest border border-border px-4 py-2 hover:border-accent transition-all"
+                  >
+                    <X className="w-5 h-5" /> 关闭搜索_CLOSE
+                  </button>
+                </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                {tag.affectedStats?.map(stat => (
-                  <span key={stat} className="text-[9px] font-mono px-2 py-0.5 bg-bg border border-border text-muted/80">
-                    {stat}
-                  </span>
-                ))}
-                {(!tag.affectedStats || tag.affectedStats.length === 0) && (
-                  <span className="text-[9px] font-mono italic text-muted/40">未定义影响属性</span>
-                )}
-              </div>
-            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                  {/* Characters Section */}
+                  <div className="space-y-8">
+                    <h4 className="text-base font-mono uppercase tracking-[0.4em] text-muted flex items-center gap-3 border-b border-border pb-3 font-bold">
+                      <UserIcon size={18} /> 关联角色档案 CHARACTERS
+                    </h4>
+                    {searchResults.characters.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {searchResults.characters.map(char => (
+                          <div key={char.id} className="bg-card/30 border border-border p-5 hover:border-accent/50 transition-all flex gap-5 items-center group cursor-pointer">
+                            <div className="w-14 h-14 bg-bg border border-border overflow-hidden flex-shrink-0">
+                              <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-serif text-accent truncate mb-1">{char.title}</div>
+                              <div className="text-base font-bold text-text truncate">{char.name}</div>
+                            </div>
+                            <ChevronRight className="text-muted group-hover:text-accent transition-colors" size={20} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-16 text-center border border-dashed border-border/30 text-muted/30 font-mono text-xs uppercase tracking-widest">
+                        未找到关联角色
+                      </div>
+                    )}
+                  </div>
 
-            <div className="mt-6 pt-4 border-t border-border/30 flex justify-between items-center text-[9px] font-mono text-muted/30">
-              <span>ID: {tag.id.slice(-6)}</span>
-              <span>{tag.updatedAt?.toDate().toLocaleDateString()}</span>
-            </div>
-          </div>
-        ))}
-        
-        {tags.length === 0 && !showAddForm && (
-          <div className="col-span-full py-20 text-center border border-dashed border-border/50">
-            <TagIcon className="w-12 h-12 text-muted/20 mx-auto mb-4" />
-            <p className="text-muted font-mono text-sm uppercase tracking-widest">暂无标签数据_NO_TAGS_FOUND</p>
+                  {/* Talents Section */}
+                  <div className="space-y-8">
+                    <h4 className="text-base font-mono uppercase tracking-[0.4em] text-muted flex items-center gap-3 border-b border-border pb-3 font-bold">
+                      <ShieldCheck size={18} /> 关联天赋定义 TALENTS
+                    </h4>
+                    {searchResults.talents.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {searchResults.talents.map(talent => (
+                          <div key={talent.id} className="bg-card/30 border border-border p-5 hover:border-accent/50 transition-all flex flex-col gap-3 group cursor-pointer">
+                            <div className="flex justify-between items-start">
+                              <div className="text-base font-bold text-text group-hover:text-accent transition-colors">{talent.name}</div>
+                              <div className="text-[10px] font-mono text-muted bg-bg px-2 py-1 border border-border font-bold">{talent.nodeId}</div>
+                            </div>
+                            <div className="text-xs text-muted/80 line-clamp-3 font-mono leading-relaxed">{talent.description}</div>
+                            <div className="flex items-center gap-3 mt-3">
+                              <span className={`text-[10px] font-mono px-2 py-1 font-bold ${talent.role === 'Survivor' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
+                                {talent.role === 'Survivor' ? '求生者' : '监管者'}
+                              </span>
+                              {talent.targetStat && (
+                                <span className="text-[10px] font-mono text-muted/60 font-medium">#{talent.targetStat}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-16 text-center border border-dashed border-border/30 text-muted/30 font-mono text-xs uppercase tracking-widest">
+                        未找到关联天赋
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-card border border-border shadow-2xl p-6 space-y-6">
+            <div className="space-y-2">
+              <h3 className={`text-xl font-serif font-bold ${confirmModal.type === 'danger' ? 'text-primary' : 'text-accent'}`}>
+                {confirmModal.title}
+              </h3>
+              <p className="text-sm text-muted font-mono leading-relaxed">
+                {confirmModal.message}
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-4 pt-4">
+              <button 
+                onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                className="px-6 py-2 border border-border text-muted text-xs font-mono hover:text-text transition-colors"
+              >
+                取消_CANCEL
+              </button>
+              <button 
+                onClick={confirmModal.onConfirm}
+                className={`px-6 py-2 font-mono text-xs text-white transition-all hover:scale-105 ${
+                  confirmModal.type === 'danger' ? 'bg-primary' : 'bg-accent text-bg'
+                }`}
+              >
+                确认_CONFIRM
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
