@@ -31,8 +31,8 @@ export interface Character {
   role: 'Survivor' | 'Hunter';
   type: string;
   description: string;
-  skills: { name: string; description: string; icon?: string; tags?: string[] }[];
-  presence?: { tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[];
+  skills: { name: string; description: string; icon?: string; tags?: string[]; cooldown?: string; cost?: string }[];
+  presence?: { tier: number; name: string; description: string; cooldown?: string; tags?: string[]; icon?: string }[];
   imageUrl: string;
   order?: number;
   remark?: string;
@@ -173,7 +173,8 @@ export const SURVIVOR_TRAITS_MODERN_TEMPLATE: CharacterTraitCategory[] = [
   }
 ];
 
-export const EXCLUDED_SURVIVOR_TRAITS = ['破译完美判定额外增长进度', '校准概率', '校准区域'];
+export const EXCLUDED_SURVIVOR_TRAITS = ['破译完美判定额外增长进度', '校准概率', '校准区域', '透视'];
+export const EXCLUDED_HUNTER_TRAITS = ['监管透视'];
 
 export const HUNTER_TRAITS_TEMPLATE: CharacterTraitCategory[] = [
   {

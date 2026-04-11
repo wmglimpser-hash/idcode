@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Character, COLORS, Tag, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
-import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Tag as TagIcon } from 'lucide-react';
+import { Character, COLORS, Tag, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
+import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Clock, Tag as TagIcon } from 'lucide-react';
 import { CharacterTraitCategory } from '../constants';
 
 type DetailTab = 'traits' | 'external' | 'mechanics';
@@ -35,11 +35,13 @@ export const CharacterDetail = ({
 
   // Local state for editing
   const [editTraits, setEditTraits] = useState<CharacterTraitCategory[]>([]);
-  const [editSkills, setEditSkills] = useState<{ name: string; description: string; icon?: string; tags?: string[] }[]>([]);
-  const [editPresence, setEditPresence] = useState<{ tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[]>([]);
+  const [editSkills, setEditSkills] = useState<{ name: string; description: string; icon?: string; tags?: string[]; cooldown?: string; cost?: string }[]>([]);
+  const [editPresence, setEditPresence] = useState<{ tier: number; name: string; description: string; cooldown?: string; tags?: string[]; icon?: string }[]>([]);
   const [editMechanics, setEditMechanics] = useState<{ title: string; content: string; icon?: string }[]>([]);
   const [editLinkedMechanics, setEditLinkedMechanics] = useState<{ characterId: string; mechanicIndex: number }[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [skillsImportMode, setSkillsImportMode] = useState(false);
+  const [skillsImportText, setSkillsImportText] = useState('');
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
@@ -56,11 +58,17 @@ export const CharacterDetail = ({
     if (section === 'external') setEditSkills(JSON.parse(JSON.stringify(character.skills || [])));
     if (section === 'mechanics') {
       if (character.role === 'Hunter') {
-        setEditPresence(JSON.parse(JSON.stringify(character.presence || [
-          { tier: 0, name: '0阶', description: '', cooldown: '' },
-          { tier: 1, name: '1阶', description: '', cooldown: '' },
-          { tier: 2, name: '2阶', description: '', cooldown: '' }
-        ])));
+        const basePresence = [
+          { tier: 0, name: '0阶', description: '', cooldown: '', tags: [] },
+          { tier: 1, name: '1阶', description: '', cooldown: '', tags: [] },
+          { tier: 2, name: '2阶', description: '', cooldown: '', tags: [] }
+        ];
+        const currentPresence = character.presence || [];
+        const finalPresence = basePresence.map((p, i) => {
+          const existing = currentPresence.find(cp => cp.tier === p.tier);
+          return existing || p;
+        });
+        setEditPresence(JSON.parse(JSON.stringify(finalPresence)));
       } else {
         setEditMechanics(JSON.parse(JSON.stringify(character.mechanics || [])));
         setEditLinkedMechanics(JSON.parse(JSON.stringify(character.linkedMechanics || [])));
@@ -87,11 +95,72 @@ export const CharacterDetail = ({
       
       await onUpdate(character.id, data);
       setEditingSection(null);
+      setSkillsImportMode(false);
+      setSkillsImportText('');
     } catch (error) {
       console.error("Failed to save section:", error);
       alert("保存失败，请重试。");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const parseSkillsOnly = (text: string) => {
+    const skills: any[] = [];
+    const skillBlocks = text.split(/\n(?=[^\s])/).filter(b => b.trim());
+    
+    skillBlocks.forEach(block => {
+      // Format: [iconUrl] Name: Description #tag1 #tag2
+      let icon = '';
+      const iconMatch = block.match(/^\[(.*?)\]/);
+      if (iconMatch) {
+        icon = iconMatch[1].trim();
+        block = block.replace(/^\[.*?\]/, '').trim();
+      }
+
+      const tags: string[] = [];
+      const tagMatches = block.match(/#(\S+)/g);
+      if (tagMatches) {
+        tagMatches.forEach(t => tags.push(t.substring(1)));
+        block = block.replace(/#\S+/g, '').trim();
+      }
+
+      const [name, ...descParts] = block.split(/[:：]/);
+      if (name && descParts.length > 0) {
+        const skillName = name.trim();
+        const existingIdx = skills.findIndex(s => s.name === skillName);
+        const skillData = { 
+          name: skillName, 
+          description: descParts.join(':').trim(),
+          icon,
+          tags
+        };
+        if (existingIdx >= 0) {
+          skills[existingIdx] = skillData;
+        } else {
+          skills.push(skillData);
+        }
+      }
+    });
+    return skills;
+  };
+
+  const handleSkillsSmartImport = () => {
+    if (!skillsImportText.trim()) return;
+    const parsedSkills = parseSkillsOnly(skillsImportText);
+    if (parsedSkills.length > 0) {
+      const newSkills = [...editSkills];
+      parsedSkills.forEach(ps => {
+        const idx = newSkills.findIndex(s => s.name === ps.name);
+        if (idx >= 0) {
+          newSkills[idx] = { ...newSkills[idx], ...ps };
+        } else {
+          newSkills.push(ps);
+        }
+      });
+      setEditSkills(newSkills);
+      setSkillsImportText('');
+      setSkillsImportMode(false);
     }
   };
 
@@ -301,7 +370,11 @@ export const CharacterDetail = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {cat.items
                           .map((item, originalIdx) => ({ ...item, originalIdx }))
-                          .filter(item => character.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label))
+                          .filter(item => {
+                            if (character.role === 'Survivor') return !EXCLUDED_SURVIVOR_TRAITS.includes(item.label);
+                            if (character.role === 'Hunter') return !EXCLUDED_HUNTER_TRAITS.includes(item.label);
+                            return true;
+                          })
                           .map((item) => (
                           <div key={item.originalIdx} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
                             <input 
@@ -364,7 +437,11 @@ export const CharacterDetail = ({
                       </h3>
                       <div className="space-y-1">
                         {cat.items
-                          .filter(item => character.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label))
+                          .filter(item => {
+                            if (character.role === 'Survivor') return !EXCLUDED_SURVIVOR_TRAITS.includes(item.label);
+                            if (character.role === 'Hunter') return !EXCLUDED_HUNTER_TRAITS.includes(item.label);
+                            return true;
+                          })
                           .map((item, j) => {
                           const baseCat = baseCharacter?.traits?.find(bc => 
                             bc.category.split(' ')[0] === cat.category.split(' ')[0]
@@ -411,7 +488,18 @@ export const CharacterDetail = ({
                     {editingSection === 'external' ? (
                       <>
                         <button 
-                          onClick={() => setEditingSection(null)}
+                          onClick={() => setSkillsImportMode(!skillsImportMode)}
+                          className={`px-3 py-1 border transition-all font-mono text-[10px] flex items-center gap-1 ${
+                            skillsImportMode ? 'bg-accent text-bg border-accent' : 'bg-bg border-border text-accent hover:border-accent'
+                          }`}
+                        >
+                          <Zap className="w-3 h-3" /> 智能识别_SMART
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingSection(null);
+                            setSkillsImportMode(false);
+                          }}
                           className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
                         >
                           <X className="w-3 h-3" /> 取消_CANCEL
@@ -435,6 +523,39 @@ export const CharacterDetail = ({
                   </div>
                 )}
               </div>
+
+              {editingSection === 'external' && skillsImportMode && (
+                <div className="mb-6 p-4 bg-accent/5 border border-accent/30 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-mono text-accent uppercase tracking-widest">智能识别导入 (SMART_IMPORT)</span>
+                    <span className="text-[9px] text-muted font-mono">格式: [图标URL] 名称: 描述 #标签</span>
+                  </div>
+                  <textarea 
+                    rows={4}
+                    value={skillsImportText}
+                    onChange={(e) => setSkillsImportText(e.target.value)}
+                    placeholder="粘贴特质文本，例如：&#10;[https://example.com/icon.png] 羸弱: 身体虚弱，板窗交互速度降低 #负面 #交互"
+                    className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-mono outline-none focus:border-accent resize-none mb-3"
+                  />
+                  <div className="flex justify-end gap-3">
+                    <button 
+                      onClick={() => {
+                        setSkillsImportText('');
+                        setSkillsImportMode(false);
+                      }}
+                      className="text-[10px] font-mono text-muted hover:text-text"
+                    >
+                      取消_CANCEL
+                    </button>
+                    <button 
+                      onClick={handleSkillsSmartImport}
+                      className="px-4 py-1 bg-accent text-bg text-[10px] font-mono font-bold hover:bg-accent/80 transition-all"
+                    >
+                      识别并添加_IMPORT
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {editingSection === 'external' ? (
                 <div className="space-y-6">
@@ -477,6 +598,36 @@ export const CharacterDetail = ({
                             placeholder="特质名称"
                             className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
                           />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                              <input 
+                                type="text"
+                                value={skill.cooldown || ''}
+                                onChange={(e) => {
+                                  const newSkills = [...editSkills];
+                                  newSkills[idx].cooldown = e.target.value;
+                                  setEditSkills(newSkills);
+                                }}
+                                placeholder="如: 120s"
+                                className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted font-mono uppercase">消耗:</span>
+                              <input 
+                                type="text"
+                                value={skill.cost || ''}
+                                onChange={(e) => {
+                                  const newSkills = [...editSkills];
+                                  newSkills[idx].cost = e.target.value;
+                                  setEditSkills(newSkills);
+                                }}
+                                placeholder="如: 1层"
+                                className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                              />
+                            </div>
+                          </div>
                           <textarea 
                             rows={3}
                             value={skill.description}
@@ -491,7 +642,7 @@ export const CharacterDetail = ({
                           
                           {/* Tag Selection */}
                           <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
-                            {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === character.role).map(tag => {
+                            {availableTags.filter(t => character.role === 'Survivor' || t.affectedRole === 'Both' || t.affectedRole === character.role).map(tag => {
                               const isSelected = skill.tags?.includes(tag.name);
                               return (
                                 <button
@@ -512,6 +663,11 @@ export const CharacterDetail = ({
                                       ? 'bg-accent/20 border-accent text-accent' 
                                       : 'bg-bg border-border text-muted hover:border-accent/50'
                                   }`}
+                                  style={tag.color ? { 
+                                    borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
+                                    color: isSelected ? tag.color : undefined,
+                                    backgroundColor: isSelected ? `${tag.color}20` : undefined
+                                  } : {}}
                                 >
                                   <TagIcon className="w-2.5 h-2.5" />
                                   {tag.name}
@@ -544,6 +700,18 @@ export const CharacterDetail = ({
                         <h3 className="text-lg font-mono font-bold text-text group-hover:text-primary transition-colors flex items-center gap-2">
                           <span className="text-primary opacity-50 text-sm">0{index + 1}</span> {skill.name}
                         </h3>
+                        <div className="flex flex-wrap gap-3 mt-1 mb-2">
+                          {skill.cooldown && (
+                            <span className="text-[10px] font-mono text-accent flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> CD: {skill.cooldown}
+                            </span>
+                          )}
+                          {skill.cost && (
+                            <span className="text-[10px] font-mono text-gold flex items-center gap-1">
+                              <Zap className="w-3 h-3" /> COST: {skill.cost}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-muted text-sm mt-2 leading-relaxed font-mono">
                           {skill.description}
                         </p>
@@ -615,8 +783,25 @@ export const CharacterDetail = ({
                       {editPresence.map((p, idx) => (
                         <div key={idx} className="p-4 bg-bg/20 border border-border space-y-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono">
-                              {p.tier}阶
+                            <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-mono relative group/icon">
+                              {p.icon ? (
+                                <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span>{p.tier}阶</span>
+                              )}
+                              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/icon:opacity-100 transition-opacity flex items-center justify-center p-1">
+                                <input 
+                                  type="text"
+                                  value={p.icon || ''}
+                                  onChange={(e) => {
+                                    const newP = [...editPresence];
+                                    newP[idx].icon = e.target.value;
+                                    setEditPresence(newP);
+                                  }}
+                                  placeholder="图标URL"
+                                  className="w-full bg-transparent text-[8px] text-accent outline-none text-center"
+                                />
+                              </div>
                             </div>
                             <input 
                               type="text"
@@ -679,6 +864,11 @@ export const CharacterDetail = ({
                                       ? 'bg-accent/20 border-accent text-accent' 
                                       : 'bg-bg border-border text-muted hover:border-accent/50'
                                   }`}
+                                  style={tag.color ? { 
+                                    borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
+                                    color: isSelected ? tag.color : undefined,
+                                    backgroundColor: isSelected ? `${tag.color}20` : undefined
+                                  } : {}}
                                 >
                                   <TagIcon className="w-2.5 h-2.5" />
                                   {tag.name}
@@ -846,8 +1036,12 @@ export const CharacterDetail = ({
                       {character.presence && character.presence.length > 0 ? (
                         character.presence.map((p, index) => (
                           <div key={index} className="flex gap-6 p-6 bg-bg/20 border border-border group hover:border-primary/50 transition-all duration-300">
-                            <div className="w-20 h-20 flex-shrink-0 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono text-2xl group-hover:scale-110 transition-transform">
-                              {p.tier}阶
+                            <div className="w-20 h-20 flex-shrink-0 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono text-2xl group-hover:scale-110 transition-transform overflow-hidden">
+                              {p.icon ? (
+                                <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span>{p.tier}阶</span>
+                              )}
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between items-center mb-3">

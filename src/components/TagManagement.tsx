@@ -3,7 +3,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query,
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as UserIcon, Shield, LayoutGrid, Table as TableIcon, Search, ExternalLink, ChevronRight, Info, ShieldCheck } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
+import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { renameTagGlobal, deleteTagGlobal } from '../services/tagService';
 
 interface TagManagementProps {
@@ -640,7 +640,11 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                     {(matrixRole === 'Survivor' ? survivorTraits : hunterTraits).map((cat, catIdx) => {
                       const filteredItems = cat.items
                         .map((item, idx) => ({ ...item, originalIdx: idx }))
-                        .filter(item => matrixRole !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label));
+                        .filter(item => {
+                          if (matrixRole === 'Survivor') return !EXCLUDED_SURVIVOR_TRAITS.includes(item.label);
+                          if (matrixRole === 'Hunter') return !EXCLUDED_HUNTER_TRAITS.includes(item.label);
+                          return true;
+                        });
                       
                       if (filteredItems.length === 0) return null;
                       

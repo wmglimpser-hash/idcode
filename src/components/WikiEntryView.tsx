@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, collection, addDoc, serverTimestamp, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { WikiEntry, Revision, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
+import { WikiEntry, Revision, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { Book, Clock, User, Shield, Zap, Search, Heart, Edit3, Activity, Save, X, Network } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -248,7 +248,11 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
                 {content?.traits && content.traits.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {content.traits.map((cat: any, i: number) => {
-                      const filteredItems = cat.items.filter((item: any) => content?.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label));
+                      const filteredItems = cat.items.filter((item: any) => {
+                        if (content?.role === 'Survivor') return !EXCLUDED_SURVIVOR_TRAITS.includes(item.label);
+                        if (content?.role === 'Hunter') return !EXCLUDED_HUNTER_TRAITS.includes(item.label);
+                        return true;
+                      });
                       if (filteredItems.length === 0) return null;
                       
                       return (

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon, Edit2 } from 'lucide-react';
-import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, EXCLUDED_SURVIVOR_TRAITS } from '../constants';
+import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 
 interface Props {
   onSave: (data: any) => void;
@@ -29,8 +29,8 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     type: '',
     imageUrl: '',
     description: '',
-    skills: [] as { name: string; description: string; icon?: string; tags?: string[] }[],
-    presence: [] as { tier: number; name: string; description: string; cooldown?: string; tags?: string[] }[],
+    skills: [] as { name: string; description: string; icon?: string; tags?: string[]; cooldown?: string; cost?: string }[],
+    presence: [] as { tier: number; name: string; description: string; cooldown?: string; tags?: string[]; icon?: string }[],
     traits: [] as CharacterTraitCategory[],
     mechanics: [] as { title: string; content: string; icon?: string }[],
     linkedMechanics: [] as { characterId: string; mechanicIndex: number }[],
@@ -69,7 +69,12 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
         imageUrl: initialData.imageUrl || '',
         description: initialData.description || '',
         skills: initialData.skills || [],
-        presence: initialData.presence || [],
+        presence: initialData.role === 'Hunter' ? (
+          [0, 1, 2].map(tier => {
+            const existing = initialData.presence?.find(p => p.tier === tier);
+            return existing || { tier, name: `${tier}阶`, description: '', cooldown: '', tags: [] };
+          })
+        ) : (initialData.presence || []),
         traits: initialData.traits || [],
         mechanics: initialData.mechanics || [],
         linkedMechanics: initialData.linkedMechanics || [],
@@ -129,7 +134,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     }));
   };
 
-  const updateSkill = (index: number, field: 'name' | 'description' | 'icon', value: string) => {
+  const updateSkill = (index: number, field: 'name' | 'description' | 'icon' | 'cooldown' | 'cost', value: string) => {
     setFormData(prev => ({
       ...prev,
       skills: prev.skills.map((s, i) => i === index ? { ...s, [field]: value } : s)
@@ -158,12 +163,19 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
 
       const [name, ...descParts] = block.split(/[:：]/);
       if (name && descParts.length > 0) {
-        skills.push({ 
-          name: name.trim(), 
+        const skillName = name.trim();
+        const existingIdx = skills.findIndex(s => s.name === skillName);
+        const skillData = { 
+          name: skillName, 
           description: descParts.join(':').trim(),
           icon,
           tags
-        });
+        };
+        if (existingIdx >= 0) {
+          skills[existingIdx] = skillData;
+        } else {
+          skills.push(skillData);
+        }
       }
     });
     return skills;
@@ -173,10 +185,21 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     if (!skillsImportText.trim()) return;
     const parsedSkills = parseSkillsOnly(skillsImportText);
     if (parsedSkills.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        skills: [...prev.skills, ...parsedSkills]
-      }));
+      setFormData(prev => {
+        const newSkills = [...prev.skills];
+        parsedSkills.forEach(ps => {
+          const idx = newSkills.findIndex(s => s.name === ps.name);
+          if (idx >= 0) {
+            newSkills[idx] = { ...newSkills[idx], ...ps };
+          } else {
+            newSkills.push(ps);
+          }
+        });
+        return {
+          ...prev,
+          skills: newSkills
+        };
+      });
       setSkillsImportText('');
       setSkillsImportMode(false);
     }
@@ -262,7 +285,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     }));
   };
 
-  const updatePresence = (index: number, field: 'name' | 'description' | 'cooldown', value: string) => {
+  const updatePresence = (index: number, field: 'name' | 'description' | 'cooldown' | 'icon', value: string) => {
     setFormData(prev => ({
       ...prev,
       presence: prev.presence.map((p, i) => i === index ? { ...p, [field]: value } : p)
@@ -365,12 +388,19 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
 
         const [name, ...descParts] = block.split(/[:：]/);
         if (name && descParts.length > 0) {
-          data.skills.push({ 
-            name: name.trim(), 
+          const skillName = name.trim();
+          const existingIdx = data.skills.findIndex((s: any) => s.name === skillName);
+          const skillData = { 
+            name: skillName, 
             description: descParts.join(':').trim(),
             icon,
             tags
-          });
+          };
+          if (existingIdx >= 0) {
+            data.skills[existingIdx] = skillData;
+          } else {
+            data.skills.push(skillData);
+          }
         }
       });
     }
@@ -434,14 +464,18 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
           // Try to find a match in the template
           let matched = false;
           for (const cat of template) {
+            // 1. Exact match
+            const exactMatch = cat.items.find((item: any) => item.label === label);
+            if (exactMatch) {
+              exactMatch.value = value;
+              matched = true;
+              break;
+            }
+
+            // 2. Fuzzy match
             for (const item of cat.items) {
               if (label.includes(item.label) || item.label.includes(label)) {
-                if (item.value === '' || item.value === 'N/A') {
-                  item.value = value;
-                } else {
-                  // If already has a value, add as a new item to the same category
-                  cat.items.push({ label, value });
-                }
+                item.value = value;
                 matched = true;
                 break;
               }
@@ -453,7 +487,13 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
           if (!matched) {
             const otherCat = template.find((c: any) => c.category === '其他');
             if (otherCat) {
-              otherCat.items.push({ label, value });
+              // Avoid duplicates in "其他" as well
+              const existingOther = otherCat.items.find((item: any) => item.label === label);
+              if (existingOther) {
+                existingOther.value = value;
+              } else {
+                otherCat.items.push({ label, value });
+              }
             }
           }
         }
@@ -798,7 +838,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {cat.items
                       .map((item, originalIdx) => ({ ...item, originalIdx }))
-                      .filter(item => formData.role !== 'Survivor' || !EXCLUDED_SURVIVOR_TRAITS.includes(item.label))
+                      .filter(item => {
+                        if (formData.role === 'Survivor') return !EXCLUDED_SURVIVOR_TRAITS.includes(item.label);
+                        if (formData.role === 'Hunter') return !EXCLUDED_HUNTER_TRAITS.includes(item.label);
+                        return true;
+                      })
                       .map((item) => (
                       <div key={item.originalIdx} className="flex items-center gap-2 bg-card/30 p-2 border border-border/50">
                         <input 
@@ -917,18 +961,41 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                     </div>
                   </div>
 
-                  <textarea 
-                    rows={2}
-                    value={skill.description}
-                    onChange={(e) => updateSkill(index, 'description', e.target.value)}
-                    placeholder="特质描述..."
-                    className="w-full bg-transparent text-xs text-muted outline-none resize-none mb-3"
-                  />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                        <input 
+                          type="text"
+                          value={skill.cooldown || ''}
+                          onChange={(e) => updateSkill(index, 'cooldown', e.target.value)}
+                          placeholder="如: 120s"
+                          className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted font-mono uppercase">消耗:</span>
+                        <input 
+                          type="text"
+                          value={skill.cost || ''}
+                          onChange={(e) => updateSkill(index, 'cost', e.target.value)}
+                          placeholder="如: 1层"
+                          className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <textarea 
+                      rows={2}
+                      value={skill.description}
+                      onChange={(e) => updateSkill(index, 'description', e.target.value)}
+                      placeholder="特质描述..."
+                      className="w-full bg-transparent text-xs text-muted outline-none resize-none mb-3"
+                    />
                   
                   {/* Tag Selection & Custom Tags */}
                   <div className="space-y-3 pt-2 border-t border-border/30">
                     <div className="flex flex-wrap gap-2">
-                      {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === formData.role).map(tag => {
+                      {availableTags.filter(t => formData.role === 'Survivor' || t.affectedRole === 'Both' || t.affectedRole === formData.role).map(tag => {
                         const isSelected = skill.tags?.includes(tag.name);
                         return (
                           <button
@@ -949,6 +1016,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                                 ? 'bg-accent/20 border-accent text-accent' 
                                 : 'bg-bg border-border text-muted hover:border-accent/50'
                             }`}
+                            style={tag.color ? { 
+                              borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
+                              color: isSelected ? tag.color : undefined,
+                              backgroundColor: isSelected ? `${tag.color}20` : undefined
+                            } : {}}
                           >
                             <TagIcon className="w-2.5 h-2.5" />
                             {tag.name}
@@ -1007,8 +1079,21 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                   {formData.presence.map((p, index) => (
                     <div key={index} className="p-4 bg-bg/50 border border-border space-y-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono">
-                          {p.tier}阶
+                        <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-mono relative group/icon">
+                          {p.icon ? (
+                            <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span>{p.tier}阶</span>
+                          )}
+                          <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/icon:opacity-100 transition-opacity flex items-center justify-center p-1">
+                            <input 
+                              type="text"
+                              value={p.icon || ''}
+                              onChange={(e) => updatePresence(index, 'icon', e.target.value)}
+                              placeholder="图标URL"
+                              className="w-full bg-transparent text-[8px] text-accent outline-none text-center"
+                            />
+                          </div>
                         </div>
                         <input 
                           type="text"
@@ -1050,6 +1135,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                                   ? 'bg-accent/20 border-accent text-accent' 
                                   : 'bg-bg border-border text-muted hover:border-accent/50'
                               }`}
+                              style={tag.color ? { 
+                                borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
+                                color: isSelected ? tag.color : undefined,
+                                backgroundColor: isSelected ? `${tag.color}20` : undefined
+                              } : {}}
                             >
                               <TagIcon className="w-2.5 h-2.5" />
                               {tag.name}
