@@ -531,58 +531,57 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
 
               <div className="space-y-2 mt-4">
                 <label className="text-[10px] text-muted uppercase font-mono tracking-widest flex items-center gap-2">
-                  <Tag size={10} /> 自定义标签 TAGS
+                  <Tag size={10} /> 标签选择 TAGS
                 </label>
                 <div className="flex flex-col gap-3">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={editForm.tagInput || ''}
-                      onChange={e => setEditForm({...editForm, tagInput: e.target.value})}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && editForm.tagInput?.trim()) {
-                          e.preventDefault();
-                          const newTag = editForm.tagInput.trim();
-                          if (!editForm.tags?.includes(newTag)) {
-                            const newTagColors = { ...(editForm.tagColors || {}) };
-                            if (editForm.selectedTagColor) {
-                              newTagColors[newTag] = editForm.selectedTagColor;
-                            }
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-[9px] text-muted font-mono uppercase">选择全局标签:</span>
+                      {editForm.tags && editForm.tags.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, tags: [], tagColors: {} })}
+                          className="text-[9px] text-primary hover:underline font-mono uppercase"
+                        >
+                          清空所有_CLEAR_ALL
+                        </button>
+                      )}
+                    </div>
+                    {availableTags.map(tag => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          const currentTags = editForm.tags || [];
+                          const newTagColors = { ...(editForm.tagColors || {}) };
+                          
+                          if (currentTags.includes(tag.name)) {
                             setEditForm({
                               ...editForm,
-                              tags: [...(editForm.tags || []), newTag],
-                              tagColors: newTagColors,
-                              tagInput: ''
+                              tags: currentTags.filter(t => t !== tag.name)
                             });
-                          }
-                        }
-                      }}
-                      className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
-                      placeholder="输入标签并回车..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (editForm.tagInput?.trim()) {
-                          const newTag = editForm.tagInput.trim();
-                          if (!editForm.tags?.includes(newTag)) {
-                            const newTagColors = { ...(editForm.tagColors || {}) };
-                            if (editForm.selectedTagColor) {
-                              newTagColors[newTag] = editForm.selectedTagColor;
-                            }
+                          } else {
+                            newTagColors[tag.name] = tag.color;
                             setEditForm({
                               ...editForm,
-                              tags: [...(editForm.tags || []), newTag],
-                              tagColors: newTagColors,
-                              tagInput: ''
+                              tags: [...currentTags, tag.name],
+                              tagColors: newTagColors
                             });
                           }
-                        }
-                      }}
-                      className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
-                    >
-                      添加_ADD
-                    </button>
+                        }}
+                        className={`px-2 py-0.5 text-[9px] font-mono uppercase border transition-all ${
+                          editForm.tags?.includes(tag.name)
+                            ? 'bg-accent/20 border-accent text-accent'
+                            : 'bg-bg/50 border-border text-muted hover:border-accent/30'
+                        }`}
+                        style={editForm.tags?.includes(tag.name) ? { borderColor: tag.color, color: tag.color, backgroundColor: tag.color + '20' } : {}}
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-start">
                     <button
                       type="button"
                       onClick={() => {
@@ -607,80 +606,15 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                           tagColors: newTagColors
                         });
                       }}
-                      className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
+                      className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest flex items-center gap-2"
                       title="根据名称和描述自动识别标签"
                     >
-                      自动识别_AUTO
+                      <Wand2 size={12} /> 自动识别标签_AUTO_TAG
                     </button>
-                  </div>
-                  
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <span className="text-[9px] text-muted font-mono uppercase">选择全局标签:</span>
-                        {editForm.tags && editForm.tags.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setEditForm({ ...editForm, tags: [], tagColors: {} })}
-                            className="text-[9px] text-primary hover:underline font-mono uppercase"
-                          >
-                            清空所有_CLEAR_ALL
-                          </button>
-                        )}
-                      </div>
-                      {availableTags.map(tag => (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => {
-                            const currentTags = editForm.tags || [];
-                            const newTagColors = { ...(editForm.tagColors || {}) };
-                            
-                            if (currentTags.includes(tag.name)) {
-                              setEditForm({
-                                ...editForm,
-                                tags: currentTags.filter(t => t !== tag.name)
-                              });
-                            } else {
-                              newTagColors[tag.name] = tag.color;
-                              setEditForm({
-                                ...editForm,
-                                tags: [...currentTags, tag.name],
-                                tagColors: newTagColors
-                              });
-                            }
-                          }}
-                          className={`px-2 py-0.5 text-[9px] font-mono uppercase border transition-all ${
-                            editForm.tags?.includes(tag.name)
-                              ? 'bg-accent/20 border-accent text-accent'
-                              : 'bg-bg/50 border-border text-muted hover:border-accent/30'
-                          }`}
-                          style={editForm.tags?.includes(tag.name) ? { borderColor: tag.color, color: tag.color, backgroundColor: tag.color + '20' } : {}}
-                        >
-                          {tag.name}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <span className="text-[9px] text-muted font-mono uppercase mr-1">自定义颜色:</span>
-                      {TAG_COLORS.map(color => (
-                      <button
-                        key={color.name}
-                        type="button"
-                        onClick={() => setEditForm({...editForm, selectedTagColor: color.value})}
-                        className={`w-5 h-5 border transition-all ${
-                          (editForm.selectedTagColor || '') === color.value 
-                            ? 'border-white scale-110' 
-                            : 'border-transparent hover:scale-110'
-                        }`}
-                        style={{ backgroundColor: color.value || '#333' }}
-                        title={color.name}
-                      />
-                    ))}
                   </div>
 
                   {editForm.tags && editForm.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
                       {Array.from(new Set(editForm.tags || [])).map((tag: string) => (
                         <div key={tag} className="flex items-center group">
                           <span 

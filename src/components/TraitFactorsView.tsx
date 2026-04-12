@@ -41,9 +41,8 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
     const unsubTags = onSnapshot(collection(db, 'tags'), (snapshot) => {
       const dynamicTags = snapshot.docs.map(doc => {
         const data = doc.data();
-        const isRelevant = data.affectedRole === 'Both' || data.affectedRole === character?.role;
-        return isRelevant ? { name: data.name, type: 'other', color: data.color } : null;
-      }).filter(Boolean) as {name: string, type: string, color?: string}[];
+        return { name: data.name, type: 'other', color: data.color };
+      }) as {name: string, type: string, color?: string}[];
 
       setAvailableTags(prev => {
         const skillTags = tags.filter(t => t.type === 'external_trait');

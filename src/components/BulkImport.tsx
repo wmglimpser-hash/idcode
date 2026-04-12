@@ -7,13 +7,14 @@ import { X, Save, AlertTriangle, FileJson, Sparkles, Wand2, RefreshCcw } from 'l
 import { GoogleGenAI, Type } from "@google/genai";
 
 interface Props {
-  mode: 'wiki' | 'talent';
+  mode: 'wiki' | 'talent' | 'character';
   role?: 'Survivor' | 'Hunter';
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (data?: any) => void;
+  allCharacters?: any[];
 }
 
-export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
+export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Props) => {
   const [inputMode, setInputMode] = useState<'json' | 'natural'>('json');
   const [jsonInput, setJsonInput] = useState('');
   const [naturalInput, setNaturalInput] = useState('');
@@ -30,36 +31,72 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       
-      const schema = mode === 'wiki' ? {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: "词条标题" },
-            type: { type: Type.STRING, description: "词条类型，通常为 'talent'" },
-            talentId: { type: Type.STRING, description: "关联的天赋节点 ID (如 1.1, 2.3)" },
-            content: { type: Type.STRING, description: "详细的 Markdown 内容" },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "标签列表" }
-          },
-          required: ["title", "content"]
-        }
-      } : {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            nodeId: { type: Type.STRING, description: "天赋节点 ID (如 1.1, 2.3)，可选" },
-            name: { type: Type.STRING, description: "天赋名称" },
-            description: { type: Type.STRING, description: "天赋描述" },
-            targetStats: { type: Type.ARRAY, items: { type: Type.STRING }, description: "目标属性列表 (如 ['跑动速度', '走路速度'])" },
-            modifier: { type: Type.STRING, description: "修正值 (如 '+10%', '-2')" },
-            effect: { type: Type.STRING, description: "具体效果描述" }
-          },
-          required: ["name"]
-        }
-      };
+      let schema: any;
+      if (mode === 'wiki') {
+        schema = {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: "词条标题" },
+              type: { type: Type.STRING, description: "词条类型，通常为 'talent'" },
+              talentId: { type: Type.STRING, description: "关联的天赋节点 ID (如 1.1, 2.3)" },
+              content: { type: Type.STRING, description: "详细的 Markdown 内容" },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "标签列表" }
+            },
+            required: ["title", "content"]
+          }
+        };
+      } else if (mode === 'talent') {
+        schema = {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              nodeId: { type: Type.STRING, description: "天赋节点 ID (如 1.1, 2.3)，可选" },
+              name: { type: Type.STRING, description: "天赋名称" },
+              description: { type: Type.STRING, description: "天赋描述" },
+              targetStats: { type: Type.ARRAY, items: { type: Type.STRING }, description: "目标属性列表 (如 ['跑动速度', '走路速度'])" },
+              modifier: { type: Type.STRING, description: "修正值 (如 '+10%', '-2')" },
+              effect: { type: Type.STRING, description: "具体效果描述" }
+            },
+            required: ["name"]
+          }
+        };
+      } else {
+        // Character mode
+        schema = {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING, description: "角色姓名" },
+              title: { type: Type.STRING, description: "角色称号" },
+              role: { type: Type.STRING, enum: ["Survivor", "Hunter"], description: "阵营" },
+              type: { type: Type.STRING, description: "定位" },
+              description: { type: Type.STRING, description: "背景描述" },
+              imageUrl: { type: Type.STRING, description: "立绘 URL" },
+              order: { type: Type.NUMBER, description: "排序 ID" },
+              skills: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    cooldown: { type: Type.STRING },
+                    cost: { type: Type.STRING },
+                    tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+                  }
+                }
+              }
+            },
+            required: ["name", "title", "role"]
+          }
+        };
+      }
 
-      const prompt = `你是一个专业的游戏数据分析师。请将以下关于《第五人格》${mode === 'wiki' ? '百科词条' : '天赋定义'}的自然语言描述解析为结构化的 JSON 数组。
+      const prompt = `你是一个专业的游戏数据分析师。请将以下关于《第五人格》${mode === 'wiki' ? '百科词条' : mode === 'talent' ? '天赋定义' : '角色档案'}的自然语言描述解析为结构化的 JSON 数组。
       
       待解析文本：
       ${naturalInput}
@@ -68,8 +105,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
       1. 返回结果必须是合法的 JSON 数组。
       2. 如果文本中包含多个项目，请全部解析。
       3. 对于缺失的信息，请根据上下文推断或留空。
-      4. 对于天赋定义，请务必识别其影响的属性 (targetStats)、数值 (modifier) 和效果 (effect)。
-      5. Markdown 内容应保持专业且格式正确。`;
+      4. 确保数据符合指定的 Schema 结构。`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -142,7 +178,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
           if (item.tags && item.tags.length > 0) {
             await syncTags(item.tags, 'Both', auth.currentUser.uid);
           }
-        } else {
+        } else if (mode === 'talent') {
           // Talent Definition mode
           const targetRole = item.role || role || 'Survivor';
           const nodeId = item.nodeId || `gen_${Math.random().toString(36).substr(2, 9)}`;
@@ -167,6 +203,30 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
             role: targetRole,
             updatedAt: serverTimestamp()
           }, { merge: true });
+        } else {
+          // Character mode
+          if (!item.name || !item.title) continue;
+          
+          const existing = allCharacters?.find(c => 
+            (item.order && c.order === item.order) || 
+            (c.name === item.name) || 
+            (item.title && c.title === item.title)
+          );
+
+          const characterData = {
+            ...item,
+            lastUpdated: serverTimestamp()
+          };
+
+          if (existing) {
+            await setDoc(doc(db, 'characters', existing.id), characterData, { merge: true });
+          } else {
+            await addDoc(collection(db, 'characters'), {
+              ...characterData,
+              imageUrl: item.imageUrl || `https://picsum.photos/seed/${item.name}/400/600`,
+              skills: item.skills || [{ name: '初始技能', description: '该角色尚未配置详细技能说明。' }]
+            });
+          }
         }
 
         setProgress(prev => ({ ...prev, current: i + 1 }));
@@ -202,17 +262,36 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
     }
   ];
 
+  const characterTemplate = [
+    {
+      "name": "艾玛·伍兹",
+      "title": "园丁",
+      "role": "Survivor",
+      "type": "辅助/牵制",
+      "description": "背景故事...",
+      "skills": [
+        { "name": "巧手成蹄", "description": "技能描述..." }
+      ]
+    }
+  ];
+
+  const getTemplate = () => {
+    if (mode === 'wiki') return wikiTemplate;
+    if (mode === 'talent') return talentTemplate;
+    return characterTemplate;
+  };
+
   return (
-    <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6 overflow-y-auto">
-      <div className="bg-card w-full max-w-3xl cyber-border p-8 shadow-2xl space-y-6 my-auto">
+    <div className="fixed inset-0 bg-bg/95 z-[100] flex items-start justify-center p-6 overflow-y-auto custom-scrollbar">
+      <div className="bg-card w-full max-w-5xl cyber-border p-8 shadow-2xl space-y-6 my-8 animate-in zoom-in-95 duration-300">
         <div className="flex justify-between items-center border-b border-border pb-4">
           <div className="flex items-center gap-3">
             <FileJson className="text-accent w-6 h-6" />
             <h3 className="text-2xl font-serif text-accent">
-              批量导入{mode === 'wiki' ? '百科词条' : '天赋定义'}
+              批量导入{mode === 'wiki' ? '百科词条' : mode === 'talent' ? '天赋定义' : '角色档案'}
             </h3>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-text transition-colors">
+          <button onClick={onClose} className="text-muted hover:text-accent transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -220,16 +299,21 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
         <div className="bg-accent/5 border border-accent/20 p-4 text-xs font-mono text-muted leading-relaxed">
           <p className="text-accent font-bold mb-2">操作说明：</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>{inputMode === 'json' ? '请粘贴符合 JSON 数组格式的数据。' : '请粘贴包含多个天赋或词条描述的原始文本，AI 将自动解析。'}</li>
+            <li>{inputMode === 'json' ? '请粘贴符合 JSON 数组格式的数据。' : '请粘贴包含多个项目描述的原始文本，AI 将自动解析。'}</li>
             {mode === 'wiki' ? (
               <>
                 <li><code className="text-text">talentId</code> 对应天赋系统中的节点 ID。</li>
                 <li>批量导入的词条将自动设为“已审核”状态。</li>
               </>
-            ) : (
+            ) : mode === 'talent' ? (
               <>
                 <li><code className="text-text">nodeId</code> 必须与天赋树配置中的 ID 一致。</li>
                 <li>数据将直接更新至天赋树侧边栏详情。</li>
+              </>
+            ) : (
+              <>
+                <li>系统将根据姓名、称号或排序 ID 自动匹配并更新现有角色。</li>
+                <li>如果匹配失败，将创建新的角色档案。</li>
               </>
             )}
           </ul>
@@ -262,14 +346,14 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
               <div className="flex justify-between items-end">
                 <label className="text-[10px] text-muted uppercase tracking-widest font-mono">JSON 数据输入</label>
                 <button 
-                  onClick={() => setJsonInput(JSON.stringify(mode === 'wiki' ? wikiTemplate : talentTemplate, null, 2))}
+                  onClick={() => setJsonInput(JSON.stringify(getTemplate(), null, 2))}
                   className="text-[10px] text-accent hover:underline font-mono"
                 >
                   使用模板示例
                 </button>
               </div>
               <textarea 
-                rows={12}
+                rows={16}
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs leading-relaxed custom-scrollbar"
@@ -290,13 +374,11 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
                 </button>
               </div>
               <textarea 
-                rows={12}
+                rows={16}
                 value={naturalInput}
                 onChange={(e) => setNaturalInput(e.target.value)}
                 className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs leading-relaxed custom-scrollbar"
-                placeholder="在此粘贴包含多个天赋或词条描述的文本，例如：
-1.1 强迫症：翻窗后加速10%，持续3秒。
-2.3 寒意：当监管者在36米范围内看向你时，获得警告。"
+                placeholder={mode === 'character' ? "在此粘贴角色描述，例如：\n艾玛·伍兹，称号园丁，求生者阵营。背景故事是...\n外在特质包括巧手成蹄..." : "在此粘贴包含多个项目的文本..."}
               />
             </div>
           )}
@@ -321,9 +403,9 @@ export const BulkImport = ({ mode, role, onClose, onSuccess }: Props) => {
           <button 
             onClick={onClose} 
             disabled={loading}
-            className="px-8 py-2 text-muted font-mono text-xs hover:text-text transition-colors disabled:opacity-50"
+            className="px-8 py-2 text-muted font-mono text-xs hover:text-text transition-colors disabled:opacity-50 flex items-center gap-2"
           >
-            取消_CANCEL
+            退出页面_EXIT
           </button>
           <button 
             onClick={handleImport}

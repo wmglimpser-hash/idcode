@@ -68,6 +68,7 @@ export default function App() {
   };
   const [isEditingWiki, setIsEditingWiki] = useState(false);
   const [isBulkImportingWiki, setIsBulkImportingWiki] = useState(false);
+  const [isBulkImportingCharacters, setIsBulkImportingCharacters] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -673,6 +674,15 @@ export default function App() {
               />
             )}
 
+            {isBulkImportingCharacters && (
+              <BulkImport 
+                mode="character" 
+                allCharacters={characters}
+                onClose={() => setIsBulkImportingCharacters(false)} 
+                onSuccess={() => setIsBulkImportingCharacters(false)} 
+              />
+            )}
+
             {selectedWikiEntry && !isEditingWiki && (
               <div className="space-y-6">
                 <button 
@@ -850,6 +860,7 @@ export default function App() {
                   setIsEditingCharacter(false);
                 }} 
                 onDelete={handleDeleteCharacter}
+                onBulkImport={() => setIsBulkImportingCharacters(true)}
                 initialData={isEditingCharacter ? selectedCharacter || undefined : undefined}
                 allCharacters={characters}
                 nextSurvivorOrder={Math.max(...characters.filter(c => c.role === 'Survivor').map(c => c.order || 0), 0) + 1}

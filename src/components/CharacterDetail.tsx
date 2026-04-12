@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Character, COLORS, Tag, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
-import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Clock, Tag as TagIcon } from 'lucide-react';
+import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Clock, Tag as TagIcon, Download, FileText, Copy, LogOut } from 'lucide-react';
 import { CharacterTraitCategory } from '../constants';
 
 type DetailTab = 'traits' | 'external' | 'mechanics';
@@ -30,6 +30,8 @@ export const CharacterDetail = ({
 }: Props) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('traits');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportMode, setExportMode] = useState<'visual' | 'text'>('visual');
   const [editingSection, setEditingSection] = useState<DetailTab | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -42,6 +44,8 @@ export const CharacterDetail = ({
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [skillsImportMode, setSkillsImportMode] = useState(false);
   const [skillsImportText, setSkillsImportText] = useState('');
+  const [presenceImportMode, setPresenceImportMode] = useState(false);
+  const [presenceImportText, setPresenceImportText] = useState('');
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'tags'), (snapshot) => {
@@ -52,6 +56,57 @@ export const CharacterDetail = ({
   }, []);
 
   const canEdit = !!onEdit;
+
+  const generatePlainText = () => {
+    let text = `【角色档案：${character.title} - ${character.name}】\n`;
+    text += `========================================\n`;
+    text += `阵营：${character.role === 'Survivor' ? '求生者' : '监管者'}\n`;
+    text += `定位：${character.type}\n`;
+    text += `排序ID：${character.order}\n\n`;
+    
+    text += `【背景描述】\n${character.description}\n\n`;
+    
+    text += `【核心属性】\n`;
+    character.traits?.forEach(cat => {
+      text += `--- ${cat.category} ---\n`;
+      cat.items.forEach(item => {
+        text += `${item.label}: ${item.value}\n`;
+      });
+    });
+    text += `\n`;
+    
+    text += `【外在特质】\n`;
+    character.skills?.forEach(skill => {
+      text += `名称：${skill.name}\n`;
+      if (skill.cooldown) text += `冷却：${skill.cooldown}\n`;
+      if (skill.cost) text += `消耗：${skill.cost}\n`;
+      text += `描述：${skill.description}\n`;
+      if (skill.tags?.length) text += `标签：#${skill.tags.join(' #')}\n`;
+      text += `--------------------\n`;
+    });
+    
+    if (character.role === 'Hunter' && character.presence) {
+      text += `\n【存在感阶级】\n`;
+      character.presence.forEach(p => {
+        text += `${p.tier}阶：${p.name}\n`;
+        if (p.cooldown) text += `冷却：${p.cooldown}\n`;
+        text += `描述：${p.description}\n`;
+        if (p.tags?.length) text += `标签：#${p.tags.join(' #')}\n`;
+        text += `--------------------\n`;
+      });
+    }
+    
+    if (character.role === 'Survivor' && character.mechanics) {
+      text += `\n【核心机制】\n`;
+      character.mechanics.forEach(mech => {
+        text += `标题：${mech.title}\n`;
+        text += `内容：${mech.content}\n`;
+        text += `--------------------\n`;
+      });
+    }
+    
+    return text;
+  };
 
   const startEditing = (section: DetailTab) => {
     if (section === 'traits') setEditTraits(JSON.parse(JSON.stringify(character.traits || [])));
@@ -107,15 +162,18 @@ export const CharacterDetail = ({
 
   const parseSkillsOnly = (text: string) => {
     const skills: any[] = [];
-    const skillBlocks = text.split(/\n(?=[^\s])/).filter(b => b.trim());
+    // Pre-process: Join icon URLs with the following line if they are separated by a newline
+    const normalizedText = text.replace(/(\[.*?\])\s*\n/g, '$1 ');
+    // Split by newline followed by an icon or a name pattern (something followed by a colon)
+    const skillBlocks = normalizedText.split(/\n(?=\[|[^:\n]+[:：])/).filter(b => b.trim());
     
     skillBlocks.forEach(block => {
       // Format: [iconUrl] Name: Description #tag1 #tag2
       let icon = '';
-      const iconMatch = block.match(/^\[(.*?)\]/);
+      const iconMatch = block.match(/\[(.*?)\]/);
       if (iconMatch) {
         icon = iconMatch[1].trim();
-        block = block.replace(/^\[.*?\]/, '').trim();
+        block = block.replace(/\[.*?\]/, '').trim();
       }
 
       const tags: string[] = [];
@@ -164,6 +222,71 @@ export const CharacterDetail = ({
     }
   };
 
+  const handlePresenceSmartImport = () => {
+    if (!presenceImportText.trim()) return;
+    
+    const newPresence = [...editPresence];
+    // Pre-process: Join icon URLs with the following line if they are separated by a newline
+    const normalizedText = presenceImportText.replace(/(\[.*?\])\s*\n/g, '$1 ');
+    const lines = normalizedText.trim().split('\n');
+    
+    lines.forEach(line => {
+      // Format: 0阶: 技能名: 描述 | 冷却: 10s #标签 [iconUrl]
+      const tierMatch = line.match(/^(\d)阶/);
+      if (tierMatch) {
+        const tier = parseInt(tierMatch[1]);
+        const idx = newPresence.findIndex(p => p.tier === tier);
+        if (idx === -1) return;
+
+        let content = line.replace(/^\d阶[:：]/, '').trim();
+        
+        // Extract Icon
+        let icon = newPresence[idx].icon || '';
+        const iconMatch = content.match(/\[(.*?)\]/);
+        if (iconMatch) {
+          icon = iconMatch[1].trim();
+          content = content.replace(/\[.*?\]/, '').trim();
+        }
+
+        // Extract Tags
+        const tags: string[] = [...(newPresence[idx].tags || [])];
+        const tagMatches = content.match(/#(\S+)/g);
+        if (tagMatches) {
+          tagMatches.forEach(t => {
+            const tagName = t.substring(1);
+            if (!tags.includes(tagName)) tags.push(tagName);
+          });
+          content = content.replace(/#\S+/g, '').trim();
+        }
+
+        // Extract Cooldown
+        let cooldown = newPresence[idx].cooldown || '';
+        const cdMatch = content.match(/\|?\s*(?:冷却|CD)[:：]\s*([^#|\[]+)/i);
+        if (cdMatch) {
+          cooldown = cdMatch[1].trim();
+          content = content.replace(/\|?\s*(?:冷却|CD)[:：]\s*[^#|\[]+/i, '').trim();
+        }
+
+        // Extract Name and Description
+        const [name, ...descParts] = content.split(/[:：]/);
+        if (name && descParts.length > 0) {
+          newPresence[idx] = {
+            ...newPresence[idx],
+            name: name.trim(),
+            description: descParts.join(':').trim(),
+            cooldown,
+            tags,
+            icon
+          };
+        }
+      }
+    });
+
+    setEditPresence(newPresence);
+    setPresenceImportText('');
+    setPresenceImportMode(false);
+  };
+
   const baseCharacter = allCharacters?.find(c => 
     c.id === (character.role === 'Survivor' ? 'base_survivor' : 'base_hunter')
   );
@@ -205,6 +328,13 @@ export const CharacterDetail = ({
                 <Edit3 className="w-3.5 h-3.5" />
                 编辑档案_EDIT
               </button>
+              <button 
+                onClick={() => setShowExportModal(true)}
+                className="px-3 py-1.5 bg-card border border-border text-accent hover:border-accent transition-all shadow-lg flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-widest"
+              >
+                <Download className="w-3.5 h-3.5" />
+                导出档案_EXPORT
+              </button>
               {onDelete && (
                 <button 
                   onClick={() => setShowDeleteConfirm(true)}
@@ -242,6 +372,187 @@ export const CharacterDetail = ({
                   className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-xs tracking-widest"
                 >
                   确认删除_CONFIRM
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showExportModal && (
+          <div className="fixed inset-0 bg-bg/95 z-[100] flex items-start justify-center p-6 overflow-y-auto custom-scrollbar">
+            <div className="bg-card border border-accent p-8 max-w-5xl w-full my-8 flex flex-col cyber-border animate-in zoom-in-95 duration-300">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-6">
+                  <h3 className="text-2xl font-serif text-accent flex items-center gap-3">
+                    <Download className="w-6 h-6" /> 角色档案导出_EXPORT_DOSSIER
+                  </h3>
+                  <div className="flex bg-bg/50 p-1 border border-border">
+                    <button 
+                      onClick={() => setExportMode('visual')}
+                      className={`px-3 py-1 text-[10px] font-mono transition-all ${exportMode === 'visual' ? 'bg-accent text-bg' : 'text-muted hover:text-text'}`}
+                    >
+                      视觉模式_VISUAL
+                    </button>
+                    <button 
+                      onClick={() => setExportMode('text')}
+                      className={`px-3 py-1 text-[10px] font-mono transition-all ${exportMode === 'text' ? 'bg-accent text-bg' : 'text-muted hover:text-text'}`}
+                    >
+                      文本模式_TEXT
+                    </button>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowExportModal(false)}
+                  className="text-muted hover:text-accent transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-8 font-mono text-sm">
+                {exportMode === 'visual' ? (
+                  <>
+                    {/* Basic Info */}
+                    <div className="space-y-2">
+                      <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">基础信息_BASIC_INFO</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><span className="text-muted">称号:</span> {character.title}</div>
+                        <div><span className="text-muted">姓名:</span> {character.name}</div>
+                        <div><span className="text-muted">阵营:</span> {character.role === 'Survivor' ? '求生者' : '监管者'}</div>
+                        <div><span className="text-muted">定位:</span> {character.type}</div>
+                        <div><span className="text-muted">排序ID:</span> {character.order}</div>
+                      </div>
+                      <div className="mt-4">
+                        <span className="text-muted block mb-1">背景描述:</span>
+                        <p className="text-text/80 leading-relaxed whitespace-pre-wrap">{character.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Traits */}
+                    <div className="space-y-4">
+                      <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">核心属性_CORE_TRAITS</div>
+                      {character.traits?.map((cat, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="text-primary text-xs font-bold">{cat.category}</div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {cat.items.map((item, i) => (
+                              <div key={i} className="flex justify-between border-b border-border/30 pb-1">
+                                <span className="text-muted text-[10px]">{item.label}</span>
+                                <span className="text-text text-[10px]">{item.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Skills */}
+                    <div className="space-y-4">
+                      <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">外在特质_EXTERNAL_TRAITS</div>
+                      {character.skills?.map((skill, idx) => (
+                        <div key={idx} className="p-3 bg-accent/5 border border-accent/20 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-accent font-bold">{skill.name}</span>
+                            <div className="flex gap-2">
+                              {skill.cooldown && <span className="text-[10px] bg-bg px-1 border border-border">CD: {skill.cooldown}</span>}
+                              {skill.cost && <span className="text-[10px] bg-bg px-1 border border-border">消耗: {skill.cost}</span>}
+                            </div>
+                          </div>
+                          <p className="text-xs text-text/80 leading-relaxed whitespace-pre-wrap">{skill.description}</p>
+                          {skill.tags && skill.tags.length > 0 && (
+                            <div className="flex gap-1">
+                              {skill.tags.map(tag => (
+                                <span key={tag} className="text-[9px] text-muted border border-border/50 px-1">#{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Presence (Hunter Only) */}
+                    {character.role === 'Hunter' && character.presence && (
+                      <div className="space-y-4">
+                        <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">存在感阶级_PRESENCE</div>
+                        {character.presence.map((p, idx) => (
+                          <div key={idx} className="p-3 bg-primary/5 border border-primary/20 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-primary font-bold">{p.tier}阶: {p.name}</span>
+                              {p.cooldown && <span className="text-[10px] bg-bg px-1 border border-border">CD: {p.cooldown}</span>}
+                            </div>
+                            <p className="text-xs text-text/80 leading-relaxed whitespace-pre-wrap">{p.description}</p>
+                            {p.tags && p.tags.length > 0 && (
+                              <div className="flex gap-1">
+                                {p.tags.map(tag => (
+                                  <span key={tag} className="text-[9px] text-muted border border-border/50 px-1">#{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Mechanics (Survivor Only) */}
+                    {character.role === 'Survivor' && character.mechanics && (
+                      <div className="space-y-4">
+                        <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">核心机制_MECHANICS</div>
+                        {character.mechanics.map((mech, idx) => (
+                          <div key={idx} className="p-3 bg-accent/5 border border-accent/20 space-y-2">
+                            <div className="text-accent font-bold">{mech.title}</div>
+                            <p className="text-xs text-text/80 leading-relaxed whitespace-pre-wrap">{mech.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-bg/50 border border-border p-6 relative group">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatePlainText());
+                      }}
+                      className="absolute top-4 right-4 p-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all flex items-center gap-2 text-[10px] font-mono"
+                    >
+                      <Copy className="w-3 h-3" /> 复制文本_COPY
+                    </button>
+                    <pre className="text-xs text-text/80 whitespace-pre-wrap font-mono leading-relaxed">
+                      {generatePlainText()}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex justify-between items-center">
+                <div className="flex gap-4 flex-1 max-w-2xl">
+                  <button 
+                    onClick={() => {
+                      const dataStr = JSON.stringify(character, null, 2);
+                      const blob = new Blob([dataStr], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `${character.title}_${character.name}_档案.json`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="flex-1 py-3 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" /> 导出为 JSON_JSON
+                  </button>
+                  <button 
+                    onClick={() => window.print()}
+                    className="flex-1 py-3 bg-bg border border-border text-text hover:border-accent transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> 打印档案_PRINT
+                  </button>
+                </div>
+                
+                <button 
+                  onClick={() => setShowExportModal(false)}
+                  className="px-6 py-3 bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-white transition-all font-mono text-xs font-bold tracking-widest flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" /> 退出页面_EXIT
                 </button>
               </div>
             </div>
@@ -642,7 +953,7 @@ export const CharacterDetail = ({
                           
                           {/* Tag Selection */}
                           <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
-                            {availableTags.filter(t => character.role === 'Survivor' || t.affectedRole === 'Both' || t.affectedRole === character.role).map(tag => {
+                            {availableTags.map(tag => {
                               const isSelected = skill.tags?.includes(tag.name);
                               return (
                                 <button
@@ -750,8 +1061,21 @@ export const CharacterDetail = ({
                   <div className="flex gap-2">
                     {editingSection === 'mechanics' ? (
                       <>
+                        {character.role === 'Hunter' && (
+                          <button 
+                            onClick={() => setPresenceImportMode(!presenceImportMode)}
+                            className={`px-3 py-1 border transition-all font-mono text-[10px] flex items-center gap-1 ${
+                              presenceImportMode ? 'bg-accent text-bg border-accent' : 'bg-bg border-border text-accent hover:border-accent'
+                            }`}
+                          >
+                            <Zap className="w-3 h-3" /> 智能识别_SMART
+                          </button>
+                        )}
                         <button 
-                          onClick={() => setEditingSection(null)}
+                          onClick={() => {
+                            setEditingSection(null);
+                            setPresenceImportMode(false);
+                          }}
                           className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
                         >
                           <X className="w-3 h-3" /> 取消_CANCEL
@@ -778,6 +1102,40 @@ export const CharacterDetail = ({
 
               {editingSection === 'mechanics' ? (
                 <div className="space-y-8">
+                  {presenceImportMode && character.role === 'Hunter' && (
+                    <div className="p-4 bg-accent/5 border border-accent/30 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-mono text-accent uppercase tracking-widest flex items-center gap-2">
+                          <Zap className="w-3 h-3" /> 存在感识别导入_PRESENCE_IMPORT
+                        </label>
+                        <span className="text-[9px] text-muted font-mono">格式: 0阶: 技能名: 描述 | 冷却: 10s #标签 [图标URL]</span>
+                      </div>
+                      <textarea 
+                        rows={4}
+                        value={presenceImportText}
+                        onChange={(e) => setPresenceImportText(e.target.value)}
+                        placeholder="在此粘贴存在感描述文本..."
+                        className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-mono outline-none focus:border-accent transition-colors"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => {
+                            setPresenceImportText('');
+                            setPresenceImportMode(false);
+                          }}
+                          className="px-3 py-1 text-[10px] font-mono text-muted hover:text-text"
+                        >
+                          取消_CANCEL
+                        </button>
+                        <button 
+                          onClick={handlePresenceSmartImport}
+                          className="px-4 py-1 bg-accent text-bg text-[10px] font-mono font-bold hover:bg-accent/80 transition-all"
+                        >
+                          确认识别_CONFIRM
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {character.role === 'Hunter' ? (
                     <div className="space-y-6">
                       {editPresence.map((p, idx) => (
@@ -843,7 +1201,7 @@ export const CharacterDetail = ({
                           
                           {/* Tag Selection */}
                           <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
-                            {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === 'Hunter').map(tag => {
+                            {availableTags.map(tag => {
                               const isSelected = p.tags?.includes(tag.name);
                               return (
                                 <button

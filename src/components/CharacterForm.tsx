@@ -8,16 +8,14 @@ interface Props {
   onSave: (data: any) => void;
   onCancel: () => void;
   onDelete?: (char: Character) => void;
+  onBulkImport?: () => void;
   initialData?: Character | null;
   allCharacters?: Character[];
   nextSurvivorOrder?: number;
   nextHunterOrder?: number;
 }
 
-export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allCharacters, nextSurvivorOrder, nextHunterOrder }: Props) => {
-  const [importMode, setImportMode] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importError, setImportError] = useState('');
+export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initialData, allCharacters, nextSurvivorOrder, nextHunterOrder }: Props) => {
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -143,15 +141,18 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
 
   const parseSkillsOnly = (text: string) => {
     const skills: any[] = [];
-    const skillBlocks = text.split(/\n(?=[^\s])/).filter(b => b.trim());
+    // Pre-process: Join icon URLs with the following line if they are separated by a newline
+    const normalizedText = text.replace(/(\[.*?\])\s*\n/g, '$1 ');
+    // Split by newline followed by an icon or a name pattern (something followed by a colon)
+    const skillBlocks = normalizedText.split(/\n(?=\[|[^:\n]+[:：])/).filter(b => b.trim());
     
     skillBlocks.forEach(block => {
       // Format: [iconUrl] Name: Description #tag1 #tag2
       let icon = '';
-      const iconMatch = block.match(/^\[(.*?)\]/);
+      const iconMatch = block.match(/\[(.*?)\]/);
       if (iconMatch) {
         icon = iconMatch[1].trim();
-        block = block.replace(/^\[.*?\]/, '').trim();
+        block = block.replace(/\[.*?\]/, '').trim();
       }
 
       const tags: string[] = [];
@@ -369,14 +370,16 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     const skillsSection = text.match(/(?:外在特质|技能)[:：]\s*([\s\S]*?)(?=\n\n\n|\n[^\n]*[:：]|$)/i);
     if (skillsSection) {
       const skillsText = skillsSection[1];
-      const skillBlocks = skillsText.split(/\n(?=[^\s])/);
+      // Pre-process: Join icon URLs with the following line if they are separated by a newline
+      const normalizedSkillsText = skillsText.replace(/(\[.*?\])\s*\n/g, '$1 ');
+      const skillBlocks = normalizedSkillsText.split(/\n(?=\[|[^:\n]+[:：])/);
       skillBlocks.forEach(block => {
         // Format: [iconUrl] Name: Description #tag1 #tag2
         let icon = '';
-        const iconMatch = block.match(/^\[(.*?)\]/);
+        const iconMatch = block.match(/\[(.*?)\]/);
         if (iconMatch) {
           icon = iconMatch[1].trim();
-          block = block.replace(/^\[.*?\]/, '').trim();
+          block = block.replace(/\[.*?\]/, '').trim();
         }
 
         const tags: string[] = [];
@@ -505,72 +508,6 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
     return data;
   };
 
-  const handleBulkImport = async () => {
-    try {
-      const trimmedText = importText.trim();
-      let charactersToSave: any[] = [];
-
-      if (trimmedText.startsWith('[') || trimmedText.startsWith('{')) {
-        // JSON Import
-        const parsed = JSON.parse(trimmedText);
-        charactersToSave = Array.isArray(parsed) ? parsed : [parsed];
-      } else {
-        // Smart Text Import (Split by '---' for multiple characters)
-        const blocks = trimmedText.split(/\n---\n|\n===\n/).filter(b => b.trim());
-        charactersToSave = blocks.map(block => parseSmartText(block.trim()));
-      }
-
-      if (charactersToSave.length === 0) throw new Error('未检测到有效的角色数据');
-      
-      // Validate at least one character has a name
-      if (!charactersToSave.some(c => c.name || c.title)) {
-        throw new Error('无法识别角色姓名或称号，请检查格式');
-      }
-
-      // If it's a single character, we can just update the form
-      if (charactersToSave.length === 1) {
-        const parsed = charactersToSave[0];
-        setFormData({
-          ...formData,
-          ...parsed,
-          skills: parsed.skills?.length ? parsed.skills : formData.skills,
-          traits: parsed.traits?.length ? parsed.traits : formData.traits,
-          mechanics: parsed.mechanics?.length ? parsed.mechanics : formData.mechanics,
-        });
-        setImportMode(false);
-      } else {
-        // If multiple, save them all immediately via onSave
-        setSaving(true);
-        
-        // Match existing characters by name or numeric ID (order) to support partial updates
-        const processedCharacters = charactersToSave.map(newChar => {
-          const existing = allCharacters?.find(c => 
-            (newChar.order && c.order === newChar.order) || 
-            (c.name === newChar.name) || 
-            (newChar.title && c.title === newChar.title)
-          );
-          if (existing) {
-            return {
-              ...existing,
-              ...newChar,
-              id: existing.id // Keep the same ID for update
-            };
-          }
-          return newChar;
-        });
-
-        await onSave(processedCharacters);
-        setSaving(false);
-        setImportMode(false);
-      }
-      
-      setImportError('');
-    } catch (e: any) {
-      setImportError(`导入失败: ${e.message}`);
-      setSaving(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) return alert('请输入角色姓名');
@@ -591,120 +528,15 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
           {initialData ? '修改档案_UPDATE' : '录入新档案_CREATE'}
         </h2>
         <button 
-          onClick={() => setImportMode(!importMode)}
+          onClick={onBulkImport}
           className="flex items-center gap-2 text-[10px] font-mono text-accent hover:text-primary transition-colors uppercase tracking-widest"
         >
-          {importMode ? <FileText className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-          {importMode ? '手动填写_MANUAL' : '文档一键导入_IMPORT'}
+          <Upload className="w-4 h-4" />
+          文档一键导入_IMPORT
         </button>
       </div>
 
-      {importMode ? (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="bg-bg/50 p-4 border border-border">
-            <div className="flex justify-between items-start mb-4">
-              <p className="text-xs text-muted font-mono">请粘贴 JSON 格式或自然语言描述的角色数据：</p>
-              <div className="text-[11px] font-mono text-accent/50 text-right">
-                支持识别：姓名、称号、阵营、定位、描述、外在特质、数值等关键词<br/>
-                <span className="text-primary">支持一键导入多个角色，请使用 "---" 作为角色之间的分隔符</span>
-              </div>
-            </div>
-            
-            <div className="mb-4 p-3 bg-card/30 border border-border/50 text-[11px] font-mono text-muted">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="mb-1 text-accent">JSON 格式示例：</p>
-                  <pre className="bg-bg/50 p-2 overflow-x-auto text-[9px]">
-{`{
-  "order": 1,
-  "name": "艾玛·伍兹",
-  "title": "园丁",
-  "role": "Survivor",
-  "type": "辅助/牵制",
-  "imageUrl": "https://picsum.photos/seed/gardener/400/600",
-  "description": "通过破坏狂欢之椅来延缓队友被淘汰的时间。",
-  "skills": [
-    {
-      "name": "巧手成蹄",
-      "description": "园丁随身携带工具箱，可以破坏狂欢之椅。",
-      "icon": "https://icon-url.com/skill1.png",
-      "tags": ["辅助", "修机"]
-    }
-  ],
-  "traits": [
-    {
-      "category": "移动能力",
-      "items": [
-        { "label": "跑动速度", "value": "3.8米/秒" }
-      ]
-    }
-  ]
-}`}
-                  </pre>
-                </div>
-                <div>
-                  <p className="mb-1 text-accent">智能文本示例：</p>
-                  <pre className="bg-bg/50 p-2 overflow-x-auto text-[9px]">
-{`角色ID：1
-姓名：艾玛·伍兹
-称号：园丁
-立绘：https://picsum.photos/seed/gardener/400/600
-阵营：求生者
-定位：辅助/牵制
-描述：通过破坏狂欢之椅来延缓队友被淘汰的时间。
-外在特质：
-[https://icon-url.com/skill1.png] 巧手成蹄：园丁随身携带工具箱，可以破坏狂欢之椅。 #辅助 #修机
-数值：
-跑动速度：3.8米/秒
-快速翻窗时长：1.08秒
-存在感：
-0阶：技能名：描述 | 冷却：10s #标签`}
-                  </pre>
-                  <p className="mt-2 text-[9px] text-primary/70">注：角色ID为数字，系统将根据ID自动匹配并更新现有角色数据。</p>
-                </div>
-              </div>
-            </div>
-
-            <textarea 
-              rows={15}
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              disabled={saving}
-              className="w-full bg-bg border border-border text-accent p-4 rounded-none focus:border-accent outline-none font-mono text-xs resize-none disabled:opacity-50"
-              placeholder={`示例格式：\n姓名：艾玛·伍兹\n称号：园丁\n...\n---\n姓名：里奥·贝克\n称号：厂长\n...`}
-            />
-            {importError && (
-              <div className="mt-4 flex items-center gap-2 text-primary text-xs font-mono">
-                <AlertCircle className="w-4 h-4" /> {importError}
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-4">
-            <button 
-              onClick={() => setImportMode(false)}
-              disabled={saving}
-              className="px-6 py-2 text-muted font-mono text-xs disabled:opacity-50"
-            >
-              取消_CANCEL
-            </button>
-            <button 
-              onClick={handleBulkImport}
-              disabled={saving || !importText.trim()}
-              className="px-8 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 transition-all disabled:opacity-50 flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <div className="w-3 h-3 border-2 border-bg border-t-transparent rounded-full animate-spin" />
-                  正在同步至云端...
-                </>
-              ) : (
-                '执行导入_EXECUTE'
-              )}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <form className="space-y-8" onSubmit={handleSubmit}>
+      <form className="space-y-8" onSubmit={handleSubmit}>
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
@@ -995,7 +827,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                   {/* Tag Selection & Custom Tags */}
                   <div className="space-y-3 pt-2 border-t border-border/30">
                     <div className="flex flex-wrap gap-2">
-                      {availableTags.filter(t => formData.role === 'Survivor' || t.affectedRole === 'Both' || t.affectedRole === formData.role).map(tag => {
+                      {availableTags.map(tag => {
                         const isSelected = skill.tags?.includes(tag.name);
                         return (
                           <button
@@ -1123,7 +955,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
                       
                       {/* Tag Selection */}
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
-                        {availableTags.filter(t => t.affectedRole === 'Both' || t.affectedRole === 'Hunter').map(tag => {
+                        {availableTags.map(tag => {
                           const isSelected = p.tags?.includes(tag.name);
                           return (
                             <button
@@ -1286,7 +1118,6 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, initialData, allChar
             </div>
           </div>
         </form>
-      )}
 
       {showDeleteConfirm && initialData && (
         <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6">
