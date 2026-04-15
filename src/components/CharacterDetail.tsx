@@ -225,23 +225,23 @@ export const CharacterDetail = ({
   const handlePresenceSmartImport = () => {
     if (!presenceImportText.trim()) return;
     
-    const newPresence = [...editPresence];
-    // Pre-process: Join icon URLs with the following line if they are separated by a newline
-    const normalizedText = presenceImportText.replace(/(\[.*?\])\s*\n/g, '$1 ');
-    const lines = normalizedText.trim().split('\n');
+    let newPresence = [...editPresence];
+    // Pre-process: Replace </br> with \n and join icon URLs with the following line
+    const normalizedText = presenceImportText
+      .replace(/<\/br>/gi, '\n')
+      .replace(/(\[.*?\])\s*\n/g, '$1 ');
     
-    lines.forEach(line => {
-      // Format: 0阶: 技能名: 描述 | 冷却: 10s #标签 [iconUrl]
-      const tierMatch = line.match(/^(\d)阶/);
+    // Split by tier pattern at the start of a line
+    const blocks = normalizedText.trim().split(/\n(?=\d阶)/);
+    
+    blocks.forEach(block => {
+      const tierMatch = block.match(/^(\d)阶/);
       if (tierMatch) {
         const tier = parseInt(tierMatch[1]);
-        const idx = newPresence.findIndex(p => p.tier === tier);
-        if (idx === -1) return;
-
-        let content = line.replace(/^\d阶[:：]/, '').trim();
+        let content = block.replace(/^\d阶[:：]/, '').trim();
         
         // Extract Icon
-        let icon = newPresence[idx].icon || '';
+        let icon = '';
         const iconMatch = content.match(/\[(.*?)\]/);
         if (iconMatch) {
           icon = iconMatch[1].trim();
@@ -249,7 +249,7 @@ export const CharacterDetail = ({
         }
 
         // Extract Tags
-        const tags: string[] = [...(newPresence[idx].tags || [])];
+        const tags: string[] = [];
         const tagMatches = content.match(/#(\S+)/g);
         if (tagMatches) {
           tagMatches.forEach(t => {
@@ -260,7 +260,7 @@ export const CharacterDetail = ({
         }
 
         // Extract Cooldown
-        let cooldown = newPresence[idx].cooldown || '';
+        let cooldown = '';
         const cdMatch = content.match(/\|?\s*(?:冷却|CD)[:：]\s*([^#|\[]+)/i);
         if (cdMatch) {
           cooldown = cdMatch[1].trim();
@@ -270,17 +270,51 @@ export const CharacterDetail = ({
         // Extract Name and Description
         const [name, ...descParts] = content.split(/[:：]/);
         if (name && descParts.length > 0) {
-          newPresence[idx] = {
-            ...newPresence[idx],
-            name: name.trim(),
-            description: descParts.join(':').trim(),
-            cooldown,
-            tags,
-            icon
-          };
+          const skillName = name.trim();
+          const skillDesc = descParts.join(':').trim();
+          
+          // Find if we should update or append
+          // If it's one of the initial empty ones (name is "0阶", "1阶", "2阶" and description is empty)
+          const emptyIdx = newPresence.findIndex(p => p.tier === tier && p.name === `${tier}阶` && !p.description);
+          
+          if (emptyIdx >= 0) {
+            newPresence[emptyIdx] = {
+              tier,
+              name: skillName,
+              description: skillDesc,
+              cooldown,
+              tags,
+              icon
+            };
+          } else {
+            // Check if an item with same tier and name already exists
+            const existingIdx = newPresence.findIndex(p => p.tier === tier && p.name === skillName);
+            if (existingIdx >= 0) {
+              newPresence[existingIdx] = {
+                tier,
+                name: skillName,
+                description: skillDesc,
+                cooldown,
+                tags,
+                icon
+              };
+            } else {
+              newPresence.push({
+                tier,
+                name: skillName,
+                description: skillDesc,
+                cooldown,
+                tags,
+                icon
+              });
+            }
+          }
         }
       }
     });
+
+    // Sort by tier
+    newPresence.sort((a, b) => a.tier - b.tier);
 
     setEditPresence(newPresence);
     setPresenceImportText('');
@@ -1108,13 +1142,13 @@ export const CharacterDetail = ({
                         <label className="text-[10px] font-mono text-accent uppercase tracking-widest flex items-center gap-2">
                           <Zap className="w-3 h-3" /> 存在感识别导入_PRESENCE_IMPORT
                         </label>
-                        <span className="text-[9px] text-muted font-mono">格式: 0阶: 技能名: 描述 | 冷却: 10s #标签 [图标URL]</span>
+                        <span className="text-[9px] text-muted font-mono">格式: 0阶: [图标URL] 技能名: 描述 | 冷却: 10s #标签</span>
                       </div>
                       <textarea 
                         rows={4}
                         value={presenceImportText}
                         onChange={(e) => setPresenceImportText(e.target.value)}
-                        placeholder="在此粘贴存在感描述文本..."
+                        placeholder="在此粘贴存在感描述文本，例如：&#10;0阶：[https://example.com/icon.png] 传火：描述内容 | 冷却：未知"
                         className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-mono outline-none focus:border-accent transition-colors"
                       />
                       <div className="flex justify-end gap-2">
@@ -1138,14 +1172,48 @@ export const CharacterDetail = ({
                   )}
                   {character.role === 'Hunter' ? (
                     <div className="space-y-6">
+                      <div className="flex justify-end">
+                        <button 
+                          onClick={() => {
+                            setEditPresence([...editPresence, { tier: 0, name: '', description: '', tags: [] }]);
+                          }}
+                          className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> 添加存在感项目_ADD_ITEM
+                        </button>
+                      </div>
                       {editPresence.map((p, idx) => (
-                        <div key={idx} className="p-4 bg-bg/20 border border-border space-y-4">
+                        <div key={idx} className="p-4 bg-bg/20 border border-border space-y-4 relative group">
+                          <button 
+                            onClick={() => {
+                              setEditPresence(editPresence.filter((_, i) => i !== idx));
+                            }}
+                            className="absolute top-2 right-2 p-1 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="删除项目"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-mono relative group/icon">
                               {p.icon ? (
                                 <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                               ) : (
-                                <span>{p.tier}阶</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[10px] opacity-50">TIER</span>
+                                  <select 
+                                    value={p.tier}
+                                    onChange={(e) => {
+                                      const newP = [...editPresence];
+                                      newP[idx].tier = parseInt(e.target.value);
+                                      setEditPresence(newP);
+                                    }}
+                                    className="bg-transparent text-primary outline-none text-center appearance-none cursor-pointer"
+                                  >
+                                    <option value={0} className="bg-bg">0</option>
+                                    <option value={1} className="bg-bg">1</option>
+                                    <option value={2} className="bg-bg">2</option>
+                                  </select>
+                                </div>
                               )}
                               <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/icon:opacity-100 transition-opacity flex items-center justify-center p-1">
                                 <input 
@@ -1161,17 +1229,35 @@ export const CharacterDetail = ({
                                 />
                               </div>
                             </div>
-                            <input 
-                              type="text"
-                              value={p.name}
-                              onChange={(e) => {
-                                const newP = [...editPresence];
-                                newP[idx].name = e.target.value;
-                                setEditPresence(newP);
-                              }}
-                              placeholder="阶级名称"
-                              className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
-                            />
+                            <div className="flex-1 flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-muted font-mono uppercase">阶段:</span>
+                                <select 
+                                  value={p.tier}
+                                  onChange={(e) => {
+                                    const newP = [...editPresence];
+                                    newP[idx].tier = parseInt(e.target.value);
+                                    setEditPresence(newP);
+                                  }}
+                                  className="bg-bg border border-border text-primary px-2 py-0.5 text-[10px] font-mono outline-none focus:border-primary"
+                                >
+                                  <option value={0}>0阶</option>
+                                  <option value={1}>1阶</option>
+                                  <option value={2}>2阶</option>
+                                </select>
+                                <input 
+                                  type="text"
+                                  value={p.name}
+                                  onChange={(e) => {
+                                    const newP = [...editPresence];
+                                    newP[idx].name = e.target.value;
+                                    setEditPresence(newP);
+                                  }}
+                                  placeholder="阶级名称"
+                                  className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
+                                />
+                              </div>
+                            </div>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
                               <input 

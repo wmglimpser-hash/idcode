@@ -84,8 +84,23 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
                   properties: {
                     name: { type: Type.STRING },
                     description: { type: Type.STRING },
+                    icon: { type: Type.STRING, description: "技能图标 URL" },
                     cooldown: { type: Type.STRING },
                     cost: { type: Type.STRING },
+                    tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+                  }
+                }
+              },
+              presence: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    tier: { type: Type.NUMBER, description: "存在感阶级 (0, 1, 2)" },
+                    name: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    icon: { type: Type.STRING, description: "技能图标 URL" },
+                    cooldown: { type: Type.STRING },
                     tags: { type: Type.ARRAY, items: { type: Type.STRING } }
                   }
                 }

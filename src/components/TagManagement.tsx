@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query, where, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as UserIcon, Shield, LayoutGrid, Table as TableIcon, Search, ExternalLink, ChevronRight, Info, ShieldCheck } from 'lucide-react';
+import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as UserIcon, Shield, LayoutGrid, Table as TableIcon, Search, ExternalLink, ChevronRight, Info, ShieldCheck, Download, FileText, LogOut, Skull } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { renameTagGlobal, deleteTagGlobal } from '../services/tagService';
@@ -118,6 +118,84 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
       searchResultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [selectedTagForSearch]);
+
+  const handleExportResults = () => {
+    if (!selectedTagForSearch) return;
+    
+    const tagName = selectedTagForSearch.name;
+    let content = `标签关联内容导出: ${tagName}\n`;
+    content += `导出时间: ${new Date().toLocaleString()}\n`;
+    content += `==========================================\n\n`;
+
+    // Characters
+    const survivors = searchResults.characters.filter(c => c.role === 'Survivor');
+    const hunters = searchResults.characters.filter(c => c.role === 'Hunter');
+
+    if (survivors.length > 0) {
+      content += `【求生者角色档案 SURVIVORS】\n`;
+      survivors.forEach(c => {
+        content += `------------------------------------------\n`;
+        content += `角色: ${c.title} - ${c.name}\n`;
+        content += `定位: ${c.type}\n`;
+        content += `关联特质:\n`;
+        c.skills.filter(s => s.tags?.includes(tagName)).forEach(s => {
+          content += `  - [外在特质] ${s.name}: ${s.description}\n`;
+        });
+        content += `\n`;
+      });
+    }
+
+    if (hunters.length > 0) {
+      content += `【监管者角色档案 HUNTERS】\n`;
+      hunters.forEach(c => {
+        content += `------------------------------------------\n`;
+        content += `角色: ${c.title} - ${c.name}\n`;
+        content += `定位: ${c.type}\n`;
+        content += `关联技能/存在感:\n`;
+        c.skills.filter(s => s.tags?.includes(tagName)).forEach(s => {
+          content += `  - [外在特质] ${s.name}: ${s.description}\n`;
+        });
+        c.presence?.filter(p => p.tags?.includes(tagName)).forEach(p => {
+          content += `  - [${p.tier}阶技能] ${p.name}: ${p.description}\n`;
+        });
+        content += `\n`;
+      });
+    }
+
+    // Talents
+    const survivorTalents = searchResults.talents.filter(t => t.role === 'Survivor');
+    const hunterTalents = searchResults.talents.filter(t => t.role === 'Hunter');
+
+    if (survivorTalents.length > 0) {
+      content += `【求生者天赋定义 SURVIVOR_TALENTS】\n`;
+      survivorTalents.forEach(t => {
+        content += `------------------------------------------\n`;
+        content += `天赋: ${t.name} (${t.nodeId})\n`;
+        content += `描述: ${t.description}\n`;
+        if (t.effect) content += `效果: ${t.effect}\n`;
+        content += `\n`;
+      });
+    }
+
+    if (hunterTalents.length > 0) {
+      content += `【监管者天赋定义 HUNTER_TALENTS】\n`;
+      hunterTalents.forEach(t => {
+        content += `------------------------------------------\n`;
+        content += `天赋: ${t.name} (${t.nodeId})\n`;
+        content += `描述: ${t.description}\n`;
+        if (t.effect) content += `效果: ${t.effect}\n`;
+        content += `\n`;
+      });
+    }
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `标签关联_${tagName}_${new Date().getTime()}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleSave = async () => {
     if (!form.name || !user) {
@@ -944,73 +1022,231 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                       <p className="text-sm font-mono text-muted uppercase tracking-[0.2em] mt-2 font-bold">FOUND {searchResults.characters.length} CHARACTERS & {searchResults.talents.length} TALENTS</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setSelectedTagForSearch(null)}
-                    className="text-muted hover:text-text flex items-center gap-3 text-xs font-mono uppercase tracking-widest border border-border px-4 py-2 hover:border-accent transition-all"
-                  >
-                    <X className="w-5 h-5" /> 关闭搜索_CLOSE
-                  </button>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={handleExportResults}
+                      className="text-accent hover:bg-accent hover:text-bg flex items-center gap-3 text-xs font-mono uppercase tracking-widest border border-accent px-6 py-2 transition-all font-bold"
+                    >
+                      <Download className="w-5 h-5" /> 导出关联内容_EXPORT
+                    </button>
+                    <button 
+                      onClick={() => setSelectedTagForSearch(null)}
+                      className="text-muted hover:text-text flex items-center gap-3 text-xs font-mono uppercase tracking-widest border border-border px-6 py-2 hover:border-accent transition-all"
+                    >
+                      <LogOut className="w-5 h-5" /> 关闭搜索_CLOSE
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                  {/* Characters Section */}
-                  <div className="space-y-8">
-                    <h4 className="text-base font-mono uppercase tracking-[0.4em] text-muted flex items-center gap-3 border-b border-border pb-3 font-bold">
-                      <UserIcon size={18} /> 关联角色档案 CHARACTERS
-                    </h4>
-                    {searchResults.characters.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {searchResults.characters.map(char => (
-                          <div key={char.id} className="bg-card/30 border border-border p-5 hover:border-accent/50 transition-all flex gap-5 items-center group cursor-pointer">
-                            <div className="w-14 h-14 bg-bg border border-border overflow-hidden flex-shrink-0">
-                              <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" referrerPolicy="no-referrer" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-serif text-accent truncate mb-1">{char.title}</div>
-                              <div className="text-base font-bold text-text truncate">{char.name}</div>
-                            </div>
-                            <ChevronRight className="text-muted group-hover:text-accent transition-colors" size={20} />
-                          </div>
-                        ))}
+                <div className="space-y-16">
+                  {/* Faction Grouping: Survivors */}
+                  {(searchResults.characters.some(c => c.role === 'Survivor') || searchResults.talents.some(t => t.role === 'Survivor')) && (
+                    <div className="space-y-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-accent/30" />
+                        <h4 className="text-xl font-serif text-accent flex items-center gap-3 px-6">
+                          <ShieldCheck className="w-6 h-6" /> 求生者阵营关联 SURVIVOR_RESOURCES
+                        </h4>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-accent/30" />
                       </div>
-                    ) : (
-                      <div className="py-16 text-center border border-dashed border-border/30 text-muted/30 font-mono text-xs uppercase tracking-widest">
-                        未找到关联角色
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Talents Section */}
-                  <div className="space-y-8">
-                    <h4 className="text-base font-mono uppercase tracking-[0.4em] text-muted flex items-center gap-3 border-b border-border pb-3 font-bold">
-                      <ShieldCheck size={18} /> 关联天赋定义 TALENTS
-                    </h4>
-                    {searchResults.talents.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {searchResults.talents.map(talent => (
-                          <div key={talent.id} className="bg-card/30 border border-border p-5 hover:border-accent/50 transition-all flex flex-col gap-3 group cursor-pointer">
-                            <div className="flex justify-between items-start">
-                              <div className="text-base font-bold text-text group-hover:text-accent transition-colors">{talent.name}</div>
-                              <div className="text-[10px] font-mono text-muted bg-bg px-2 py-1 border border-border font-bold">{talent.nodeId}</div>
-                            </div>
-                            <div className="text-xs text-muted/80 line-clamp-3 font-mono leading-relaxed">{talent.description}</div>
-                            <div className="flex items-center gap-3 mt-3">
-                              <span className={`text-[10px] font-mono px-2 py-1 font-bold ${talent.role === 'Survivor' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
-                                {talent.role === 'Survivor' ? '求生者' : '监管者'}
-                              </span>
-                              {talent.targetStat && (
-                                <span className="text-[10px] font-mono text-muted/60 font-medium">#{talent.targetStat}</span>
-                              )}
-                            </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        {/* Survivor Characters */}
+                        <div className="space-y-6">
+                          <h5 className="text-xs font-mono uppercase tracking-[0.3em] text-muted flex items-center gap-2 border-b border-border/50 pb-2 font-bold">
+                            角色档案 CHARACTERS
+                          </h5>
+                          <div className="flex flex-wrap gap-4">
+                            {searchResults.characters.filter(c => c.role === 'Survivor').map(char => (
+                              <div key={char.id} className="relative group">
+                                {/* Icon */}
+                                <div className="w-16 h-16 bg-bg border border-border overflow-hidden cursor-help hover:border-accent transition-all shadow-lg">
+                                  <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover transition-all" referrerPolicy="no-referrer" />
+                                </div>
+                                
+                                {/* Hover Detail Card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-80 bg-card border border-accent p-5 shadow-[0_0_30px_rgba(0,0,0,0.5)] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto z-50 transition-all translate-y-2 group-hover:translate-y-0">
+                                  <div className="flex gap-4 items-start mb-4">
+                                    <div className="w-14 h-14 bg-bg border border-border overflow-hidden flex-shrink-0">
+                                      <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[10px] font-serif text-accent mb-0.5">{char.title}</div>
+                                      <div className="text-base font-bold text-text">{char.name}</div>
+                                      <div className="text-[9px] font-mono text-muted uppercase tracking-widest">{char.type}</div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-4 pl-2 border-l-2 border-accent/20 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    {char.skills.filter(s => s.tags?.includes(selectedTagForSearch.name)).map((skill, sIdx) => (
+                                      <div key={sIdx} className="space-y-1.5">
+                                        <div className="text-xs font-bold text-accent flex items-center gap-2">
+                                          <div className="w-1 h-1 bg-accent rounded-full" />
+                                          {skill.name}
+                                        </div>
+                                        <p className="text-[11px] text-muted leading-relaxed font-mono whitespace-pre-wrap">{skill.description}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-accent" />
+                                </div>
+                              </div>
+                            ))}
+                            {searchResults.characters.filter(c => c.role === 'Survivor').length === 0 && (
+                              <div className="w-full py-10 text-center border border-dashed border-border/20 text-muted/20 font-mono text-[10px] uppercase tracking-widest">无关联角色</div>
+                            )}
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Survivor Talents */}
+                        <div className="space-y-6">
+                          <h5 className="text-xs font-mono uppercase tracking-[0.3em] text-muted flex items-center gap-2 border-b border-border/50 pb-2 font-bold">
+                            天赋定义 TALENTS
+                          </h5>
+                          <div className="flex flex-wrap gap-3">
+                            {searchResults.talents.filter(t => t.role === 'Survivor').map(talent => (
+                              <div key={talent.id} className="relative group">
+                                {/* Talent Chip */}
+                                <div className="px-4 py-2 bg-card/40 border border-border hover:border-accent transition-all cursor-help flex items-center gap-2">
+                                  <ShieldCheck className="w-3 h-3 text-accent" />
+                                  <span className="text-xs font-bold text-text">{talent.name}</span>
+                                </div>
+
+                                {/* Hover Detail Card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-80 bg-card border border-accent p-5 shadow-[0_0_30px_rgba(0,0,0,0.5)] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto z-50 transition-all translate-y-2 group-hover:translate-y-0">
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div className="text-lg font-bold text-text">{talent.name}</div>
+                                    <div className="text-[10px] font-mono text-muted bg-bg px-2 py-1 border border-border font-bold">{talent.nodeId}</div>
+                                  </div>
+                                  <p className="text-xs text-muted/80 font-mono leading-relaxed mb-4 whitespace-pre-wrap">{talent.description}</p>
+                                  {talent.effect && (
+                                    <div className="text-[11px] font-mono text-accent/80 bg-accent/5 p-3 border-l-2 border-accent">
+                                      <span className="text-[9px] uppercase opacity-50 block mb-1">具体效果 EFFECT:</span>
+                                      {talent.effect}
+                                    </div>
+                                  )}
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-accent" />
+                                </div>
+                              </div>
+                            ))}
+                            {searchResults.talents.filter(t => t.role === 'Survivor').length === 0 && (
+                              <div className="w-full py-10 text-center border border-dashed border-border/20 text-muted/20 font-mono text-[10px] uppercase tracking-widest">无关联天赋</div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="py-16 text-center border border-dashed border-border/30 text-muted/30 font-mono text-xs uppercase tracking-widest">
-                        未找到关联天赋
+                    </div>
+                  )}
+
+                  {/* Faction Grouping: Hunters */}
+                  {(searchResults.characters.some(c => c.role === 'Hunter') || searchResults.talents.some(t => t.role === 'Hunter')) && (
+                    <div className="space-y-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/30" />
+                        <h4 className="text-xl font-serif text-primary flex items-center gap-3 px-6">
+                          <Skull className="w-6 h-6" /> 监管者阵营关联 HUNTER_RESOURCES
+                        </h4>
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-primary/30" />
                       </div>
-                    )}
-                  </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        {/* Hunter Characters */}
+                        <div className="space-y-6">
+                          <h5 className="text-xs font-mono uppercase tracking-[0.3em] text-muted flex items-center gap-2 border-b border-border/50 pb-2 font-bold">
+                            角色档案 CHARACTERS
+                          </h5>
+                          <div className="flex flex-wrap gap-4">
+                            {searchResults.characters.filter(c => c.role === 'Hunter').map(char => (
+                              <div key={char.id} className="relative group">
+                                {/* Icon */}
+                                <div className="w-16 h-16 bg-bg border border-border overflow-hidden cursor-help hover:border-primary transition-all shadow-lg">
+                                  <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover transition-all" referrerPolicy="no-referrer" />
+                                </div>
+                                
+                                {/* Hover Detail Card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-80 bg-card border border-primary p-5 shadow-[0_0_30px_rgba(0,0,0,0.5)] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto z-50 transition-all translate-y-2 group-hover:translate-y-0">
+                                  <div className="flex gap-4 items-start mb-4">
+                                    <div className="w-14 h-14 bg-bg border border-border overflow-hidden flex-shrink-0">
+                                      <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[10px] font-serif text-primary mb-0.5">{char.title}</div>
+                                      <div className="text-base font-bold text-text">{char.name}</div>
+                                      <div className="text-[9px] font-mono text-muted uppercase tracking-widest">{char.type}</div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-4 pl-2 border-l-2 border-primary/20 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    {char.skills.filter(s => s.tags?.includes(selectedTagForSearch.name)).map((skill, sIdx) => (
+                                      <div key={`s-${sIdx}`} className="space-y-1.5">
+                                        <div className="text-xs font-bold text-primary flex items-center gap-2">
+                                          <div className="w-1 h-1 bg-primary rounded-full" />
+                                          [外在特质] {skill.name}
+                                        </div>
+                                        <p className="text-[11px] text-muted leading-relaxed font-mono whitespace-pre-wrap">{skill.description}</p>
+                                      </div>
+                                    ))}
+                                    {char.presence?.filter(p => p.tags?.includes(selectedTagForSearch.name)).map((p, pIdx) => (
+                                      <div key={`p-${pIdx}`} className="space-y-1.5">
+                                        <div className="text-xs font-bold text-gold flex items-center gap-2">
+                                          <div className="w-1 h-1 bg-gold rounded-full" />
+                                          [{p.tier}阶技能] {p.name}
+                                        </div>
+                                        <p className="text-[11px] text-muted leading-relaxed font-mono whitespace-pre-wrap">{p.description}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-primary" />
+                                </div>
+                              </div>
+                            ))}
+                            {searchResults.characters.filter(c => c.role === 'Hunter').length === 0 && (
+                              <div className="w-full py-10 text-center border border-dashed border-border/20 text-muted/20 font-mono text-[10px] uppercase tracking-widest">无关联角色</div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Hunter Talents */}
+                        <div className="space-y-6">
+                          <h5 className="text-xs font-mono uppercase tracking-[0.3em] text-muted flex items-center gap-2 border-b border-border/50 pb-2 font-bold">
+                            天赋定义 TALENTS
+                          </h5>
+                          <div className="flex flex-wrap gap-3">
+                            {searchResults.talents.filter(t => t.role === 'Hunter').map(talent => (
+                              <div key={talent.id} className="relative group">
+                                {/* Talent Chip */}
+                                <div className="px-4 py-2 bg-card/40 border border-border hover:border-primary transition-all cursor-help flex items-center gap-2">
+                                  <Skull className="w-3 h-3 text-primary" />
+                                  <span className="text-xs font-bold text-text">{talent.name}</span>
+                                </div>
+
+                                {/* Hover Detail Card */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-80 bg-card border border-primary p-5 shadow-[0_0_30px_rgba(0,0,0,0.5)] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto z-50 transition-all translate-y-2 group-hover:translate-y-0">
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div className="text-lg font-bold text-text">{talent.name}</div>
+                                    <div className="text-[10px] font-mono text-muted bg-bg px-2 py-1 border border-border font-bold">{talent.nodeId}</div>
+                                  </div>
+                                  <p className="text-xs text-muted/80 font-mono leading-relaxed mb-4 whitespace-pre-wrap">{talent.description}</p>
+                                  {talent.effect && (
+                                    <div className="text-[11px] font-mono text-primary/80 bg-primary/5 p-3 border-l-2 border-primary">
+                                      <span className="text-[9px] uppercase opacity-50 block mb-1">具体效果 EFFECT:</span>
+                                      {talent.effect}
+                                    </div>
+                                  )}
+                                  {/* Arrow */}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-primary" />
+                                </div>
+                              </div>
+                            ))}
+                            {searchResults.talents.filter(t => t.role === 'Hunter').length === 0 && (
+                              <div className="w-full py-10 text-center border border-dashed border-border/20 text-muted/20 font-mono text-[10px] uppercase tracking-widest">无关联天赋</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

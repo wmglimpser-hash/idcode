@@ -411,16 +411,27 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
     // Presence (Hunter only)
     const presenceSection = text.match(/(?:存在感|技能阶级)[:：]\s*([\s\S]*?)(?=\n\n\n|\n[^\n]*[:：]|$)/i);
     if (presenceSection) {
-      const presenceText = presenceSection[1];
-      const lines = presenceText.trim().split('\n');
+      const presenceText = presenceSection[1]
+        .replace(/<\/br>/gi, '\n')
+        .replace(/(\[.*?\])\s*\n/g, '$1 ');
+      
+      // Split by tier pattern at the start of a line
+      const blocks = presenceText.trim().split(/\n(?=\d阶)/);
       data.presence = [];
-      lines.forEach(line => {
-        // Format: 0阶: 技能名: 描述 | 冷却: 10s #标签
-        const tierMatch = line.match(/^(\d)阶/);
+      
+      blocks.forEach(block => {
+        const tierMatch = block.match(/^(\d)阶/);
         if (tierMatch) {
           const tier = parseInt(tierMatch[1]);
-          let content = line.replace(/^\d阶[:：]/, '').trim();
+          let content = block.replace(/^\d阶[:：]/, '').trim();
           
+          let icon = '';
+          const iconMatch = content.match(/\[(.*?)\]/);
+          if (iconMatch) {
+            icon = iconMatch[1].trim();
+            content = content.replace(/\[.*?\]/, '').trim();
+          }
+
           const tags: string[] = [];
           const tagMatches = content.match(/#(\S+)/g);
           if (tagMatches) {
@@ -429,10 +440,10 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
           }
 
           let cooldown = '';
-          const cdMatch = content.match(/\|?\s*(?:冷却|CD)[:：]\s*([^#|]+)/i);
+          const cdMatch = content.match(/\|?\s*(?:冷却|CD)[:：]\s*([^#|\[]+)/i);
           if (cdMatch) {
             cooldown = cdMatch[1].trim();
-            content = content.replace(/\|?\s*(?:冷却|CD)[:：]\s*[^#|]+/i, '').trim();
+            content = content.replace(/\|?\s*(?:冷却|CD)[:：]\s*[^#|\[]+/i, '').trim();
           }
 
           const [name, ...descParts] = content.split(/[:：]/);
@@ -442,11 +453,14 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
               name: name.trim(),
               description: descParts.join(':').trim(),
               cooldown,
-              tags
+              tags,
+              icon
             });
           }
         }
       });
+      // Sort by tier
+      data.presence.sort((a: any, b: any) => a.tier - b.tier);
     }
 
     // Traits (Numerical) - Automatic Categorization with Fixed Template
@@ -895,27 +909,66 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
               <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">
                 {formData.role === 'Hunter' ? '存在感阶级 (PRESENCE)' : '进阶机制 (MECHANICS)'}
               </h3>
-              {formData.role !== 'Hunter' && (
-                <button 
-                  type="button"
-                  onClick={addMechanic}
-                  className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
-                >
-                  <Plus className="w-3 h-3" /> 添加机制
-                </button>
-              )}
+              <div className="flex gap-2">
+                {formData.role === 'Hunter' && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        presence: [...prev.presence, { tier: 0, name: '', description: '', tags: [] }]
+                      }));
+                    }}
+                    className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                  >
+                    <Plus className="w-3 h-3" /> 添加阶级项目
+                  </button>
+                )}
+                {formData.role !== 'Hunter' && (
+                  <button 
+                    type="button"
+                    onClick={addMechanic}
+                    className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                  >
+                    <Plus className="w-3 h-3" /> 添加机制
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-4">
               {formData.role === 'Hunter' ? (
                 <div className="space-y-4">
                   {formData.presence.map((p, index) => (
-                    <div key={index} className="p-4 bg-bg/50 border border-border space-y-4">
+                    <div key={index} className="p-4 bg-bg/50 border border-border space-y-4 relative group">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            presence: prev.presence.filter((_, i) => i !== index)
+                          }));
+                        }}
+                        className="absolute top-2 right-2 p-1 text-muted hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-mono relative group/icon">
                           {p.icon ? (
                             <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           ) : (
-                            <span>{p.tier}阶</span>
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] opacity-50">TIER</span>
+                              <select 
+                                value={p.tier}
+                                onChange={(e) => updatePresence(index, 'tier' as any, e.target.value)}
+                                className="bg-transparent text-primary outline-none text-center appearance-none cursor-pointer"
+                              >
+                                <option value={0} className="bg-bg">0</option>
+                                <option value={1} className="bg-bg">1</option>
+                                <option value={2} className="bg-bg">2</option>
+                              </select>
+                            </div>
                           )}
                           <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/icon:opacity-100 transition-opacity flex items-center justify-center p-1">
                             <input 
@@ -927,13 +980,27 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                             />
                           </div>
                         </div>
-                        <input 
-                          type="text"
-                          value={p.name}
-                          onChange={(e) => updatePresence(index, 'name', e.target.value)}
-                          placeholder="阶级名称"
-                          className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
-                        />
+                        <div className="flex-1 flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted font-mono uppercase">阶段:</span>
+                            <select 
+                              value={p.tier}
+                              onChange={(e) => updatePresence(index, 'tier' as any, e.target.value)}
+                              className="bg-bg border border-border text-primary px-2 py-0.5 text-[10px] font-mono outline-none focus:border-primary"
+                            >
+                              <option value={0}>0阶</option>
+                              <option value={1}>1阶</option>
+                              <option value={2}>2阶</option>
+                            </select>
+                            <input 
+                              type="text"
+                              value={p.name}
+                              onChange={(e) => updatePresence(index, 'name', e.target.value)}
+                              placeholder="阶级名称"
+                              className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
+                            />
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
                           <input 
