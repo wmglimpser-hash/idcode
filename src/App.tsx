@@ -14,6 +14,7 @@ import { TalentWeb } from './components/TalentWeb';
 import { BulkImport } from './components/BulkImport';
 import { WikiSearch } from './components/WikiSearch';
 import { WallpaperManager } from './components/WallpaperManager';
+import { AIAssistant } from './components/AIAssistant';
 import { 
   collection, 
   addDoc, 
@@ -268,8 +269,7 @@ export default function App() {
 
   const handleUpdateCharacter = async (charId: string, data: Partial<Character>) => {
     if (!isContributor) {
-      alert("您没有权限修改档案数据。");
-      return;
+      throw new Error("权限不足：只有贡献者或管理员可以修改档案数据。");
     }
 
     try {
@@ -699,6 +699,12 @@ export default function App() {
                 />
               </div>
             )}
+
+            <AIAssistant 
+              characters={characters} 
+              onUpdateCharacter={handleUpdateCharacter}
+              userProfile={userProfile}
+            />
           </div>
         )}
 

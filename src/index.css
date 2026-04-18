@@ -69,6 +69,32 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-accent/30 rounded-full hover:bg-accent/50 transition-colors;
+  }
+
+  .markdown-body {
+    @apply space-y-2;
+  }
+  .markdown-body p {
+    @apply leading-relaxed;
+  }
+  .markdown-body strong {
+    @apply text-accent font-bold;
+  }
+  .markdown-body code {
+    @apply bg-accent/10 px-1 py-0.5 rounded font-mono text-accent;
+  }
+  .markdown-body ul {
+    @apply list-disc list-inside space-y-1 ml-2;
+  }
 }
 
 /* Custom Scrollbar */

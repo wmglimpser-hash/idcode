@@ -53,6 +53,8 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
     affectedRole: 'Survivor',
     affectedStats: []
   });
+  const [showTextView, setShowTextView] = useState(false);
+  const [generatedTextContent, setGeneratedTextContent] = useState('');
 
   const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
   const isContributor = userProfile?.role === 'contributor' || isAdminUser;
@@ -119,8 +121,8 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
     }
   }, [selectedTagForSearch]);
 
-  const handleExportResults = () => {
-    if (!selectedTagForSearch) return;
+  const generateContent = () => {
+    if (!selectedTagForSearch) return '';
     
     const tagName = selectedTagForSearch.name;
     let content = `标签关联内容导出: ${tagName}\n`;
@@ -188,6 +190,14 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
       });
     }
 
+    return content;
+  };
+
+  const handleExportResults = () => {
+    const content = generateContent();
+    if (!content) return;
+    
+    const tagName = selectedTagForSearch?.name || 'unknown';
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -195,6 +205,12 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
     link.download = `标签关联_${tagName}_${new Date().getTime()}.txt`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleOpenTextView = () => {
+    const content = generateContent();
+    setGeneratedTextContent(content);
+    setShowTextView(true);
   };
 
   const handleSave = async () => {
@@ -1024,6 +1040,12 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                   </div>
                   <div className="flex gap-4">
                     <button 
+                      onClick={handleOpenTextView}
+                      className="text-accent hover:bg-accent/10 flex items-center gap-3 text-xs font-mono uppercase tracking-widest border border-accent/30 px-6 py-2 transition-all font-bold"
+                    >
+                      <FileText className="w-5 h-5" /> 文本浏览_VIEW
+                    </button>
+                    <button 
                       onClick={handleExportResults}
                       className="text-accent hover:bg-accent hover:text-bg flex items-center gap-3 text-xs font-mono uppercase tracking-widest border border-accent px-6 py-2 transition-all font-bold"
                     >
@@ -1253,6 +1275,56 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
           </div>
         )}
       </div>
+
+      {/* Text View Modal */}
+      {showTextView && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-5xl bg-card border border-accent shadow-[0_0_50px_rgba(0,243,255,0.2)] flex flex-col max-h-full overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-border bg-bg/50">
+              <div className="flex items-center gap-3">
+                <FileText className="text-accent w-6 h-6" />
+                <div>
+                  <h3 className="text-xl font-serif text-text">关联内容文本浏览</h3>
+                  <p className="text-[10px] font-mono text-muted uppercase tracking-widest">TEXT VIEW MODE</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedTextContent);
+                    alert('内容已复制到剪贴板');
+                  }}
+                  className="px-4 py-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-xs flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" /> 复制全文_COPY
+                </button>
+                <button 
+                  onClick={handleExportResults}
+                  className="px-4 py-2 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs flex items-center gap-2 font-bold"
+                >
+                  <Download className="w-4 h-4" /> 下载文件_DOWNLOAD
+                </button>
+                <button 
+                  onClick={() => setShowTextView(false)}
+                  className="p-2 text-muted hover:text-text transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-[#050505]">
+              <pre className="text-sm font-mono text-muted leading-relaxed whitespace-pre-wrap selection:bg-accent selection:text-bg">
+                {generatedTextContent}
+              </pre>
+            </div>
+            <div className="p-4 border-t border-border bg-bg/30 text-center">
+              <p className="text-[10px] font-mono text-muted/40 uppercase tracking-widest">
+                END OF CONTENT - TOTAL {generatedTextContent.length} CHARACTERS
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Confirmation Modal */}
       {confirmModal.show && (

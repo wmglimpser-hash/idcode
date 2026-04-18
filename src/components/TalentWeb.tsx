@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, query, where, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
-import { Save, Trash2, Plus, Info, ShieldCheck, Swords, Network, ExternalLink, FileText, FileJson, Search, List, X, Edit3, Wand2, Tag, ChevronDown } from 'lucide-react';
+import { Save, Trash2, Plus, Info, ShieldCheck, Swords, Network, ExternalLink, FileText, FileJson, Search, List, X, Edit3, Wand2, Tag, ChevronDown, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TalentNode, WikiEntry, DEFAULT_TAG_CONFIG, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag as TagType } from '../constants';
 import { syncTags } from '../services/tagService';
@@ -98,6 +98,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+
   const [editForm, setEditForm] = useState<Partial<TalentDefinition> & {
     newId?: string;
     maxLevel?: number;
@@ -116,6 +117,9 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [buildName, setBuildName] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const [showTextView, setShowTextView] = useState(false);
+  const [generatedTextContent, setGeneratedTextContent] = useState('');
 
   const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
   const isContributor = userProfile?.role === 'contributor' || isAdminUser;
@@ -232,6 +236,49 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
       }
     }
   }, [selectedNodeId, treeNodes, viewMode, zoom]);
+
+  const generateTalentExportContent = (format: 'txt' | 'json') => {
+    const relevantTalents = talents.filter(t => t.role === role);
+    
+    if (format === 'json') {
+      return JSON.stringify(relevantTalents, null, 2);
+    }
+
+    let content = `天赋系统数据导出 (${role === 'Survivor' ? '求生者' : '监管者'})\n`;
+    content += `导出时间: ${new Date().toLocaleString()}\n`;
+    content += `==========================================\n\n`;
+
+    relevantTalents.forEach(t => {
+      const node = treeNodes.find(n => n.talentId === t.id || n.id === t.nodeId);
+      content += `[ID: ${t.id}] ${t.name || '未命名'}\n`;
+      if (node) content += `对应节点: ${node.id} (${node.maxLevel}层)\n`;
+      if (t.tags && t.tags.length > 0) content += `标签: ${t.tags.join(', ')}\n`;
+      content += `描述: ${t.description}\n`;
+      if (t.modifier) content += `修正值: ${t.modifier}\n`;
+      if (t.effect) content += `效果: ${t.effect}\n`;
+      if (t.targetStats && t.targetStats.length > 0) content += `影响属性: ${t.targetStats.join(', ')}\n`;
+      content += `------------------------------------------\n\n`;
+    });
+
+    return content;
+  };
+
+  const handleExportData = (format: 'txt' | 'json') => {
+    const content = generateTalentExportContent(format);
+    const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `天赋数据_${role}_${new Date().getTime()}.${format}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleOpenTextView = () => {
+    const content = generateTalentExportContent('txt');
+    setGeneratedTextContent(content);
+    setShowTextView(true);
+  };
 
   const totalPointsUsed = Object.values(allocatedPoints).reduce((sum, val) => sum + (val * POINT_COST_PER_LEVEL), 0);
   const baseColor = role === 'Survivor' ? '#00f3ff' : '#ff003c';
@@ -2269,6 +2316,25 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         </button>
                       </>
                     )}
+                    <div className="h-px bg-border my-1" />
+                    <button 
+                      onClick={() => { handleOpenTextView(); setShowEditDropdown(false); }}
+                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                    >
+                      <FileText className="w-3 h-3" /> 数据统计查看
+                    </button>
+                    <button 
+                      onClick={() => { handleExportData('txt'); setShowEditDropdown(false); }}
+                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                    >
+                      <Download className="w-3 h-3" /> 导出文本_TXT
+                    </button>
+                    <button 
+                      onClick={() => { handleExportData('json'); setShowEditDropdown(false); }}
+                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                    >
+                      <FileJson className="w-3 h-3" /> 导出数据_JSON
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -2652,6 +2718,63 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 >
                   确认_CONFIRM
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Text View Modal */}
+      <AnimatePresence>
+        {showTextView && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-5xl bg-card border border-accent shadow-[0_0_50px_rgba(0,243,255,0.2)] flex flex-col max-h-full overflow-hidden"
+            >
+              <div className="flex justify-between items-center p-6 border-b border-border bg-bg/50">
+                <div className="flex items-center gap-3">
+                  <FileText className="text-accent w-6 h-6" />
+                  <div>
+                    <h3 className="text-xl font-serif text-text">天赋系统数据浏览</h3>
+                    <p className="text-[10px] font-mono text-muted uppercase tracking-widest">TEXT VIEW MODE</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedTextContent);
+                      showStatus('内容已复制到剪贴板');
+                    }}
+                    className="px-4 py-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-xs flex items-center gap-2"
+                  >
+                    复制全文_COPY
+                  </button>
+                  <button 
+                    onClick={() => handleExportData('txt')}
+                    className="px-4 py-2 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs flex items-center gap-2 font-bold"
+                  >
+                    下载TXT_DOWNLOAD
+                  </button>
+                  <button 
+                    onClick={() => setShowTextView(false)}
+                    className="p-2 text-muted hover:text-text transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-[#050505]">
+                <pre className="text-sm font-mono text-muted leading-relaxed whitespace-pre-wrap selection:bg-accent selection:text-bg">
+                  {generatedTextContent}
+                </pre>
+              </div>
+              <div className="p-4 border-t border-border bg-bg/30 text-center">
+                <p className="text-[10px] font-mono text-muted/40 uppercase tracking-widest">
+                  END OF CONTENT - TOTAL {talents.filter(t => t.role === role).length} TALENTS
+                </p>
               </div>
             </motion.div>
           </div>
