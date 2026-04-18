@@ -516,14 +516,14 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div 
-        className="min-h-screen bg-bg text-text font-sans selection:bg-primary selection:text-white relative bg-cover bg-center bg-fixed bg-no-repeat transition-all duration-500"
+        className="min-h-screen bg-bg text-text font-sans selection:bg-primary selection:text-white relative bg-cover bg-center bg-fixed bg-no-repeat transition-all duration-500 overflow-x-hidden flex flex-col"
         style={{ backgroundImage: 'var(--bg-overlay), var(--bg-image)' }}
       >
-      <div className="scanline" />
-      
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-24 flex flex-col justify-center">
+        <div className="scanline" />
+        
+        {/* Header */}
+        <header className="border-b border-border bg-card/80 sticky top-0 z-50 shrink-0 backdrop-blur-md">
+          <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-col justify-center">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-primary flex items-center justify-center rotate-45 overflow-hidden">
@@ -609,8 +609,9 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-12 relative min-h-[60vh]">
-        <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: 'radial-gradient(var(--color-border) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+      <main className="flex-1 relative">
+        <div className="max-w-[1600px] mx-auto px-6 py-12 min-h-full">
+          <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: 'radial-gradient(var(--color-border) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
         {activeTab === 'wiki' && (
           <div className="space-y-12 relative z-10">
@@ -943,83 +944,84 @@ export default function App() {
             userProfile={userProfile} 
           />
         )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-16 bg-card/50 relative">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div className="space-y-4">
-            <h3 className="text-accent font-serif font-bold text-xl cyber-glow-text">庄园秘典 CODEX</h3>
-            <p className="text-muted text-xs leading-relaxed">
-              为庄园求生者与监管者提供的高级神经接口。
-              自2018年起持续破解欧利蒂丝庄园的秘密。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 text-xs">
-            <span className="text-primary uppercase tracking-widest mb-2">快速访问</span>
-            <a href="#" className="text-muted hover:text-accent transition-colors">官方网站</a>
-            <a href="#" className="text-muted hover:text-accent transition-colors">数据库 V4</a>
-            <a href="#" className="text-muted hover:text-accent transition-colors">地图侦察</a>
-          </div>
-          <div className="text-right space-y-4">
-            <div className="inline-block px-4 py-2 border border-primary text-primary text-xs font-mono cyber-glitch">
-              系统状态: 正常运行
-            </div>
-            <p className="text-xs text-muted font-mono uppercase tracking-[0.2em]">
-              © 2026 NEURAL_MANOR_OS. 保留所有权利。
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Custom Confirmation Modal */}
-      {confirmModal.show && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="w-full max-w-md bg-card border border-border shadow-2xl p-6 space-y-6">
-            <div className="space-y-2">
-              <h3 className={`text-xl font-serif font-bold ${confirmModal.type === 'danger' ? 'text-primary' : 'text-accent'}`}>
-                {confirmModal.title}
-              </h3>
-              <p className="text-sm text-muted font-mono leading-relaxed">
-                {confirmModal.message}
-              </p>
-            </div>
-            
-            <div className="flex justify-end gap-4 pt-4">
-              <button 
-                onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
-                className="px-6 py-2 border border-border text-muted text-xs font-mono hover:text-text transition-colors"
-              >
-                取消_CANCEL
-              </button>
-              <button 
-                onClick={confirmModal.onConfirm}
-                className={`px-6 py-2 font-mono text-xs text-white transition-all hover:scale-105 ${
-                  confirmModal.type === 'danger' ? 'bg-primary' : 'bg-accent text-bg'
-                }`}
-              >
-                确认_CONFIRM
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Nav */}
-      <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around z-50">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id as Tab)}
-            className={`p-4 transition-all ${
-              activeTab === item.id ? 'text-accent scale-110' : 'text-muted'
-            }`}
-          >
-            {item.icon}
-          </button>
-        ))}
       </div>
+    </main>
+
+    {/* Footer */}
+    <footer className="border-t border-border py-16 bg-card/50 relative mt-auto backdrop-blur-sm">
+      <div className="max-w-[1600px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="space-y-4">
+          <h3 className="text-accent font-serif font-bold text-xl cyber-glow-text">庄园秘典 CODEX</h3>
+          <p className="text-muted text-xs leading-relaxed">
+            为庄园求生者与监管者提供的高级神经接口。
+            自2018年起持续破解欧利蒂丝庄园的秘密。
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 text-xs">
+          <span className="text-primary uppercase tracking-widest mb-2">快速访问</span>
+          <a href="#" className="text-muted hover:text-accent transition-colors">官方网站</a>
+          <a href="#" className="text-muted hover:text-accent transition-colors">数据库 V4</a>
+          <a href="#" className="text-muted hover:text-accent transition-colors">地图侦察</a>
+        </div>
+        <div className="text-right space-y-4">
+          <div className="inline-block px-4 py-2 border border-primary text-primary text-xs font-mono cyber-glitch">
+            系统状态: 正常运行
+          </div>
+          <p className="text-xs text-muted font-mono uppercase tracking-[0.2em]">
+            © 2026 NEURAL_MANOR_OS. 保留所有权利。
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    {/* Custom Confirmation Modal */}
+    {confirmModal.show && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="w-full max-w-md bg-card border border-border shadow-2xl p-6 space-y-6">
+          <div className="space-y-2">
+            <h3 className={`text-xl font-serif font-bold ${confirmModal.type === 'danger' ? 'text-primary' : 'text-accent'}`}>
+              {confirmModal.title}
+            </h3>
+            <p className="text-sm text-muted font-mono leading-relaxed">
+              {confirmModal.message}
+            </p>
+          </div>
+          
+          <div className="flex justify-end gap-4 pt-4">
+            <button 
+              onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+              className="px-6 py-2 border border-border text-muted text-xs font-mono hover:text-text transition-colors"
+            >
+              取消_CANCEL
+            </button>
+            <button 
+              onClick={confirmModal.onConfirm}
+              className={`px-6 py-2 font-mono text-xs text-white transition-all hover:scale-105 ${
+                confirmModal.type === 'danger' ? 'bg-primary' : 'bg-accent text-bg'
+              }`}
+            >
+              确认_CONFIRM
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Mobile Nav */}
+    <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around z-50">
+      {navItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => setActiveTab(item.id as Tab)}
+          className={`p-4 transition-all ${
+            activeTab === item.id ? 'text-accent scale-110' : 'text-muted'
+          }`}
+        >
+          {item.icon}
+        </button>
+      ))}
     </div>
-    </ErrorBoundary>
+  </div>
+</ErrorBoundary>
   );
 }
