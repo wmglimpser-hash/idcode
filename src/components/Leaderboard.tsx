@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Character, CharacterTraitCategory } from '../constants';
-import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator, Maximize2, Minimize2 } from 'lucide-react';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { CharacterComparison } from './CharacterComparison';
@@ -42,6 +42,19 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newItemLabel, setNewItemLabel] = useState('');
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  
+  // Disable body scroll when full screen
+  useEffect(() => {
+    if (isFullScreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isFullScreen]);
 
   // Fetch leaderboard config
   useEffect(() => {
@@ -306,7 +319,16 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
     });
 
     const sortedData = explodedData.sort((a, b) => {
-      if (a.numericValue === b.numericValue) return 0;
+      if (a.numericValue === b.numericValue) {
+        // Find respective character objects to get their secondary sort criteria
+        const charA = characters.find(c => c.id === a.id);
+        const charB = characters.find(c => c.id === b.id);
+        const orderA = charA?.order ?? 999;
+        const orderB = charB?.order ?? 999;
+        
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id.localeCompare(b.id);
+      }
       if (a.numericValue === -Infinity) return 1;
       if (b.numericValue === -Infinity) return -1;
       
@@ -397,7 +419,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Base Info Section */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className={`${isFullScreen ? 'hidden' : 'lg:col-span-4'} space-y-6`}>
             <div className="bg-card/30 border border-border p-6 cyber-border relative overflow-hidden flex flex-col h-[800px]">
               <div className="absolute top-0 right-0 p-2 opacity-10 pointer-events-none">
                 <Activity className="w-24 h-24" />
@@ -634,122 +656,137 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
           </div>
 
           {/* Ranking Section */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className={`${isFullScreen ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-6`}>
             {selectedTrait || selectedCustomMetric ? (
-              <div className="bg-card/30 border border-border p-6 cyber-border h-[800px] flex flex-col">
-                <div className="flex justify-between items-end mb-8 border-b border-border pb-4 flex-shrink-0">
-                  <div>
-                    <div className="text-[10px] text-primary font-bold uppercase mb-1">
-                      {selectedCustomMetric ? '自定义计算项' : selectedTrait?.category}
+              <div className={`flex flex-col ${isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 cyber-border'}`}>
+                <div className={`flex justify-between items-start mb-4 border-b border-border pb-4 flex-shrink-0 ${isFullScreen ? 'max-w-7xl mx-auto w-full' : ''}`}>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-accent animate-pulse" />
+                      <div className="text-[10px] text-primary font-bold uppercase tracking-[0.1em]">
+                        {selectedCustomMetric ? '自定义计算' : selectedTrait?.category}
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-serif text-accent cyber-glow-text">
+                    <h3 className={`${isFullScreen ? 'text-4xl' : 'text-2xl'} font-serif text-accent cyber-glow-text`}>
                       {selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label} 排行榜
                     </h3>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-end gap-1 text-right">
+                      <button
+                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                        className="flex items-center gap-2 px-3 py-1 bg-bg/50 border border-border hover:border-accent group transition-all"
+                      >
+                        {sortOrder === 'desc' ? <ArrowDown className="w-3.5 h-3.5 text-accent" /> : <ArrowUp className="w-3.5 h-3.5 text-accent" />}
+                        <span className="text-[10px] font-mono text-muted group-hover:text-accent">{sortOrder === 'desc' ? '降序' : '升序'}</span>
+                      </button>
+                      <div className="text-[9px] font-mono text-muted uppercase opacity-60">TOTAL: {factionCharacters.length}</div>
+                    </div>
+                    
                     <button
-                      onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-bg/50 border border-border hover:border-accent/50 text-xs font-mono text-muted hover:text-accent transition-all"
+                      onClick={() => setIsFullScreen(!isFullScreen)}
+                      className="p-2 border border-accent/50 bg-accent/5 text-accent hover:bg-accent hover:text-bg transition-all flex items-center justify-center"
+                      title={isFullScreen ? "退出全屏" : "全屏模式"}
                     >
-                      {sortOrder === 'desc' ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
-                      {sortOrder === 'desc' ? '降序排列 (从大到小)' : '升序排列 (从小到大)'}
+                      {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
                     </button>
-                    <div className="text-[10px] font-mono text-muted">共 {factionCharacters.length} 名成员</div>
                   </div>
                 </div>
 
-                <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                  {groupedRankedData.map((group) => (
-                    <div 
-                      key={group.rank} 
-                      className={`flex items-center gap-6 p-4 border transition-all ${
-                        group.rank === 1 ? 'bg-gold/10 border-gold/50 shadow-[0_0_15px_rgba(212,175,55,0.1)]' : 
-                        group.rank === 2 ? 'bg-accent/5 border-accent/30' :
-                        group.rank === 3 ? 'bg-primary/5 border-primary/30' :
-                        'bg-bg/40 border-border/50'
-                      }`}
-                    >
-                      {/* Rank */}
-                      <div className="w-12 text-center font-mono font-bold flex-shrink-0">
-                        {group.rank === 1 ? <span className="text-gold text-2xl">1</span> :
-                         group.rank === 2 ? <span className="text-accent text-xl">2</span> :
-                         group.rank === 3 ? <span className="text-primary text-lg">3</span> :
-                         <span className="text-muted text-lg">{group.rank}</span>}
-                      </div>
-                      
-                      {/* Characters (Parallel) */}
-                      <div className="flex flex-wrap gap-4 flex-grow">
-                        {group.characters.map((char, idx) => {
-                          const traitLabel = selectedTrait?.label || selectedCustomMetric?.name || 'custom';
-                          const remarkId = `${char.id}_${traitLabel}_${char.value}`.replace(/[.#$/[\]]/g, '_');
-                          const remark = traitRemarks[remarkId] || '';
-                          const isEditing = editingRemark?.charId === char.id && editingRemark?.valueStr === char.value;
+                <div className={`flex-grow overflow-y-auto custom-scrollbar ${isFullScreen ? 'px-2 max-w-7xl mx-auto w-full' : 'pr-2'}`}>
+                  <div className="grid grid-cols-1 gap-1.5 pb-4">
+                    {groupedRankedData.map((group) => (
+                      <div 
+                        key={group.rank} 
+                        className={`flex items-center gap-3 p-2 border transition-all ${
+                          group.rank === 1 ? 'bg-gold/10 border-gold/50' : 
+                          group.rank === 2 ? 'bg-accent/5 border-accent/20' :
+                          group.rank === 3 ? 'bg-primary/5 border-primary/30' :
+                          'bg-bg/40 border-border/30'
+                        }`}
+                      >
+                        {/* Rank */}
+                        <div className="w-10 text-center font-mono font-bold flex-shrink-0">
+                          {group.rank === 1 ? <span className="text-gold text-xl">1</span> :
+                           group.rank === 2 ? <span className="text-accent text-lg">2</span> :
+                           group.rank === 3 ? <span className="text-primary text-base">3</span> :
+                           <span className="text-muted text-sm">{group.rank}</span>}
+                        </div>
+                        
+                        {/* Characters */}
+                        <div className="flex flex-wrap gap-x-3 gap-y-2 flex-grow py-1">
+                          {group.characters.map((char, idx) => {
+                            const traitLabel = selectedTrait?.label || selectedCustomMetric?.name || 'custom';
+                            const remarkId = `${char.id}_${traitLabel}_${char.value}`.replace(/[.#$/[\]]/g, '_');
+                            const remark = traitRemarks[remarkId] || '';
+                            const isEditing = editingRemark?.charId === char.id && editingRemark?.valueStr === char.value;
 
-                          return (
-                            <div key={`${char.id}-${idx}`} className="flex items-center gap-3 bg-bg/40 p-2 border border-border/30 hover:border-accent/50 transition-all group min-w-[120px] relative">
-                              <div 
-                                className={`w-12 h-12 cyber-border overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isAdmin ? 'hover:ring-2 hover:ring-accent' : ''}`}
-                                onClick={() => {
-                                  if (isAdmin) {
-                                    setEditingRemark({ 
-                                      charId: char.id, 
-                                      traitLabel: traitLabel,
-                                      valueStr: char.value,
-                                      currentRemark: remark 
-                                    });
-                                  }
-                                }}
-                                title={isAdmin ? "点击编辑独立备注" : undefined}
-                              >
-                                <img src={char.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
-                              </div>
-                              <div className="flex flex-col justify-center min-w-0 flex-grow">
-                                {isEditing ? (
-                                  <div className="flex items-center gap-1">
-                                    <input 
-                                      autoFocus
-                                      type="text"
-                                      value={editingRemark.currentRemark}
-                                      onChange={(e) => setEditingRemark({ ...editingRemark, currentRemark: e.target.value })}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveRemark();
-                                        if (e.key === 'Escape') setEditingRemark(null);
-                                      }}
-                                      className="w-full bg-bg border border-accent text-[10px] px-1 py-0.5 outline-none font-mono"
-                                      placeholder="输入独立备注..."
-                                    />
-                                    <button onClick={handleSaveRemark} className="text-accent hover:text-primary"><Check className="w-3 h-3" /></button>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col">
-                                    <div className="text-sm font-bold text-accent group-hover:text-primary transition-colors truncate">
-                                      {char.title}
+                            return (
+                              <div key={`${char.id}-${idx}`} className={`flex flex-col items-center gap-1 group relative ${isFullScreen ? 'w-28' : 'w-20'}`}>
+                                <div 
+                                  className={`aspect-square w-full cyber-border overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isAdmin ? 'hover:ring-1 hover:ring-accent' : ''}`}
+                                  onClick={() => {
+                                    if (isAdmin) {
+                                      setEditingRemark({ 
+                                        charId: char.id, 
+                                        traitLabel: traitLabel,
+                                        valueStr: char.value,
+                                        currentRemark: remark 
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <img src={char.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105" referrerPolicy="no-referrer" />
+                                </div>
+                                <div className="w-full text-center">
+                                  {isEditing ? (
+                                    <div className="flex items-center gap-1">
+                                      <input 
+                                        autoFocus
+                                        type="text"
+                                        value={editingRemark.currentRemark}
+                                        onChange={(e) => setEditingRemark({ ...editingRemark, currentRemark: e.target.value })}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleSaveRemark();
+                                          if (e.key === 'Escape') setEditingRemark(null);
+                                        }}
+                                        className="w-full bg-bg border border-accent text-[10px] px-1 py-0.5 outline-none font-mono"
+                                        placeholder="..."
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col overflow-hidden leading-tight">
+                                      <div className={`${isFullScreen ? 'text-xs' : 'text-[10px]'} font-bold text-accent group-hover:text-primary transition-colors truncate w-full tracking-tighter uppercase`}>
+                                        {char.title}
+                                      </div>
                                       {remark && (
-                                        <span className="ml-1 text-[10px] text-primary font-mono opacity-80">[{remark}]</span>
+                                        <div className={`${isFullScreen ? 'text-[10px]' : 'text-[8px]'} text-primary font-mono opacity-80 truncate w-full tracking-tighter`}>
+                                          [{remark}]
+                                        </div>
                                       )}
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Value */}
-                      <div className="text-right flex-shrink-0 min-w-[100px]">
-                        <div className="text-xl font-mono font-bold text-accent">
-                          {group.value.split(/[（(]/)[0].trim()}
+                            );
+                          })}
                         </div>
-                        {group.value && (group.value.includes('(') || group.value.includes('（')) && (
-                          <div className="text-[10px] text-muted font-normal leading-tight mt-1">
-                            {group.value.substring(group.value.search(/[（(]/))}
+
+                        {/* Value */}
+                        <div className="text-right flex-shrink-0 min-w-[80px]">
+                          <div className="text-lg font-mono font-bold text-accent leading-none">
+                            {group.value.split(/[（(]/)[0].trim()}
                           </div>
-                        )}
-                        {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest mt-1">TOP RANK</div>}
+                          {group.value && (group.value.includes('(') || group.value.includes('（')) && (
+                            <div className="text-[9px] text-muted font-normal leading-tight mt-0.5 max-w-[100px] ml-auto opacity-70">
+                              {group.value.substring(group.value.search(/[（(]/))}
+                            </div>
+                          )}
+                          {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest mt-1">TOP RANK</div>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : (

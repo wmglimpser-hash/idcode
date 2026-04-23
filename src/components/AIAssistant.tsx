@@ -20,6 +20,10 @@ interface Message {
     updates: Partial<Character>;
     reason: string;
   };
+  proposedBatchUpdateData?: {
+    updates: { characterId: string; updates: Partial<Character> }[];
+    reason: string;
+  };
 }
 
 const MODEL_NAME = "gemini-3-flash-preview";
@@ -27,7 +31,7 @@ const MODEL_NAME = "gemini-3-flash-preview";
 export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'system', content: '您好，我是庄园秘典智能助手。我可以帮您查找角色信息，或者根据您的指示修改角色的属性、技能及背景故事。' }
+    { role: 'system', content: '您好，我是庄园秘典智能助手。我可以帮您查找角色信息，或者根据您的指示修改角色的详细数据，包括立绘、技能、背景等。' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +91,7 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                 properties: {
                   name: { type: Type.STRING },
                   title: { type: Type.STRING },
+                  imageUrl: { type: Type.STRING, description: "角色的立绘 URL" },
                   description: { type: Type.STRING },
                   role: { type: Type.STRING },
                   type: { type: Type.STRING },
@@ -119,6 +124,38 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
             },
             required: ["characterId", "updates", "reason"]
           }
+        } as FunctionDeclaration,
+        {
+          name: "propose_batch_update",
+          description: "向用户提议批量修改多个角色的数据。适用于批量更新立绘、角色属性或其他通用字段。",
+          parameters: {
+            type: Type.OBJECT,
+            properties: {
+              updates: {
+                type: Type.ARRAY,
+                description: "包含多个角色修改信息的数组。",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    characterId: { type: Type.STRING, description: "角色 ID" },
+                    updates: {
+                      type: Type.OBJECT,
+                      description: "要修改的字段",
+                      properties: {
+                        imageUrl: { type: Type.STRING },
+                        name: { type: Type.STRING },
+                        title: { type: Type.STRING },
+                        role: { type: Type.STRING }
+                      }
+                    }
+                  },
+                  required: ["characterId", "updates"]
+                }
+              },
+              reason: { type: Type.STRING, description: "批量修改的原因" }
+            },
+            required: ["updates", "reason"]
+          }
         } as FunctionDeclaration
       ]
     }
@@ -140,7 +177,8 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
         config: {
           systemInstruction: `你是“庄园秘典”的智能助手，专门负责维护第五人格角色的档案数据。
 你的目标是协助用户查询和修改角色详细信息。
-当你获得用户的明确指令要修改数据时，必须使用 propose_character_update 工具。
+当你获得用户的明确指令要修改单个角色数据时，必须使用 propose_character_update 工具。
+如果你检测到用户想要批量修改多个角色（例如批量更换立绘），请使用 propose_batch_update 工具。
 用户确认后，前端会执行具体的更新逻辑。
 你可以调用 get_character_list 获取角色 ID，或者 get_character_details 获取具体细节。
 请保持专业、友好且富有神秘感的语调，符合庄园的主题。`,
@@ -180,6 +218,16 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
             }]);
             hasProposedUpdate = true;
             break;
+          } else if (call.name === 'propose_batch_update') {
+            const args = call.args as any;
+            setMessages(prev => [...prev, { 
+              role: 'model', 
+              content: args.reason, 
+              isProposedUpdate: true,
+              proposedBatchUpdateData: args
+            }]);
+            hasProposedUpdate = true;
+            break;
           }
         }
 
@@ -216,6 +264,26 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
       console.error("Apply update failed:", error);
       setMessages(prev => [...prev, { role: 'system', content: `更新失败：${error instanceof Error ? error.message : '未知错误'}` }]);
     }
+  };
+
+  const handleApplyBatchUpdate = async (batchData: { updates: { characterId: string; updates: Partial<Character> }[]; reason: string }) => {
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const update of batchData.updates) {
+      try {
+        await onUpdateCharacter(update.characterId, update.updates);
+        successCount++;
+      } catch (error) {
+        console.error(`Batch update failed for ${update.characterId}:`, error);
+        failCount++;
+      }
+    }
+
+    setMessages(prev => [...prev, { 
+      role: 'system', 
+      content: `批量更新完成：${successCount} 个成功，${failCount} 个失败。` 
+    }]);
   };
 
   return (
@@ -278,26 +346,54 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                       <div className="markdown-body text-current tabular-nums">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
-                      {msg.isProposedUpdate && msg.proposedUpdateData && (
+                      {msg.isProposedUpdate && (msg.proposedUpdateData || msg.proposedBatchUpdateData) && (
                         <div className="mt-3 p-3 bg-bg/50 border border-accent/30 rounded-sm space-y-3">
                           <div className="flex items-center gap-2 text-accent">
                             <Sparkles className="w-4 h-4" />
-                            <span className="font-bold">修改建议</span>
+                            <span className="font-bold">{msg.proposedBatchUpdateData ? '批量修改建议' : '修改建议'}</span>
                           </div>
-                          <div className="space-y-1">
-                            <div className="text-[10px] text-muted uppercase">角色 ID: {msg.proposedUpdateData.characterId}</div>
-                            <div className="text-[10px] text-muted uppercase">修改项目:</div>
-                            <div className="pl-2 border-l border-border space-y-1">
-                              {Object.entries(msg.proposedUpdateData.updates).map(([key, val]) => (
-                                <div key={key} className="text-[10px]">
-                                  <span className="text-secondary">{key}:</span> {typeof val === 'object' ? '数据块' : String(val)}
+                          
+                          <div className="space-y-2 overflow-hidden">
+                            {msg.proposedUpdateData && (
+                              <div className="space-y-1">
+                                <div className="text-[10px] text-muted uppercase">角色 ID: {msg.proposedUpdateData.characterId}</div>
+                                <div className="text-[10px] text-muted uppercase">修改项目:</div>
+                                <div className="pl-2 border-l border-border space-y-1">
+                                  {Object.entries(msg.proposedUpdateData.updates).map(([key, val]) => (
+                                    <div key={key} className="text-[10px] truncate">
+                                      <span className="text-secondary">{key}:</span> {typeof val === 'object' ? '数据块' : String(val)}
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            )}
+
+                            {msg.proposedBatchUpdateData && (
+                              <div className="space-y-2">
+                                <div className="text-[10px] text-muted uppercase">批量修改明细 ({msg.proposedBatchUpdateData.updates.length} 个角色):</div>
+                                <div className="max-h-32 overflow-y-auto custom-scrollbar pl-2 border-l border-border space-y-2">
+                                  {msg.proposedBatchUpdateData.updates.map((item, idx) => (
+                                    <div key={idx} className="space-y-1 pb-1 border-b border-border/10 last:border-0">
+                                      <div className="text-[9px] font-bold text-accent">{item.characterId}</div>
+                                      {Object.entries(item.updates).map(([key, val]) => (
+                                        <div key={key} className="text-[9px] flex items-start gap-1">
+                                          <span className="text-secondary opacity-70 shrink-0">{key}:</span>
+                                          <span className="truncate opacity-90">{String(val)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
+
                           <div className="flex gap-2 pt-2">
                             <button
-                              onClick={() => handleApplyUpdate(msg.proposedUpdateData!)}
+                              onClick={() => {
+                                if (msg.proposedBatchUpdateData) handleApplyBatchUpdate(msg.proposedBatchUpdateData);
+                                else if (msg.proposedUpdateData) handleApplyUpdate(msg.proposedUpdateData);
+                              }}
                               className="flex-1 py-1.5 bg-accent text-bg text-[10px] font-bold uppercase tracking-widest hover:bg-accent/80 transition-all flex items-center justify-center gap-2"
                             >
                               <Check className="w-3 h-3" /> 确认修改
