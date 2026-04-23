@@ -667,23 +667,6 @@ export default function App() {
               />
             )}
 
-            {isBulkImportingWiki && (
-              <BulkImport 
-                mode="wiki" 
-                onClose={() => setIsBulkImportingWiki(false)} 
-                onSuccess={() => setIsBulkImportingWiki(false)} 
-              />
-            )}
-
-            {isBulkImportingCharacters && (
-              <BulkImport 
-                mode="character" 
-                allCharacters={characters}
-                onClose={() => setIsBulkImportingCharacters(false)} 
-                onSuccess={() => setIsBulkImportingCharacters(false)} 
-              />
-            )}
-
             {selectedWikiEntry && !isEditingWiki && (
               <div className="space-y-6">
                 <button 
@@ -974,6 +957,12 @@ export default function App() {
       </div>
     </footer>
 
+    <AIAssistant 
+      characters={characters} 
+      onUpdateCharacter={handleUpdateCharacter}
+      userProfile={userProfile}
+    />
+
     {/* Custom Confirmation Modal */}
     {confirmModal.show && (
       <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
@@ -1005,6 +994,24 @@ export default function App() {
           </div>
         </div>
       </div>
+    )}
+
+    {/* Global Modals & Utilities */}
+    {isBulkImportingWiki && (
+      <BulkImport 
+        mode="wiki" 
+        onClose={() => setIsBulkImportingWiki(false)} 
+        onSuccess={() => setIsBulkImportingWiki(false)} 
+      />
+    )}
+
+    {isBulkImportingCharacters && (
+      <BulkImport 
+        mode="character" 
+        allCharacters={characters}
+        onClose={() => setIsBulkImportingCharacters(false)} 
+        onSuccess={() => setIsBulkImportingCharacters(false)} 
+      />
     )}
 
     {/* Mobile Nav */}

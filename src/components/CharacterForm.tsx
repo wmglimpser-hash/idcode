@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon, Edit2 } from 'lucide-react';
+import { Save, Plus, Trash2, Image as ImageIcon, FileText, Upload, AlertCircle, ChevronDown, ChevronUp, Tag as TagIcon, Edit2, Wand2, X } from 'lucide-react';
 import { Character, CharacterTraitCategory, SURVIVOR_TRAITS_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 
 interface Props {
@@ -253,6 +253,26 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
       ...prev,
       traits: prev.traits.map((cat, i) => i === catIndex ? { ...cat, items: cat.items.filter((_, j) => j !== itemIndex) } : cat)
     }));
+  };
+
+  const [showSmartImport, setShowSmartImport] = useState(false);
+  const [smartImportText, setSmartImportText] = useState('');
+
+  const handleSmartImport = () => {
+    if (!smartImportText.trim()) return;
+    const parsedData = parseSmartText(smartImportText);
+    
+    setFormData(prev => ({
+      ...prev,
+      ...parsedData,
+      // Deep merge for complex sections
+      skills: parsedData.skills.length > 0 ? parsedData.skills : prev.skills,
+      presence: parsedData.presence?.length > 0 ? parsedData.presence : prev.presence,
+      traits: parsedData.traits?.length > 0 ? parsedData.traits : prev.traits,
+      mechanics: parsedData.mechanics?.length > 0 ? parsedData.mechanics : prev.mechanics
+    }));
+    setShowSmartImport(false);
+    setSmartImportText('');
   };
 
   const updateTraitItem = (catIndex: number, itemIndex: number, field: 'label' | 'value', value: string) => {
@@ -541,14 +561,51 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
         <h2 className="text-3xl font-serif text-accent">
           {initialData ? '修改档案_UPDATE' : '录入新档案_CREATE'}
         </h2>
-        <button 
-          onClick={onBulkImport}
-          className="flex items-center gap-2 text-[10px] font-mono text-accent hover:text-primary transition-colors uppercase tracking-widest"
-        >
-          <Upload className="w-4 h-4" />
-          文档一键导入_IMPORT
-        </button>
+        <div className="flex gap-4">
+          <button 
+            type="button"
+            onClick={() => setShowSmartImport(!showSmartImport)}
+            className="flex items-center gap-2 text-[10px] font-mono text-primary hover:text-accent transition-colors uppercase tracking-widest"
+          >
+            <Wand2 className="w-4 h-4" />
+            智能识别填充_PARSE
+          </button>
+          <button 
+            type="button"
+            onClick={onBulkImport}
+            className="flex items-center gap-2 text-[10px] font-mono text-accent hover:text-primary transition-colors uppercase tracking-widest"
+          >
+            <Upload className="w-4 h-4" />
+            文档一键导入_IMPORT
+          </button>
+        </div>
       </div>
+
+      {showSmartImport && (
+        <div className="mb-8 p-6 bg-primary/10 border border-primary/30 space-y-4 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">粘贴角色完整文档进行自动解析</label>
+            <button type="button" onClick={() => setShowSmartImport(false)} className="text-muted hover:text-primary"><X size={16}/></button>
+          </div>
+          <textarea 
+            rows={8}
+            value={smartImportText}
+            onChange={(e) => setSmartImportText(e.target.value)}
+            placeholder={`支持识别：角色姓名、称号、阵营、定位、背景描述、外在特质、存在感技能（监管者）、特质详情等...\n\n示例：\n姓名：艾玛·伍兹\n阵营：求生者\n外在特质：\n[url] 巧手成蹄：描述... #标签`}
+            className="w-full bg-bg/80 border border-border p-4 text-sm font-mono text-text outline-none focus:border-primary custom-scrollbar"
+          />
+          <div className="flex justify-between items-center">
+            <p className="text-[10px] text-muted font-mono italic">提示：存在感技能支持多项解析，格式为“X阶：[图标] 技能名：描述 | 冷却：...”</p>
+            <button 
+              type="button"
+              onClick={handleSmartImport}
+              className="px-8 py-2 bg-primary text-white font-mono text-sm tracking-widest hover:scale-105 transition-all"
+            >
+              执行解析填充_EXECUTE
+            </button>
+          </div>
+        </div>
+      )}
 
       <form className="space-y-8" onSubmit={handleSubmit}>
           {/* Basic Info */}
