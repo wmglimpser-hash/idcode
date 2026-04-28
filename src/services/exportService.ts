@@ -112,7 +112,7 @@ export const exportCharacterCardToMarkdown = (character: Character, availableTag
   return downloadMarkdown(content, `character_card_${character.title}_${character.name}_${Date.now()}.md`);
 };
 
-const generateTagMaterialSection = (
+export const generateTagMaterialSection = (
   tag: Tag,
   relatedCharacters: Character[],
   relatedTalents: TalentDefinition[]

@@ -4,7 +4,8 @@ import {
   Tag as TagIcon, Trophy, X, Save, FilePlus, Sparkles, Search, Info, 
   Copy, Trash2, ArrowUp, ArrowDown, Monitor, Video, Edit, Download, Zap
 } from 'lucide-react';
-import { Tag } from '../constants';
+import { Tag, Character, TalentDefinition } from '../constants';
+import { generateLeaderboardData } from '../utils/leaderboardUtils';
 
 type SlideType = 'title' | 'conclusion' | 'list' | 'ranking' | 'compare' | 'formula' | 'summary';
 
@@ -16,6 +17,8 @@ interface Slide {
   bullets?: string[];
   notes: string;
   estimatedSeconds?: number;
+  sourceType?: 'leaderboard' | 'tag';
+  sourceData?: any; // For flexible source storage
 }
 
 interface TheoryArticle {
@@ -30,6 +33,8 @@ interface TheoryArticle {
 }
 
 interface TheoryPresentationProps {
+  characters: Character[];
+  talents: TalentDefinition[];
   availableTags: Tag[];
   availableTraits: { id: string; label: string; category: string; role: 'Survivor' | 'Hunter' }[];
 }
@@ -87,10 +92,20 @@ const MOCK_DATA: TheoryArticle[] = [
 
 type ViewMode = 'edit' | 'presentation' | 'recording';
 
-export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availableTags, availableTraits }) => {
+export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characters, talents, availableTags, availableTraits }) => {
   const [articles, setArticles] = useState<TheoryArticle[]>(() => {
-    const saved = localStorage.getItem('theory_articles');
-    return saved ? JSON.parse(saved) : MOCK_DATA;
+    try {
+      const saved = localStorage.getItem('theory_articles');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to parse theory_articles from localStorage", err);
+    }
+    return MOCK_DATA;
   });
   const [currentArticle, setCurrentArticle] = useState<TheoryArticle>(articles[0] || MOCK_DATA[0]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -266,10 +281,56 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
 
   // Slide Management
   const handleUpdateSlide = (updatedSlide: Slide) => {
+    const cleanBody = (updatedSlide.body || '').replace(/\[备注：.*?\]/g, '').trim();
+    const notes = updatedSlide.notes || '';
+    const title = updatedSlide.title || '';
+    const estimatedSeconds = Math.ceil((title.length + cleanBody.length + notes.length) / 4);
+
+    const fullUpdatedSlide = { ...updatedSlide, estimatedSeconds };
+
     const updatedSlides = [...currentArticle.slides];
-    updatedSlides[currentSlideIndex] = updatedSlide;
+    updatedSlides[currentSlideIndex] = fullUpdatedSlide;
     const updatedArticle = { ...currentArticle, slides: updatedSlides };
     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+  };
+
+  const handleInsertLeaderboard = (traitLabel: string, role: 'Survivor' | 'Hunter', sortOrder: 'asc' | 'desc', limit: number) => {
+    const { sortedData } = generateLeaderboardData(characters, role, traitLabel, sortOrder);
+    const topData = sortedData.slice(0, limit);
+    const newBody = topData.map(d => `${d.name} (${d.value})`).join('\n');
+    
+    handleUpdateSlide({
+      ...currentSlide,
+      type: 'ranking',
+      body: newBody,
+      sourceType: 'leaderboard',
+      sourceData: { role, metricLabel: traitLabel, sortOrder, limit, topData }
+    });
+  };
+
+  const handleInsertTag = (tag: Tag, mode: 'summary' | 'characters' | 'talents') => {
+    const relatedChars = characters.filter(c => 
+      c.skills?.some(s => s.tags?.includes(tag.name)) || 
+      c.presence?.some(p => p.tags?.includes(tag.name))
+    );
+    const relatedTals = talents.filter(t => t.tags?.includes(tag.name));
+
+    let newBody = '';
+    if (mode === 'summary') {
+      newBody = `适用阵营：${tag.affectedRole}\n关联角色：${relatedChars.length}名\n关联天赋：${relatedTals.length}个`;
+    } else if (mode === 'characters') {
+      newBody = relatedChars.map(c => `- ${c.title} ${c.name}`).join('\n');
+    } else if (mode === 'talents') {
+      newBody = relatedTals.map(t => `- ${t.name}`).join('\n');
+    }
+
+    handleUpdateSlide({
+      ...currentSlide,
+      type: (currentSlide.type !== 'list' && currentSlide.type !== 'summary') ? 'list' : currentSlide.type,
+      body: newBody,
+      sourceType: 'tag',
+      sourceData: { tagId: tag.id, tagName: tag.name, insertedMode: mode, relatedChars, relatedTals }
+    });
   };
 
   const handleAddSlide = () => {
@@ -388,7 +449,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
               {slide.title}
             </h2>
             <div className="flex-1 space-y-6">
-              {slide.body && <p className="text-xl text-slate-600 leading-relaxed">{slide.body}</p>}
+              {slide.body && <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap">{slide.body}</p>}
               {slide.bullets && (
                 <ul className="space-y-4">
                   {slide.bullets.map((b, i) => (
@@ -491,7 +552,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
       {viewMode === 'recording' && (
         <button 
           onClick={() => setViewMode('edit')}
-          className="fixed top-6 right-6 z-[110] px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur text-white text-[10px] font-bold rounded-full transition-all flex items-center gap-2"
+          className="fixed top-6 right-6 z-[110] px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur text-white text-[10px] font-bold rounded-full transition-all flex items-center gap-2 opacity-0 hover:opacity-100"
         >
           <X className="w-3 h-3" /> 退出录屏模式
         </button>
@@ -748,6 +809,17 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
                       </div>
                       <span className="text-[10px] text-blue-300 font-mono">TAG</span>
                     </div>
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => handleInsertTag(tag, 'summary')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                        插入摘要
+                      </button>
+                      <button onClick={() => handleInsertTag(tag, 'characters')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                        插入角色
+                      </button>
+                      <button onClick={() => handleInsertTag(tag, 'talents')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                        插入天赋
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -759,6 +831,14 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
                         <span className="text-xs font-bold text-amber-900">{trait.label}</span>
                       </div>
                       <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                        插入前5降序
+                      </button>
+                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'asc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                        插入前5升序
+                      </button>
                     </div>
                   </div>
                 ))}

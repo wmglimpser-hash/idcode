@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from './constants';
+import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, TalentDefinition } from './constants';
 import { bulkSyncTags } from './services/tagService';
 import { createBackup } from './services/backupService';
 import { CharacterForm } from './components/CharacterForm';
@@ -39,6 +39,7 @@ type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents'
 
 export default function App() {
   const [characters, setCharacters] = useState<Character[]>(MOCK_CHARACTERS);
+  const [talents, setTalents] = useState<TalentDefinition[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('wiki');
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [viewingFactors, setViewingFactors] = useState<{ characterId: string; characterName: string; category: string } | null>(null);
@@ -189,7 +190,15 @@ export default function App() {
       });
       setCharacters(merged);
     });
-    return () => unsubscribe();
+
+    const unsubscribeTalents = onSnapshot(collection(db, 'talent_definitions'), (snapshot) => {
+      setTalents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TalentDefinition)));
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeTalents();
+    };
   }, []);
 
   useEffect(() => {
@@ -811,6 +820,8 @@ export default function App() {
 
         {activeTab === 'theory' && (
           <TheoryPresentation 
+            characters={characters}
+            talents={talents}
             availableTags={tags} 
             availableTraits={[
               ...SURVIVOR_TRAITS_MODERN_TEMPLATE.flatMap(cat => cat.items.map(item => ({ 
