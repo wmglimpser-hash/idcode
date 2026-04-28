@@ -5,6 +5,7 @@ import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as Us
 import { User as FirebaseUser } from 'firebase/auth';
 import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { renameTagGlobal, deleteTagGlobal } from '../services/tagService';
+import { exportTagMaterialToMarkdown } from '../services/exportService';
 
 interface TagManagementProps {
   user?: FirebaseUser | null;
@@ -58,6 +59,26 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
 
   const isAdminUser = user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin';
   const isContributor = userProfile?.role === 'contributor' || isAdminUser;
+  const handleExportTagMaterial = (tag: Tag) => {
+    const relatedChars = characters.filter(c => 
+      c.skills?.some(s => s.tags?.includes(tag.name)) || 
+      c.presence?.some(p => p.tags?.includes(tag.name))
+    );
+    const relatedTals = talents.filter(t => t.tags?.includes(tag.name));
+    exportTagMaterialToMarkdown(tag, relatedChars, relatedTals);
+  };
+
+  const handleBatchExportTags = () => {
+    tags.forEach(tag => {
+      const relatedChars = characters.filter(c => 
+        c.skills?.some(s => s.tags?.includes(tag.name)) || 
+        c.presence?.some(p => p.tags?.includes(tag.name))
+      );
+      const relatedTals = talents.filter(t => t.tags?.includes(tag.name));
+      exportTagMaterialToMarkdown(tag, relatedChars, relatedTals);
+    });
+    alert(`已触发 ${tags.length} 个标签素材卡的批量导出。`);
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'system_configs', 'trait_templates'), (snapshot) => {
@@ -530,6 +551,12 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={handleBatchExportTags}
+            className="px-6 py-2.5 bg-bg border border-border text-text font-bold font-mono text-sm uppercase tracking-widest hover:border-accent transition-all flex items-center gap-2"
+          >
+            <Download className="w-5 h-5" /> 批量导出全量素材
+          </button>
           <div className="flex bg-card/50 p-1 border border-border">
             <button 
               onClick={() => setViewMode('matrix')}
@@ -965,6 +992,16 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
                     </div>
                     {isContributor && (
                       <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportTagMaterial(tag);
+                          }}
+                          className="p-1.5 text-muted hover:text-accent transition-colors"
+                          title="导出素材卡"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();

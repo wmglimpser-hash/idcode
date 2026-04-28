@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { DEFAULT_TAG_CONFIG } from '../constants';
-import { syncTags } from '../services/tagService';
+import { bulkSyncTags, syncTags } from '../services/tagService';
+import { createBackup } from '../services/backupService';
 import { X, Save, AlertTriangle, FileJson, Sparkles, Wand2, RefreshCcw } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -155,7 +156,34 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
       const data = JSON.parse(jsonInput);
       if (!Array.isArray(data)) throw new Error("输入必须是 JSON 数组格式。");
 
+      // 1. Trigger backup before bulk import
+      const actionLabel = mode === 'character' ? 'bulk_import_character' : (mode === 'wiki' ? 'bulk_import_wiki' : 'bulk_import_talent');
+      const backupFile = await createBackup(actionLabel);
+
       setProgress({ current: 0, total: data.length });
+
+      // If mode is character, summarize tags for optimized sync
+      if (mode === 'character') {
+        const allTagsToSync = data.map((item: any) => {
+          const tags = new Set<string>();
+          if (Array.isArray(item.skills)) {
+            item.skills.forEach((s: any) => {
+              if (Array.isArray(s.tags)) {
+                s.tags.forEach((t: string) => { if (t) tags.add(t); });
+              }
+            });
+          }
+          if (Array.isArray(item.presence)) {
+            item.presence.forEach((p: any) => {
+              if (Array.isArray(p.tags)) {
+                p.tags.forEach((t: string) => { if (t) tags.add(t); });
+              }
+            });
+          }
+          return { tags: Array.from(tags), role: (item.role || role || 'Survivor') as 'Survivor' | 'Hunter' | 'Both' };
+        });
+        await bulkSyncTags(allTagsToSync, auth.currentUser?.uid || 'unknown');
+      }
 
       for (let i = 0; i < data.length; i++) {
         const item = data[i];

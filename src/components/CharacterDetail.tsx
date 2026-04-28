@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { Character, COLORS, Tag, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Clock, Tag as TagIcon, Download, FileText, Copy, LogOut } from 'lucide-react';
 import { CharacterTraitCategory } from '../constants';
+import { exportCharacterCardToMarkdown } from '../services/exportService';
 
 type DetailTab = 'traits' | 'external' | 'mechanics';
 
@@ -559,6 +560,12 @@ export const CharacterDetail = ({
 
               <div className="mt-8 flex justify-between items-center">
                 <div className="flex gap-4 flex-1 max-w-2xl">
+                  <button 
+                    onClick={() => exportCharacterCardToMarkdown(character, availableTags)}
+                    className="flex-1 py-3 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" /> 导出为 Markdown_MD
+                  </button>
                   <button 
                     onClick={() => {
                       const dataStr = JSON.stringify(character, null, 2);

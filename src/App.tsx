@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE } from './constants';
-import { syncTags } from './services/tagService';
+import { bulkSyncTags } from './services/tagService';
+import { createBackup } from './services/backupService';
 import { CharacterForm } from './components/CharacterForm';
 import { CharacterDetail } from './components/CharacterDetail';
 import { TraitFactorsView } from './components/TraitFactorsView';
@@ -190,14 +191,17 @@ export default function App() {
     }
   }, [characters, selectedCharacter]);
 
-  const handleSyncCharacterOrders = async (silent = true) => {
+  const handleSyncCharacterOrders = async () => {
     if (!isAdminUser || characters.length === 0) return;
 
-    const updates: { id: string, order: number }[] = [];
+    if (!window.confirm(`确定要同步所有角色的排序 ID 吗？系统将尝试根据 ID 重新修正 order 权重。`)) {
+      return;
+    }
+
+    const updates: { id: string, name: string, order: number }[] = [];
 
     for (const char of characters) {
       let targetOrder = char.order;
-      // Derive order from ID if it follows sX or hX pattern
       if (char.id.startsWith('s')) {
         const num = parseInt(char.id.substring(1));
         if (!isNaN(num)) targetOrder = num;
@@ -207,37 +211,30 @@ export default function App() {
       }
 
       if (targetOrder !== char.order) {
-        updates.push({ id: char.id, order: targetOrder });
+        updates.push({ id: char.id, name: char.name, order: targetOrder });
       }
     }
 
     if (updates.length === 0) {
-      if (!silent) alert("数据已是最新，无需同步排序。");
+      alert("数据已是最新，无需同步排序。");
       return;
     }
 
-    if (!silent && !window.confirm(`检测到 ${updates.length} 个角色的排序 ID 需要同步，是否继续？`)) {
-      return;
-    }
-
-    console.log("Syncing character IDs...", updates.length, "updates pending");
+    let successCount = 0;
     for (const update of updates) {
       try {
         await updateDoc(doc(db, 'characters', update.id), {
           order: update.order,
           lastUpdated: serverTimestamp()
         });
+        successCount++;
       } catch (e) {
-        // Likely mock character or permission issue
+        console.error(`Sync failed for ${update.name}`, e);
       }
     }
-    if (!silent) alert("同步完成！所有角色已按 ID 重新排序。");
-  };
 
-  // Hidden Auto-Sync for Admin to fix character IDs/orders
-  useEffect(() => {
-    handleSyncCharacterOrders(true);
-  }, [user, userProfile, characters]);
+    alert(`同步完成！\n- 更新了 ${successCount} 个角色\n- 修改名单：${updates.map(u => u.name).join(', ')}`);
+  };
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
@@ -294,7 +291,7 @@ export default function App() {
       }
     };
 
-    const extractTags = (data: any) => {
+    const getTagsFromChar = (data: any) => {
       const tags = new Set<string>();
       if (Array.isArray(data.skills)) {
         data.skills.forEach((s: any) => {
@@ -314,23 +311,36 @@ export default function App() {
     };
 
     try {
+      // 1. High risk operation - Trigger backup
+      const action = Array.isArray(charData) ? 'bulk_save' : (isEditingCharacter ? 'edit_save' : 'create_save');
+      setConfirmModal({
+        show: true,
+        title: '系统备份中',
+        message: '正在为本次保存操作生成自动化快照备份，请稍后...',
+        onConfirm: () => {},
+        type: 'info'
+      });
+      const backupFile = await createBackup(action);
+      setConfirmModal(prev => ({ ...prev, show: false }));
+
       if (Array.isArray(charData)) {
-        // Bulk save multiple characters
+        // 2. Optimized Tag Sync for bulk save
+        const allTagsToSync = charData.map(d => ({
+          tags: getTagsFromChar(d),
+          role: d.role as 'Survivor' | 'Hunter' | 'Both'
+        }));
+        const addedTagsCount = await bulkSyncTags(allTagsToSync, user?.uid || 'unknown');
+        
+        let successCount = 0;
         for (const data of charData) {
           validateChar(data);
-          const tags = extractTags(data);
-          if (tags.length > 0 && user) {
-            await syncTags(tags, data.role, user.uid);
-          }
           try {
             if (data.id && !MOCK_CHARACTERS.some(m => m.id === data.id)) {
-              // Update existing DB character
               await setDoc(doc(db, 'characters', data.id), {
                 ...data,
                 lastUpdated: serverTimestamp()
               }, { merge: true });
             } else {
-              // Create new or update mock (by creating a DB override)
               const docRef = data.id ? doc(db, 'characters', data.id) : doc(collection(db, 'characters'));
               await setDoc(docRef, {
                 ...data,
@@ -341,31 +351,26 @@ export default function App() {
                 lastUpdated: serverTimestamp()
               }, { merge: true });
             }
+            successCount++;
           } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, 'characters');
+            console.error(`Save failed for ${data.name}`, err);
           }
         }
-      } else if (isEditingCharacter && selectedCharacter) {
+        alert(`批量保存完成！\n- 成功处理 ${successCount} 个角色\n- 自动补齐了 ${addedTagsCount} 个缺失标签\n- 备份已导出: ${backupFile}`);
+      } else {
+        // Single character save
         validateChar(charData);
-        const tags = extractTags(charData);
+        const tags = getTagsFromChar(charData);
         if (tags.length > 0 && user) {
-          await syncTags(tags, charData.role, user.uid);
+          await bulkSyncTags([{ tags, role: charData.role }], user.uid);
         }
-        try {
+
+        if (isEditingCharacter && selectedCharacter) {
           await setDoc(doc(db, 'characters', selectedCharacter.id), {
             ...charData,
             lastUpdated: serverTimestamp()
           }, { merge: true });
-        } catch (err) {
-          handleFirestoreError(err, OperationType.WRITE, `characters/${selectedCharacter.id}`);
-        }
-      } else {
-        validateChar(charData);
-        const tags = extractTags(charData);
-        if (tags.length > 0 && user) {
-          await syncTags(tags, charData.role, user.uid);
-        }
-        try {
+        } else {
           await addDoc(collection(db, 'characters'), {
             ...charData,
             imageUrl: charData.imageUrl || `https://picsum.photos/seed/${charData.name}/400/600`,
@@ -374,9 +379,8 @@ export default function App() {
               : [{ name: '初始技能', description: '该角色尚未配置详细技能说明。' }],
             lastUpdated: serverTimestamp()
           });
-        } catch (err) {
-          handleFirestoreError(err, OperationType.WRITE, 'characters');
         }
+        alert(`保存成功！\n- 角色：${charData.name}\n- 备份已导出: ${backupFile}`);
       }
       
       if (!Array.isArray(charData)) {
@@ -416,12 +420,16 @@ export default function App() {
       type: 'danger',
       onConfirm: async () => {
         try {
+          // Backup before deletion
+          const backupFile = await createBackup('delete_character');
+          
           const isMock = MOCK_CHARACTERS.some(m => m.id === char.id);
           if (isMock) {
             await setDoc(doc(db, 'characters', char.id), { deleted: true, lastUpdated: serverTimestamp() });
           } else {
             await deleteDoc(doc(db, 'characters', char.id));
           }
+          alert(`删除成功！\n- 角色：${char.name}\n- 备份已导出: ${backupFile}`);
           setSelectedCharacter(null);
           setConfirmModal(prev => ({ ...prev, show: false }));
         } catch (err) {
@@ -452,6 +460,10 @@ export default function App() {
       type: 'danger',
       onConfirm: async () => {
         try {
+          // Backup before batch delete
+          const backupFile = await createBackup('batch_delete');
+          
+          let successCount = 0;
           for (const id of selectedCharacterIds) {
             const isMock = MOCK_CHARACTERS.some(m => m.id === id);
             if (isMock) {
@@ -459,7 +471,9 @@ export default function App() {
             } else {
               await deleteDoc(doc(db, 'characters', id));
             }
+            successCount++;
           }
+          alert(`批量删除完成！\n- 成功删除 ${successCount} 个角色\n- 备份已导出: ${backupFile}`);
           setSelectedCharacterIds([]);
           setIsBatchMode(false);
           setSelectedCharacter(null);
@@ -555,7 +569,17 @@ export default function App() {
               </div>
 
               {user ? (
-                <div className="flex items-center gap-4 bg-bg/50 border border-border px-4 py-2">
+                <div className="flex items-center gap-4">
+                  {isAdminUser && (
+                    <button 
+                      onClick={handleSyncCharacterOrders}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all"
+                      title="同步角色档案排序 ID"
+                    >
+                      <RefreshCcw className="w-3.5 h-3.5" /> 同步排序
+                    </button>
+                  )}
+                  <div className="flex items-center gap-4 bg-bg/50 border border-border px-4 py-2">
                   <div className="flex flex-col items-end">
                     <span className="text-xs font-bold text-accent">{userProfile?.displayName}</span>
                     <span className="text-[10px] text-muted uppercase tracking-widest">{userProfile?.role}</span>
@@ -564,6 +588,7 @@ export default function App() {
                     <LogOut className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
               ) : (
                 <button 
                   onClick={handleLogin}
@@ -913,7 +938,7 @@ export default function App() {
         {activeTab === 'leaderboard' && (
           <Leaderboard 
             characters={characters} 
-            onRefresh={() => handleSyncCharacterOrders(false)}
+            onRefresh={() => handleSyncCharacterOrders()}
             isAdmin={user?.email === 'wmglimpser@gmail.com' || userProfile?.role === 'admin'}
             initialTrait={leaderboardTrait}
             onUpdate={handleUpdateCharacter}

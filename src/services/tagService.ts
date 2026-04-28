@@ -2,32 +2,55 @@ import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, update
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Tag } from '../constants';
 
-export const syncTags = async (tagNames: string[], role: 'Survivor' | 'Hunter' | 'Both', userId: string) => {
-  if (!tagNames || tagNames.length === 0) return;
+export const bulkSyncTags = async (allTags: { tags: string[], role: 'Survivor' | 'Hunter' | 'Both' }[], userId: string) => {
+  if (!allTags || allTags.length === 0) return;
 
   try {
     const tagsRef = collection(db, 'tags');
     const snapshot = await getDocs(tagsRef);
     const existingTagNames = new Set(snapshot.docs.map(doc => (doc.data() as Tag).name));
-
-    for (const name of tagNames) {
-      if (!name) continue;
-      if (!existingTagNames.has(name)) {
-        const docId = `tag_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        await setDoc(doc(db, 'tags', docId), {
-          name,
-          color: '#00f3ff', // Default color
-          affectedRole: role,
-          affectedStats: [],
-          authorId: userId,
-          updatedAt: serverTimestamp()
-        });
-        existingTagNames.add(name); // Prevent adding same tag multiple times in one loop
+    
+    // Aggregate and deduplicate tags across all characters
+    const uniqueTagsToProcess = new Map<string, 'Survivor' | 'Hunter' | 'Both'>();
+    
+    for (const item of allTags) {
+      for (const name of item.tags) {
+        if (!name) continue;
+        if (!existingTagNames.has(name)) {
+          const currentRole = uniqueTagsToProcess.get(name);
+          if (!currentRole) {
+            uniqueTagsToProcess.set(name, item.role);
+          } else if (currentRole !== item.role && currentRole !== 'Both') {
+            uniqueTagsToProcess.set(name, 'Both');
+          }
+        }
       }
     }
+
+    if (uniqueTagsToProcess.size === 0) return 0;
+
+    let addedCount = 0;
+    for (const [name, role] of uniqueTagsToProcess.entries()) {
+      const docId = `tag_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      await setDoc(doc(db, 'tags', docId), {
+        name,
+        color: '#00f3ff', 
+        affectedRole: role,
+        affectedStats: [],
+        authorId: userId,
+        updatedAt: serverTimestamp()
+      });
+      addedCount++;
+    }
+    return addedCount;
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'tags');
+    handleFirestoreError(error, OperationType.WRITE, 'tags_bulk');
+    throw error;
   }
+};
+
+export const syncTags = async (tags: string[], role: 'Survivor' | 'Hunter' | 'Both', userId: string) => {
+  return bulkSyncTags([{ tags, role }], userId);
 };
 
 export const renameTagGlobal = async (oldName: string, newName: string) => {

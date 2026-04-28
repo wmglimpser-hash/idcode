@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Character, CharacterTraitCategory } from '../constants';
-import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator, Maximize2, Minimize2 } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator, Maximize2, Minimize2, Download, FileText } from 'lucide-react';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { CharacterComparison } from './CharacterComparison';
+import { exportLeaderboardToMarkdown } from '../services/exportService';
 
 interface CustomMetric {
   id: string;
@@ -673,6 +674,21 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-end gap-1 text-right">
+                      <button
+                        onClick={() => exportLeaderboardToMarkdown(
+                          selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || '未命名',
+                          role,
+                          selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || '',
+                          sortOrder,
+                          factionCharacters.length,
+                          groupedRankedData,
+                          traitRemarks
+                        )}
+                        className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all"
+                        title="导出 Markdown 数据卡"
+                      >
+                        <Download className="w-3.5 h-3.5" /> 导出数据卡
+                      </button>
                       <button
                         onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                         className="flex items-center gap-2 px-3 py-1 bg-bg/50 border border-border hover:border-accent group transition-all"
