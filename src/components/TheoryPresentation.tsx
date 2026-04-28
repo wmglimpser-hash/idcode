@@ -1,12 +1,21 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Maximize2, BookOpen, User, Clock, FileText, Plus, Tag as TagIcon, Trophy, X, Save, FilePlus, Sparkles, Search, Info } from 'lucide-react';
+import { 
+  ChevronLeft, ChevronRight, Maximize2, BookOpen, User, Clock, FileText, Plus, 
+  Tag as TagIcon, Trophy, X, Save, FilePlus, Sparkles, Search, Info, 
+  Copy, Trash2, ArrowUp, ArrowDown, Monitor, Video, Edit, Download, Zap
+} from 'lucide-react';
 import { Tag } from '../constants';
+
+type SlideType = 'title' | 'conclusion' | 'list' | 'ranking' | 'compare' | 'formula' | 'summary';
 
 interface Slide {
   id: string;
+  type: SlideType;
   title: string;
-  content: React.ReactNode;
+  body?: string;
+  bullets?: string[];
   notes: string;
+  estimatedSeconds?: number;
 }
 
 interface TheoryArticle {
@@ -16,13 +25,13 @@ interface TheoryArticle {
   date: string;
   author: string;
   slides: Slide[];
-  relatedTags?: string[]; // Tag names or IDs
-  relatedMetrics?: string[]; // Trait labels/IDs
+  relatedTags?: string[];
+  relatedMetrics?: string[];
 }
 
 interface TheoryPresentationProps {
   availableTags: Tag[];
-  availableTraits: { id: string; label: string; category: string }[];
+  availableTraits: { id: string; label: string; category: string; role: 'Survivor' | 'Hunter' }[];
 }
 
 const MOCK_DATA: TheoryArticle[] = [
@@ -37,98 +46,59 @@ const MOCK_DATA: TheoryArticle[] = [
     slides: [
       {
         id: 's1',
+        type: 'title',
         title: '为什么“修机快”不等于“破译收益高”？',
-        content: (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-6">
-              效率 vs 收益
-            </h2>
-            <p className="text-xl text-slate-500 max-w-2xl leading-relaxed">
-              破译速度只是纸面指标，真实的对局收益往往被后期节奏、补电机成本和失误容错率所稀释。
-            </p>
-          </div>
-        ),
-        notes: "开场观点：引导读者思考破译速度以外的变量。注意强调'纸面指标'与'对局收益'的对立。"
+        body: '效率 vs 收益\n破译速度只是纸面指标，真实的对局收益往往被后期节奏、补电机成本和失误容错率所稀释。',
+        notes: "开场观点：引导读者思考破译速度以外的变量。注意强调'纸面指标'与'对局收益'的对立。",
+        estimatedSeconds: 15
       },
       {
         id: 's2',
+        type: 'list',
         title: '破译收益的四个维度',
-        content: (
-          <div className="grid grid-cols-2 gap-8 p-12 h-full">
-            {[
-              { label: '速度', desc: '单位时间内的进度产出' },
-              { label: '稳定性', desc: '受校准、特殊机制影响的下限' },
-              { label: '干扰承受', desc: '面对监管者干扰时的博弈资本' },
-              { label: '团队适配', desc: '对后续补位、转点节奏的支持' }
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col p-6 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
-                <span className="text-sm font-bold text-slate-400 mb-2 uppercase tracking-widest">{`0${i + 1}`}</span>
-                <h3 className="text-2xl font-bold text-slate-800 mb-2">{item.label}</h3>
-                <p className="text-slate-500 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        ),
-        notes: "核心模型介绍。速度是基础，稳定性决定下限，干扰承受是上限，团队适配决定上限的上限。"
+        bullets: [
+          '速度：单位时间内的进度产出',
+          '稳定性：受校准、特殊机制影响的下限',
+          '干扰承受：面对监管者干扰时的博弈资本',
+          '团队适配：对后续补位、转点节奏的支持'
+        ],
+        notes: "核心模型介绍。速度是基础，稳定性决定下限，干扰承受是上限，团队适配决定上限的上限。",
+        estimatedSeconds: 25
       },
       {
         id: 's3',
-        title: '破译收益简化排行榜',
-        content: (
-          <div className="p-12 h-full flex flex-col">
-            <h3 className="text-2xl font-bold text-slate-800 mb-8 border-l-4 border-slate-900 pl-4">破译综合评级 (理论值)</h3>
-            <div className="flex-1 space-y-4">
-              {[
-                { name: '机械师', score: 98, tag: '高上限/低稳定性' },
-                { name: '盲女', score: 92, tag: '高效率/极低生存' },
-                { name: '囚徒', score: 88, tag: '灵活转场/中等波动' },
-                { name: '律师', score: 85, tag: '极高稳定/中等效率' }
-              ].map((row, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl">
-                  <div className="flex items-center gap-4">
-                    <span className="text-lg font-mono font-bold text-slate-300 w-6">{i + 1}</span>
-                    <span className="text-lg font-bold text-slate-700">{row.name}</span>
-                    <span className="text-xs px-2 py-1 bg-slate-100 text-slate-500 rounded font-bold uppercase">{row.tag}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-slate-900" style={{ width: `${row.score}%` }} />
-                    </div>
-                    <span className="text-sm font-mono font-bold text-slate-900">{row.score}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ),
-        notes: "展示部分理论计算后的排名。律师虽然效率不是最高，但稳定性带来的收益在实战中往往超出预期。"
+        type: 'ranking',
+        title: '破译收益简化排行榜 (理论值)',
+        body: '1. 机械师 (98) - 高上限/低稳定性\n2. 盲女 (92) - 高效率/极低生存\n3. 囚徒 (88) - 灵活转场/中等波动\n4. 律师 (85) - 极高稳定/中等效率',
+        notes: "展示部分理论计算后的排名。律师虽然效率不是最高，但稳定性带来的收益在实战中往往超出预期。",
+        estimatedSeconds: 20
       },
       {
         id: 's4',
-        title: '总结',
-        content: (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-slate-900 text-white rounded-3xl">
-            <div className="mb-8 w-12 h-1 bg-white/30" />
-            <h2 className="text-5xl font-bold tracking-tight mb-8">
-              不追求瞬时的火花，<br />
-              而追求持续的燃料。
-            </h2>
-            <p className="text-xl text-white/60 max-w-xl italic">
-              "破译收益 = 理论效率 × 过程稳定性 + 团队节奏增益"
-            </p>
-          </div>
-        ),
-        notes: "总结句。强调稳健和持续性。收尾干净利落。"
+        type: 'summary',
+        title: '不追求瞬时的火花，而追求持续的燃料。',
+        body: '"破译收益 = 理论效率 × 过程稳定性 + 团队节奏增益"',
+        notes: "总结句。强调稳健和持续性。收尾干净利落。",
+        estimatedSeconds: 12
       }
     ]
   }
 ];
 
+type ViewMode = 'edit' | 'presentation' | 'recording';
+
 export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availableTags, availableTraits }) => {
-  const [articles, setArticles] = useState<TheoryArticle[]>(MOCK_DATA);
-  const [currentArticle, setCurrentArticle] = useState<TheoryArticle>(articles[0]);
+  const [articles, setArticles] = useState<TheoryArticle[]>(() => {
+    const saved = localStorage.getItem('theory_articles');
+    return saved ? JSON.parse(saved) : MOCK_DATA;
+  });
+  const [currentArticle, setCurrentArticle] = useState<TheoryArticle>(articles[0] || MOCK_DATA[0]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isAddingArticle, setIsAddingArticle] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('edit');
+  const [isEditingSlide, setIsEditingSlide] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  
   const [newArticleDoc, setNewArticleDoc] = useState({
     title: '',
     series: '',
@@ -136,29 +106,55 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
     selectedTags: [] as string[],
     selectedMetrics: [] as string[]
   });
+
+  // Auto-save articles
+  useEffect(() => {
+    localStorage.setItem('theory_articles', JSON.stringify(articles));
+  }, [articles]);
+
+  // Sync current article if articles change
+  useEffect(() => {
+    if (!currentArticle) return;
+    const fresh = articles.find(a => a.id === currentArticle.id);
+    if (fresh && fresh !== currentArticle) {
+      setCurrentArticle(fresh);
+    }
+  }, [articles, currentArticle?.id]);
   
   const presentationContainerRef = useRef<HTMLDivElement>(null);
 
   const handleCreateFromDoc = () => {
     if (!newArticleDoc.title) return;
 
-    // Simple parser: split by "---" for slides
-    const slideTexts = newArticleDoc.content.split('---').map(s => s.trim()).filter(Boolean);
-    const generatedSlides: Slide[] = slideTexts.map((text, idx) => {
+    // Enhanced parser
+    const sections = newArticleDoc.content.split(/\n---\n|\[画面：/).map(s => s.trim()).filter(Boolean);
+    const generatedSlides: Slide[] = sections.map((section, idx) => {
+      const text = section.endsWith(']') ? section.slice(0, -1) : section;
       const lines = text.split('\n');
       const title = lines[0] || `页面 ${idx + 1}`;
-      const body = lines.slice(1).join('\n') || '暂无详细内容';
+      const body = lines.slice(1).join('\n') || '';
       
+      let type: SlideType = 'list';
+      if (idx === 0) type = 'title';
+      else if (idx === sections.length - 1) type = 'summary';
+      else if (text.includes('对比')) type = 'compare';
+      else if (/(排名|排行|TOP|第)/i.test(text)) type = 'ranking';
+      else if (/[=×+x\*]/i.test(text)) type = 'formula';
+      else if (text.length < 50) type = 'conclusion';
+
+      const notes = text.match(/\[备注：(.*?)\]/)?.[1] || "自动生成的内容。";
+      const cleanBody = body.replace(/\[备注：.*?\]/g, '').trim();
+
+      // Estimate time: 240 chars per minute = 4 chars per second
+      const estimatedSeconds = Math.ceil((title.length + cleanBody.length + notes.length) / 4);
+
       return {
         id: `gen-${Date.now()}-${idx}`,
-        title: title,
-        content: (
-          <div className="flex flex-col items-center justify-center h-full text-center p-12">
-            <h2 className="text-3xl font-bold mb-6 text-slate-800">{title}</h2>
-            <p className="text-lg text-slate-500 whitespace-pre-wrap max-w-3xl leading-relaxed">{body}</p>
-          </div>
-        ),
-        notes: "通过文档实验室生成的原始稿件。"
+        type,
+        title,
+        body: cleanBody,
+        notes,
+        estimatedSeconds
       };
     });
 
@@ -172,13 +168,14 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
       relatedMetrics: newArticleDoc.selectedMetrics,
       slides: generatedSlides.length > 0 ? generatedSlides : [{
         id: 'empty',
+        type: 'conclusion',
         title: '空内容',
-        content: <div className="p-12">文档内容为空</div>,
         notes: '请检查输入格式'
       }]
     };
 
-    setArticles([newArt, ...articles]);
+    const updatedArticles = [newArt, ...articles];
+    setArticles(updatedArticles);
     setCurrentArticle(newArt);
     setCurrentSlideIndex(0);
     setIsAddingArticle(false);
@@ -194,8 +191,22 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
   }, []);
 
   useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName.toLowerCase();
+      return (
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target.isContentEditable ||
+        Boolean(target.closest('[contenteditable="true"]'))
+      );
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Focus element check or other conditions can go here
+      if (isAddingArticle) return;
+      if (isEditableTarget(e.target)) return;
+
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
         if (e.key === ' ') e.preventDefault(); // Prevent space from scrolling
         nextSlide();
@@ -206,7 +217,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextSlide, prevSlide]);
+  }, [nextSlide, prevSlide, isAddingArticle]);
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -218,6 +229,210 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
 
   const currentSlide = currentArticle.slides[currentSlideIndex];
 
+  // Article Management
+  const handleDeleteArticle = (id: string) => {
+    if (deleteConfirmId !== id) {
+      setDeleteConfirmId(id);
+      // Auto cancel after 3 seconds
+      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+      return;
+    }
+
+    const updated = articles.filter(a => a.id !== id);
+    setArticles(updated);
+    setDeleteConfirmId(null);
+
+    // If we deleted the current article, switch to the first available one
+    if (currentArticle.id === id) {
+      const nextArticle = updated.length > 0 ? updated[0] : MOCK_DATA[0];
+      setCurrentArticle(nextArticle);
+      setCurrentSlideIndex(0);
+    }
+  };
+
+  const handleDuplicateArticle = (article: TheoryArticle) => {
+    const duplicated: TheoryArticle = {
+      ...article,
+      id: `copy-${Date.now()}`,
+      title: `${article.title} (副本)`,
+      date: new Date().toISOString().split('T')[0]
+    };
+    setArticles([duplicated, ...articles]);
+  };
+
+  const handleRenameArticle = (id: string, newTitle: string) => {
+    setArticles(articles.map(a => a.id === id ? { ...a, title: newTitle } : a));
+  };
+
+  // Slide Management
+  const handleUpdateSlide = (updatedSlide: Slide) => {
+    const updatedSlides = [...currentArticle.slides];
+    updatedSlides[currentSlideIndex] = updatedSlide;
+    const updatedArticle = { ...currentArticle, slides: updatedSlides };
+    setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+  };
+
+  const handleAddSlide = () => {
+    const newSlide: Slide = {
+      id: `slide-${Date.now()}`,
+      type: 'list',
+      title: '新页面',
+      body: '输入内容...',
+      notes: '',
+      estimatedSeconds: 10
+    };
+    const updatedSlides = [...currentArticle.slides];
+    updatedSlides.splice(currentSlideIndex + 1, 0, newSlide);
+    const updatedArticle = { ...currentArticle, slides: updatedSlides };
+    setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+    setCurrentSlideIndex(currentSlideIndex + 1);
+  };
+
+  const handleDeleteSlide = () => {
+    if (currentArticle.slides.length <= 1) return;
+    if (window.confirm('确定要删除当前页面吗？')) {
+      const updatedSlides = currentArticle.slides.filter((_, i) => i !== currentSlideIndex);
+      const updatedArticle = { ...currentArticle, slides: updatedSlides };
+      setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+      setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1));
+    }
+  };
+
+  const handleMoveSlide = (direction: 'up' | 'down') => {
+    const newIdx = direction === 'up' ? currentSlideIndex - 1 : currentSlideIndex + 1;
+    if (newIdx < 0 || newIdx >= currentArticle.slides.length) return;
+    
+    const updatedSlides = [...currentArticle.slides];
+    [updatedSlides[currentSlideIndex], updatedSlides[newIdx]] = [updatedSlides[newIdx], updatedSlides[currentSlideIndex]];
+    
+    const updatedArticle = { ...currentArticle, slides: updatedSlides };
+    setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+    setCurrentSlideIndex(newIdx);
+  };
+
+  // Export Functions
+  const exportJSON = () => {
+    const data = JSON.stringify(currentArticle, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentArticle.title.replace(/[\\/:*?"<>|]/g, '_')}.json`;
+    a.click();
+  };
+
+  const exportMarkdown = () => {
+    let md = `# ${currentArticle.title}\n\n`;
+    md += `系列：${currentArticle.series}\n`;
+    md += `作者：${currentArticle.author}\n`;
+    md += `日期：${currentArticle.date}\n\n---\n\n`;
+    
+    currentArticle.slides.forEach((slide, idx) => {
+      md += `## P${idx + 1}: ${slide.title} (${slide.type})\n\n`;
+      if (slide.body) md += `${slide.body}\n\n`;
+      if (slide.bullets) slide.bullets.forEach(b => md += `- ${b}\n`);
+      md += `\n> **口播备注**：${slide.notes}\n\n---\n\n`;
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentArticle.title.replace(/[\\/:*?"<>|]/g, '_')}_口播稿.md`;
+    a.click();
+  };
+
+  // Duration Stats
+  const getTotalSeconds = () => currentArticle.slides.reduce((acc, s) => acc + (s.estimatedSeconds || 0), 0);
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}分${s}秒`;
+  };
+
+  // Render Slide Content
+  const renderSlideContent = (slide: Slide) => {
+    const baseClasses = "flex flex-col h-full p-8 md:p-16 animate-in fade-in slide-in-from-bottom-4 duration-700";
+    
+    switch (slide.type) {
+      case 'title':
+        return (
+          <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
+            <div className="w-16 h-1 bg-slate-900 mb-4" />
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight">
+              {slide.title}
+            </h1>
+            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic">
+              {slide.body}
+            </p>
+          </div>
+        );
+      case 'summary':
+        return (
+          <div className={`${baseClasses} items-center justify-center text-center bg-slate-900 text-white rounded-[2rem] m-4 gap-8`}>
+            <Sparkles className="w-12 h-12 text-white/20" />
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-snug">
+              {slide.title}
+            </h2>
+            <div className="h-px w-24 bg-white/20" />
+            <p className="text-xl text-white/50 max-w-2xl italic font-serif">
+              {slide.body}
+            </p>
+          </div>
+        );
+      case 'list':
+      case 'conclusion':
+        return (
+          <div className={`${baseClasses} gap-8`}>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 border-l-8 border-slate-900 pl-6 mb-4">
+              {slide.title}
+            </h2>
+            <div className="flex-1 space-y-6">
+              {slide.body && <p className="text-xl text-slate-600 leading-relaxed">{slide.body}</p>}
+              {slide.bullets && (
+                <ul className="space-y-4">
+                  {slide.bullets.map((b, i) => (
+                    <li key={i} className="flex gap-4 text-lg text-slate-500">
+                      <span className="text-slate-900 font-mono font-bold">{i + 1}.</span>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        );
+      case 'ranking':
+        const rankingItems = slide.body?.split('\n').filter(Boolean) || [];
+        return (
+          <div className={`${baseClasses} gap-8`}>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">{slide.title}</h2>
+            <div className="flex-1 space-y-4">
+              {rankingItems.map((item, i) => {
+                const [name, rest] = item.split(/[(\-]/);
+                return (
+                  <div key={i} className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md">
+                    <div className="flex items-center gap-6">
+                      <span className="text-2xl font-mono font-bold text-slate-200 w-8">{i + 1}</span>
+                      <span className="text-xl font-bold text-slate-800">{name.trim().replace(/^\d+\.\s*/, '')}</span>
+                    </div>
+                    {rest && <span className="text-sm font-mono text-slate-400">({rest.replace(/[)]/g, '')}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
+            <h2 className="text-4xl font-bold text-slate-900">{slide.title}</h2>
+            <p className="text-xl text-slate-500 whitespace-pre-wrap">{slide.body}</p>
+          </div>
+        );
+    }
+  };
+
   // Helper to get real data objects
   const getSelectedTagData = () => {
     return availableTags.filter(t => currentArticle.relatedTags?.includes(t.name) || currentArticle.relatedTags?.includes(t.id));
@@ -228,367 +443,481 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availabl
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0">
-      {/* Sidebar: Article List */}
-      <aside className="w-full lg:w-72 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 gap-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <BookOpen className="w-3 h-3" /> 内容系列
-          </h3>
-          <button 
-            onClick={() => setIsAddingArticle(true)}
-            className="p-1.5 hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors rounded-lg"
-            title="输入新文档"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-        
-        <div className="space-y-2 overflow-y-auto max-h-[300px] lg:max-h-none no-scrollbar">
-          {articles.map(article => (
-            <button
-              key={article.id}
-              onClick={() => {
-                setCurrentArticle(article);
-                setCurrentSlideIndex(0);
-              }}
-              className={`w-full text-left p-4 rounded-2xl transition-all ${
-                currentArticle.id === article.id 
-                  ? 'bg-slate-900 text-white shadow-lg' 
-                  : 'bg-transparent text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
-              <span className="text-sm font-bold leading-tight">{article.title}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* 关联数据区 */}
-        {(currentArticle.relatedTags || currentArticle.relatedMetrics) && (
-          <div className="pt-6 border-t border-slate-100 space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Sparkles className="w-3 h-3" /> 关联研究素材
-            </h3>
-            
-            {currentArticle.relatedTags && (
-              <div className="space-y-2">
-                <span className="text-[10px] text-slate-400 font-bold ml-1">相关标签</span>
-                <div className="flex flex-wrap gap-2">
-                  {currentArticle.relatedTags.map(tag => (
-                    <div key={tag} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold">
-                      <TagIcon className="w-3 h-3" />
-                      {tag}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {currentArticle.relatedMetrics && (
-              <div className="space-y-2">
-                <span className="text-[10px] text-slate-400 font-bold ml-1">关联指标</span>
-                <div className="flex flex-wrap gap-2">
-                  {currentArticle.relatedMetrics.map(m => (
-                    <div key={m} className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-bold">
-                      <Trophy className="w-3 h-3" />
-                      {m}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+    <div className={`flex flex-col gap-6 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0 ${viewMode === 'recording' ? 'fixed inset-0 z-[100] bg-black p-0' : ''}`}>
+      {/* Top Header Mode Switcher */}
+      {viewMode !== 'recording' && (
+        <div className="flex items-center justify-between bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-6">
+            <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 flex items-center gap-2">
+              <Zap className="w-4 h-4" /> 理论演示工作台
+            </h2>
+            <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100">
+              {[
+                { id: 'edit', label: '制作模式', icon: <Edit className="w-3 h-3" /> },
+                { id: 'presentation', label: '演示模式', icon: <Monitor className="w-3 h-3" /> },
+                { id: 'recording', label: '录制模式', icon: <Video className="w-3 h-3" /> }
+              ].map(mode => (
+                <button
+                  key={mode.id}
+                  onClick={() => setViewMode(mode.id as ViewMode)}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    viewMode === mode.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {mode.icon}
+                  {mode.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={exportJSON}
+              className="px-4 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2"
+            >
+              <Download className="w-3 h-3" /> 下载 JSON
+            </button>
+            <button 
+              onClick={exportMarkdown}
+              className="px-4 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 hover:text-slate-900 rounded-lg flex items-center gap-2"
+            >
+              <FilePlus className="w-3 h-3" /> 导出口播稿
+            </button>
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'recording' && (
+        <button 
+          onClick={() => setViewMode('edit')}
+          className="fixed top-6 right-6 z-[110] px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur text-white text-[10px] font-bold rounded-full transition-all flex items-center gap-2"
+        >
+          <X className="w-3 h-3" /> 退出录屏模式
+        </button>
+      )}
+
+      <div className={`flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden ${viewMode === 'recording' ? 'h-full bg-black' : ''}`}>
+        {/* Sidebar: Article List */}
+        {viewMode === 'edit' && (
+          <aside className="w-full lg:w-72 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 gap-6 shrink-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <BookOpen className="w-3 h-3" /> 我的草稿箱
+              </h3>
+              <button 
+                onClick={() => setIsAddingArticle(true)}
+                className="p-1.5 bg-slate-900 text-white rounded-lg hover:scale-105 transition-all"
+                title="导入新文稿"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
+              {articles.map(article => (
+                <div key={article.id} className="group relative">
+                  <button
+                    onClick={() => {
+                      setCurrentArticle(article);
+                      setCurrentSlideIndex(0);
+                    }}
+                    className={`w-full text-left p-4 rounded-2xl transition-all ${
+                      currentArticle.id === article.id 
+                        ? 'bg-slate-900 text-white shadow-lg' 
+                        : 'bg-transparent text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-100'
+                    }`}
+                  >
+                    <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
+                    <span className="text-sm font-bold leading-tight line-clamp-2">{article.title}</span>
+                  </button>
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <button 
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDuplicateArticle(article); }}
+                      className="p-1.5 bg-slate-800/80 backdrop-blur rounded-lg text-white/50 hover:text-white transition-all shadow-sm"
+                      title="克隆副本"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        handleDeleteArticle(article.id); 
+                      }}
+                      className={`p-1.5 backdrop-blur rounded-lg transition-all shadow-sm flex items-center justify-center ${
+                        deleteConfirmId === article.id 
+                          ? 'bg-red-500 text-white animate-pulse scale-110' 
+                          : 'bg-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white'
+                      }`}
+                      title={deleteConfirmId === article.id ? "再次点击确认删除" : "删除文稿"}
+                    >
+                      {deleteConfirmId === article.id ? (
+                        <X className="w-3.5 h-3.5" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
         )}
 
-        <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-slate-400 text-[11px] font-mono">
-            <User className="w-3 h-3" />
-            <span>{currentArticle.author}</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-[11px] font-mono">
-            <Clock className="w-3 h-3" />
-            <span>{currentArticle.date}</span>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col gap-6">
-        {/* Fullscreen Wrapper Container */}
-        <div ref={presentationContainerRef} className="presentation-container flex-1 flex flex-col gap-4 bg-[#f8fafc] fullscreen:p-6 lg:fullscreen:p-12">
+        {/* Main Content Area */}
+        <div className={`flex-1 flex flex-col gap-6 ${viewMode === 'recording' ? 'absolute inset-0 z-10 items-center justify-center bg-black p-0' : ''}`}>
+          {/* Fullscreen Wrapper Container */}
           <div 
-            className="flex-1 relative w-full aspect-video bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden flex items-center justify-center p-0 transition-all duration-700 ease-in-out"
+            ref={presentationContainerRef} 
+            className={`flex flex-col ${viewMode === 'recording' 
+              ? 'w-full h-auto max-w-[177.78vh] aspect-video animate-in zoom-in-95 duration-700 shadow-2xl relative' 
+              : 'flex-1 gap-4 bg-[#f8fafc]'}`}
           >
-            {/* The actual slide content */}
-            <div className="w-full h-full animate-in fade-in zoom-in-95 duration-500 overflow-auto">
-              {currentSlide.content}
-            </div>
-
-            {/* Slide Overlay Info */}
-            <div className="absolute bottom-6 left-6 flex items-center gap-4 pointer-events-none">
-              <span className="px-3 py-1 bg-slate-900/5 backdrop-blur-sm rounded-full text-[10px] font-bold tracking-widest text-slate-400">
-                {currentSlideIndex + 1} / {currentArticle.slides.length}
-              </span>
-            </div>
-            
-            <div className="absolute top-6 right-6 flex items-center gap-2 pointer-events-auto">
-              <button 
-                onClick={toggleFullScreen}
-                className="p-3 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all border border-slate-100"
-                title="进入演示模式"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Controls Footer */}
-          <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-white/40 shadow-sm mt-auto shrink-0 transition-all">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-300 px-4 py-2 border border-slate-100 rounded-2xl mr-2">
-                CODEX 理论引擎 v1.0
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={prevSlide}
-                disabled={currentSlideIndex === 0}
-                className={`p-4 rounded-2xl transition-all ${
-                  currentSlideIndex === 0 
-                    ? 'opacity-30 cursor-not-allowed' 
-                    : 'bg-white hover:bg-slate-50 border border-slate-100 text-slate-900 shadow-sm active:scale-95'
-                }`}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={nextSlide}
-                disabled={currentSlideIndex === currentArticle.slides.length - 1}
-                className={`px-8 py-4 rounded-2xl transition-all flex items-center gap-2 font-bold ${
-                  currentSlideIndex === currentArticle.slides.length - 1 
-                    ? 'opacity-30 cursor-not-allowed' 
-                    : 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg active:scale-95'
-                }`}
-              >
-                <span>下一步</span>
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar: Notes & Related Data */}
-      <aside className="w-full lg:w-96 flex flex-col gap-6">
-        {/* Editor Modal */}
-        {isAddingArticle && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-              <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
-                    <FilePlus className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">文档实验室</h3>
-                    <p className="text-xs text-slate-400">导入文本并关联系统数据</p>
-                  </div>
-                </div>
-                <button onClick={() => setIsAddingArticle(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
+            <div 
+              className={`flex-1 relative w-full h-full bg-white overflow-hidden flex items-center justify-center transition-all duration-700 ease-in-out ${viewMode === 'recording' ? 'rounded-none' : 'rounded-[2.5rem] border border-slate-100 shadow-xl'}`}
+            >
+              {/* The actual slide content */}
+              <div className="w-full h-full">
+                {renderSlideContent(currentSlide)}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">文章标题</label>
-                      <input 
-                        type="text" 
-                        value={newArticleDoc.title}
-                        onChange={e => setNewArticleDoc({...newArticleDoc, title: e.target.value})}
-                        placeholder="例：解密 01：破译数据"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 text-sm"
-                      />
+              {/* Slide Overlay Info */}
+              {viewMode !== 'recording' && (
+                <>
+                  <div className="absolute bottom-10 left-10 flex items-center gap-4 pointer-events-none">
+                    <span className="px-4 py-2 bg-white/80 backdrop-blur shadow-sm border border-slate-100 rounded-2xl text-xs font-bold tracking-widest text-slate-400">
+                      {currentSlideIndex + 1} / {currentArticle.slides.length}
+                    </span>
+                  </div>
+                  
+                  <div className="absolute top-10 right-10 flex items-center gap-2 pointer-events-auto">
+                    <button 
+                      onClick={toggleFullScreen}
+                      className="p-4 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all border border-slate-100"
+                      title="全屏预览"
+                    >
+                      <Maximize2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Controls Footer */}
+            {viewMode !== 'recording' && (
+              <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-[2rem] border border-white/40 shadow-sm mt-auto shrink-0 transition-all">
+                <div className="flex items-center gap-2">
+                  {viewMode === 'edit' && (
+                    <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-100">
+                      <button onClick={() => handleMoveSlide('up')} disabled={currentSlideIndex === 0} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
+                      <button onClick={() => handleMoveSlide('down')} disabled={currentSlideIndex === currentArticle.slides.length - 1} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
+                      <div className="w-px h-4 bg-slate-100 mx-1" />
+                      <button onClick={handleDeleteSlide} className="p-2 hover:bg-red-50 text-red-400"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={handleAddSlide} className="p-2 hover:bg-slate-50 text-slate-900 flex items-center gap-2 px-4"><Plus className="w-4 h-4" /><span className="text-xs font-bold">加页</span></button>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">系列</label>
-                      <input 
-                        type="text" 
-                        value={newArticleDoc.series}
-                        onChange={e => setNewArticleDoc({...newArticleDoc, series: e.target.value})}
-                        placeholder="例：纯数据系列"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 text-sm"
-                      />
-                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={prevSlide}
+                    disabled={currentSlideIndex === 0}
+                    className={`p-4 rounded-2xl transition-all ${
+                      currentSlideIndex === 0 
+                        ? 'opacity-30 cursor-not-allowed text-slate-300' 
+                        : 'bg-white hover:bg-slate-50 border border-slate-100 text-slate-900 shadow-sm active:scale-95'
+                    }`}
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button 
+                    onClick={nextSlide}
+                    disabled={currentSlideIndex === currentArticle.slides.length - 1}
+                    className={`px-12 py-4 rounded-2xl transition-all flex items-center gap-3 font-bold ${
+                      currentSlideIndex === currentArticle.slides.length - 1 
+                        ? 'opacity-30 cursor-not-allowed bg-slate-100 text-slate-300' 
+                        : 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg active:scale-95'
+                    }`}
+                  >
+                    <span className="tracking-widest">下个环节</span>
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar: Editor / Info */}
+        {viewMode !== 'recording' && (
+          <aside className="w-full lg:w-96 flex flex-col gap-6 overflow-y-auto no-scrollbar">
+            {/* Editor Console */}
+            {viewMode === 'edit' && (
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Edit className="w-3 h-3" /> 环节编辑器
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">版式类型</label>
+                    <select 
+                      value={currentSlide.type}
+                      onChange={(e) => handleUpdateSlide({...currentSlide, type: e.target.value as SlideType})}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold"
+                    >
+                      <option value="title">标题页 (Title)</option>
+                      <option value="list">列表页 (List)</option>
+                      <option value="ranking">排行榜 (Ranking)</option>
+                      <option value="compare">对比页 (Compare)</option>
+                      <option value="formula">公式页 (Formula)</option>
+                      <option value="summary">总结页 (Summary)</option>
+                      <option value="conclusion">纯文字 (Text)</option>
+                    </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex justify-between">
-                      <span>文档内容</span>
-                      <span>使用 "---" 分隔</span>
-                    </label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">环节标题</label>
+                    <input 
+                      type="text" 
+                      value={currentSlide.title}
+                      onChange={(e) => handleUpdateSlide({...currentSlide, title: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">正文内容 / 数据列表</label>
                     <textarea 
-                      value={newArticleDoc.content}
-                      onChange={e => setNewArticleDoc({...newArticleDoc, content: e.target.value})}
-                      placeholder="标题&#10;内容...&#10;---&#10;下页标题..."
-                      className="w-full h-80 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 text-sm font-mono resize-none"
+                      value={currentSlide.body}
+                      onChange={(e) => handleUpdateSlide({...currentSlide, body: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm h-32 resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">口播稿 / 专家备注</label>
+                    <textarea 
+                      value={currentSlide.notes}
+                      onChange={(e) => handleUpdateSlide({...currentSlide, notes: e.target.value})}
+                      className="w-full bg-amber-50/50 border border-amber-100 rounded-xl px-4 py-2 text-sm h-32 italic text-amber-900/70"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Stats Panel */}
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">录制统计</span>
+                <Clock className="w-4 h-4 text-white/40" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <span className="block text-[10px] text-white/30 font-bold mb-1 uppercase">当前环节</span>
+                  <span className="text-xl font-bold font-mono">{formatTime(currentSlide.estimatedSeconds || 0)}</span>
+                  {(currentSlide.estimatedSeconds || 0) > 45 && (
+                    <span className="block mt-1 text-[8px] text-amber-400 flex items-center gap-1">
+                      <Search className="w-2 h-2" /> 建议精简内容
+                    </span>
+                  )}
+                </div>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <span className="block text-[10px] text-white/30 font-bold mb-1 uppercase">全片时长</span>
+                  <span className="text-xl font-bold font-mono">{formatTime(getTotalSeconds())}</span>
+                  <span className="block mt-1 text-[8px] text-white/20">{currentArticle.slides.length} 个环节</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Related Research */}
+            <div className="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-auto flex flex-col gap-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Sparkles className="w-3 h-3" /> 研究资产引用
+              </h3>
+              
+              <div className="space-y-4">
+                {getSelectedTagData().map(tag => (
+                  <div key={tag.id} className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <TagIcon className="w-3 h-3 text-blue-400" />
+                        <span className="text-xs font-bold text-blue-900">{tag.name}</span>
+                      </div>
+                      <span className="text-[10px] text-blue-300 font-mono">TAG</span>
+                    </div>
+                  </div>
+                ))}
+
+                {getSelectedMetricData().map(trait => (
+                  <div key={trait.id} className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-3 h-3 text-amber-400" />
+                        <span className="text-xs font-bold text-amber-900">{trait.label}</span>
+                      </div>
+                      <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {getSelectedTagData().length === 0 && getSelectedMetricData().length === 0 && (
+                  <div className="py-8 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-50 rounded-2xl gap-2">
+                    <span className="text-[9px] uppercase font-bold tracking-widest">无关联系统数据</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
+
+      {/* Editor Modal */}
+      {isAddingArticle && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-8 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-200">
+                  <FilePlus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">文档实验室 (Doc Lab)</h3>
+                  <p className="text-sm text-slate-400 font-medium">智能解析文稿并关联研究素材</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAddingArticle(false)} 
+                className="p-3 hover:bg-slate-50 rounded-2xl transition-all group"
+              >
+                <X className="w-6 h-6 text-slate-300 group-hover:text-slate-900" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">演示课题名称</label>
+                    <input 
+                      type="text" 
+                      value={newArticleDoc.title}
+                      onChange={e => setNewArticleDoc({...newArticleDoc, title: e.target.value})}
+                      placeholder="例如：庄园破译机制深度解析"
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-bold transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">所属研究系列</label>
+                    <input 
+                      type="text" 
+                      value={newArticleDoc.series}
+                      onChange={e => setNewArticleDoc({...newArticleDoc, series: e.target.value})}
+                      placeholder="例如：核心机制系列"
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-bold transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-2">
-                      <TagIcon className="w-3 h-3" /> 关联系统标签 (排行榜标签)
-                    </label>
-                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl max-h-48 overflow-y-auto">
-                      {availableTags.map(tag => (
-                        <button
-                          key={tag.id}
-                          onClick={() => {
-                            const isSelected = newArticleDoc.selectedTags.includes(tag.name);
-                            setNewArticleDoc({
-                              ...newArticleDoc,
-                              selectedTags: isSelected 
-                                ? newArticleDoc.selectedTags.filter(t => t !== tag.name)
-                                : [...newArticleDoc.selectedTags, tag.name]
-                            });
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                            newArticleDoc.selectedTags.includes(tag.name)
-                              ? 'bg-slate-900 text-white'
-                              : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-300'
-                          }`}
-                        >
-                          {tag.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-2">
-                      <Trophy className="w-3 h-3" /> 关联项目排行榜指标
-                    </label>
-                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl max-h-48 overflow-y-auto">
-                      {availableTraits.map(trait => (
-                        <button
-                          key={trait.id}
-                          onClick={() => {
-                            const isSelected = newArticleDoc.selectedMetrics.includes(trait.id);
-                            setNewArticleDoc({
-                              ...newArticleDoc,
-                              selectedMetrics: isSelected 
-                                ? newArticleDoc.selectedMetrics.filter(t => t !== trait.id)
-                                : [...newArticleDoc.selectedMetrics, trait.id]
-                            });
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                            newArticleDoc.selectedMetrics.includes(trait.id)
-                              ? 'bg-slate-900 text-white'
-                              : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-300'
-                          }`}
-                        >
-                          {trait.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 flex justify-between">
+                    <span>文稿正文 (支持智能解析)</span>
+                    <span className="text-slate-400 font-medium normal-case">使用 "---" 或 "[画面：...]" 分隔环节</span>
+                  </label>
+                  <textarea 
+                    value={newArticleDoc.content}
+                    onChange={e => setNewArticleDoc({...newArticleDoc, content: e.target.value})}
+                    placeholder="[画面：开场标题]&#10;这是第一页的内容...&#10;[备注：这里语速要慢]&#10;&#10;---&#10;&#10;[画面：核心数据]&#10;这是第二页的内容..."
+                    className="w-full h-[400px] px-6 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-mono leading-relaxed resize-none transition-all"
+                  />
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                <button onClick={() => setIsAddingArticle(false)} className="px-6 py-3 text-slate-500 font-bold">取消</button>
-                <button 
-                  onClick={handleCreateFromDoc}
-                  className="px-8 py-3 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" /> 生成并保存
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-auto flex flex-col gap-8">
-          <section>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <FileText className="w-3 h-3" /> 演示备注 / 口播稿
-            </h3>
-            <div className="prose prose-slate prose-sm text-slate-500 leading-relaxed font-serif italic text-lg whitespace-pre-wrap">
-              {currentSlide?.notes || "无演示备注。"}
-            </div>
-          </section>
-
-          <section className="pt-8 border-t border-slate-100">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Sparkles className="w-3 h-3" /> 本次演示关联资产
-            </h3>
-            
-            <div className="space-y-4">
-              {/* Tags Cards */}
-              {getSelectedTagData().map(tag => (
-                <div key={tag.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200/50 relative overflow-hidden group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TagIcon className="w-3 h-3 text-slate-400" />
-                      <span className="text-sm font-bold text-slate-800">{tag.name}</span>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 bg-white text-slate-400 rounded-lg border border-slate-100 font-mono">TAG</span>
+              <div className="flex flex-col gap-10">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <TagIcon className="w-3 h-3" /> 引用系统标签 (Tag Assets)
+                  </label>
+                  <div className="flex flex-wrap gap-2.5 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] max-h-60 overflow-y-auto no-scrollbar">
+                    {availableTags.map(tag => (
+                      <button
+                        key={tag.id}
+                        onClick={() => {
+                          const isSelected = newArticleDoc.selectedTags.includes(tag.name);
+                          setNewArticleDoc({
+                            ...newArticleDoc,
+                            selectedTags: isSelected 
+                              ? newArticleDoc.selectedTags.filter(t => t !== tag.name)
+                              : [...newArticleDoc.selectedTags, tag.name]
+                          });
+                        }}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                          newArticleDoc.selectedTags.includes(tag.name)
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200'
+                            : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        {tag.name}
+                      </button>
+                    ))}
                   </div>
-                  <p className="text-xs text-slate-500 leading-relaxed italic line-clamp-3">
-                    "{tag.description || '暂无详细描述数据'}"
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Trophy className="w-3 h-3" /> 引用关键指标 (Metrics Assets)
+                  </label>
+                  <div className="flex flex-wrap gap-2.5 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] max-h-60 overflow-y-auto no-scrollbar">
+                    {availableTraits.map(trait => (
+                      <button
+                        key={trait.id}
+                        onClick={() => {
+                          const isSelected = newArticleDoc.selectedMetrics.includes(trait.id);
+                          setNewArticleDoc({
+                            ...newArticleDoc,
+                            selectedMetrics: isSelected 
+                              ? newArticleDoc.selectedMetrics.filter(t => t !== trait.id)
+                              : [...newArticleDoc.selectedMetrics, trait.id]
+                            });
+                        }}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${
+                          newArticleDoc.selectedMetrics.includes(trait.id)
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200'
+                            : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        {trait.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-auto bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                  <div className="flex items-center gap-3 text-blue-900 font-bold text-sm mb-2">
+                    <Sparkles className="w-5 h-5 text-blue-400" />
+                    智能解析提示
+                  </div>
+                  <p className="text-blue-700/60 text-xs leading-relaxed">
+                    系统将自动识别标题、列表、公式等不同版式。在文本最后添加 <code className="bg-blue-100 px-1 rounded">[备注：...]</code> 可自动同步到口播稿中。
                   </p>
-                  <div className="absolute right-0 bottom-0 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <TagIcon className="w-12 h-12 translate-x-4 translate-y-4" />
-                  </div>
                 </div>
-              ))}
-
-              {/* Metrics Cards */}
-              {getSelectedMetricData().map(trait => (
-                <div key={trait.id} className="bg-slate-900 p-4 rounded-2xl border border-white/5 relative overflow-hidden group">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="w-3 h-3 text-amber-400" />
-                      <span className="text-sm font-bold text-white">{trait.label}</span>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 bg-white/10 text-white/40 rounded-lg font-mono tracking-tighter">METRIC</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[9px] text-white/30 font-bold uppercase">
-                    分类: {trait.category}
-                  </div>
-                  <div className="absolute right-0 bottom-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Trophy className="w-12 h-12 translate-x-4 translate-y-4 text-white" />
-                  </div>
-                </div>
-              ))}
-
-              {getSelectedTagData().length === 0 && getSelectedMetricData().length === 0 && (
-                <div className="py-12 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-100 rounded-3xl gap-2">
-                  <Sparkles className="w-8 h-8 opacity-20" />
-                  <span className="text-[10px] uppercase font-bold tracking-widest">未发现关联数据内容</span>
-                </div>
-              )}
+              </div>
             </div>
-          </section>
-        </div>
 
-        <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative group shrink-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-3xl group-hover:scale-150 transition-transform duration-1000" />
-          <h4 className="text-sm font-bold mb-2">当前主题</h4>
-          <p className="text-xs text-white/60 mb-4">{currentSlide.title}</p>
-          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-slate-400 transition-all duration-500" 
-              style={{ width: `${((currentSlideIndex + 1) / currentArticle.slides.length) * 100}%` }} 
-            />
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-6 items-center">
+              <span className="text-xs text-slate-400 font-medium">准备好开始你的创作了吗？</span>
+              <button 
+                onClick={handleCreateFromDoc}
+                className="px-10 py-4 bg-slate-900 text-white font-black text-sm rounded-2xl shadow-2xl shadow-slate-300 hover:bg-slate-800 hover:-translate-y-0.5 transition-all flex items-center gap-3"
+              >
+                <Save className="w-5 h-5" /> 生成并进入工作台
+              </button>
+            </div>
           </div>
         </div>
-      </aside>
+      )}
     </div>
   );
 };

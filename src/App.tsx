@@ -813,8 +813,18 @@ export default function App() {
           <TheoryPresentation 
             availableTags={tags} 
             availableTraits={[
-              ...SURVIVOR_TRAITS_MODERN_TEMPLATE.flatMap(cat => cat.items.map(item => ({ id: item.label, label: item.label, category: cat.category as any }))),
-              ...HUNTER_TRAITS_TEMPLATE.flatMap(cat => cat.items.map(item => ({ id: item.label, label: item.label, category: cat.category as any })))
+              ...SURVIVOR_TRAITS_MODERN_TEMPLATE.flatMap(cat => cat.items.map(item => ({ 
+                id: `Survivor:${cat.category}:${item.label}`, 
+                label: item.label, 
+                category: cat.category as any,
+                role: 'Survivor' as const
+              }))),
+              ...HUNTER_TRAITS_TEMPLATE.flatMap(cat => cat.items.map(item => ({ 
+                id: `Hunter:${cat.category}:${item.label}`, 
+                label: item.label, 
+                category: cat.category as any,
+                role: 'Hunter' as const
+              })))
             ]}
           />
         )}
