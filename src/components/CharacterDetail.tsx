@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { Character, COLORS, Tag, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { Shield, Zap, Heart, Users, Search, Activity, Target, Layers, Cpu, Edit3, Trash2, Save, X, Plus, Clock, Tag as TagIcon, Download, FileText, Copy, LogOut } from 'lucide-react';
 import { CharacterTraitCategory } from '../constants';
-import { exportCharacterCardToMarkdown } from '../services/exportService';
+import { exportCharacterCardToMarkdown, sanitizeFileName } from '../services/exportService';
 
 type DetailTab = 'traits' | 'external' | 'mechanics';
 
@@ -561,7 +561,10 @@ export const CharacterDetail = ({
               <div className="mt-8 flex justify-between items-center">
                 <div className="flex gap-4 flex-1 max-w-2xl">
                   <button 
-                    onClick={() => exportCharacterCardToMarkdown(character, availableTags)}
+                    onClick={() => {
+                      const fileName = exportCharacterCardToMarkdown(character, availableTags);
+                      alert(`角色资料卡导出成功！\n- 角色: ${character.title} ${character.name}\n- 文件名: ${fileName}`);
+                    }}
                     className="flex-1 py-3 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" /> 导出为 Markdown_MD
@@ -573,9 +576,12 @@ export const CharacterDetail = ({
                       const url = URL.createObjectURL(blob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = `${character.title}_${character.name}_档案.json`;
+                      const rawName = `${character.title}_${character.name}_档案.json`;
+                      const safeName = sanitizeFileName(rawName);
+                      link.download = safeName;
                       link.click();
                       URL.revokeObjectURL(url);
+                      alert(`角色 JSON 导出成功！\n- 角色: ${character.title} ${character.name}\n- 文件名: ${safeName}`);
                     }}
                     className="flex-1 py-3 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
                   >

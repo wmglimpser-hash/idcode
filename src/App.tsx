@@ -16,6 +16,7 @@ import { BulkImport } from './components/BulkImport';
 import { WikiSearch } from './components/WikiSearch';
 import { WallpaperManager } from './components/WallpaperManager';
 import { AIAssistant } from './components/AIAssistant';
+import { TheoryPresentation } from './components/TheoryPresentation';
 import { 
   collection, 
   addDoc, 
@@ -34,7 +35,7 @@ import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User 
 import { Skull, Map as MapIcon, ShieldCheck, Swords, Plus, Book, Search, LogIn, LogOut, User as UserIcon, Edit3, Settings, Sun, Moon, Trophy, ChevronLeft, ChevronRight, RefreshCcw, Network, FileJson, Zap, Trash2 } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'tags';
+type Tab = 'survivors' | 'hunters' | 'maps' | 'wiki' | 'leaderboard' | 'talents' | 'tags' | 'theory';
 
 export default function App() {
   const [characters, setCharacters] = useState<Character[]>(MOCK_CHARACTERS);
@@ -221,6 +222,9 @@ export default function App() {
     }
 
     let successCount = 0;
+    const failedItems: string[] = [];
+    const successItems: string[] = [];
+
     for (const update of updates) {
       try {
         await updateDoc(doc(db, 'characters', update.id), {
@@ -228,12 +232,21 @@ export default function App() {
           lastUpdated: serverTimestamp()
         });
         successCount++;
-      } catch (e) {
+        successItems.push(update.name);
+      } catch (e: any) {
         console.error(`Sync failed for ${update.name}`, e);
+        failedItems.push(`${update.name} (${e.message})`);
       }
     }
 
-    alert(`同步完成！\n- 更新了 ${successCount} 个角色\n- 修改名单：${updates.map(u => u.name).join(', ')}`);
+    let report = `同步完成！\n- 成功更新: ${successCount} 个角色`;
+    if (failedItems.length > 0) {
+      report += `\n- 失败: ${failedItems.length} 个角色\n- 失败名单: ${failedItems.join(', ')}`;
+    }
+    if (successCount > 0) {
+      report += `\n- 修改成功名单: ${successItems.join(', ')}`;
+    }
+    alert(report);
   };
 
   const handleLogin = async () => {
@@ -262,6 +275,7 @@ export default function App() {
     { id: 'maps', label: '地图', icon: <MapIcon className="w-4 h-4" /> },
     { id: 'tags', label: '标签系统', icon: <Settings className="w-4 h-4" /> },
     { id: 'talents', label: '天赋系统', icon: <Network className="w-4 h-4" /> },
+    { id: 'theory', label: '理论演示', icon: <Zap className="w-4 h-4" /> },
   ];
 
   const handleUpdateCharacter = async (charId: string, data: Partial<Character>) => {
@@ -320,7 +334,7 @@ export default function App() {
         onConfirm: () => {},
         type: 'info'
       });
-      const backupFile = await createBackup(action);
+      const backupResult = await createBackup(action);
       setConfirmModal(prev => ({ ...prev, show: false }));
 
       if (Array.isArray(charData)) {
@@ -332,6 +346,9 @@ export default function App() {
         const addedTagsCount = await bulkSyncTags(allTagsToSync, user?.uid || 'unknown');
         
         let successCount = 0;
+        const failedItems: string[] = [];
+        const successItems: string[] = [];
+
         for (const data of charData) {
           validateChar(data);
           try {
@@ -352,11 +369,22 @@ export default function App() {
               }, { merge: true });
             }
             successCount++;
-          } catch (err) {
+            successItems.push(data.name || data.title);
+          } catch (err: any) {
             console.error(`Save failed for ${data.name}`, err);
+            failedItems.push(`${data.name || data.title} (${err.message})`);
           }
         }
-        alert(`批量保存完成！\n- 成功处理 ${successCount} 个角色\n- 自动补齐了 ${addedTagsCount} 个缺失标签\n- 备份已导出: ${backupFile}`);
+
+        let report = `批量保存结果：\n- 成功: ${successCount} 个角色\n- 自动补齐标签: ${addedTagsCount} 个`;
+        if (failedItems.length > 0) {
+          report += `\n- 失败: ${failedItems.length} 个角色\n- 失败单: ${failedItems.join(', ')}`;
+        }
+        report += `\n- 备份文件: ${backupResult.fileName}${backupResult.hasFailures ? ' (警告：备份不完整！)' : ''}`;
+        if (backupResult.hasFailures) {
+          report += `\n- 备份失败集合: ${backupResult.failedCollections.join(', ')}`;
+        }
+        alert(report);
       } else {
         // Single character save
         validateChar(charData);
@@ -380,7 +408,13 @@ export default function App() {
             lastUpdated: serverTimestamp()
           });
         }
-        alert(`保存成功！\n- 角色：${charData.name}\n- 备份已导出: ${backupFile}`);
+        
+        let report = `保存成功！\n- 角色：${charData.title} ${charData.name}`;
+        report += `\n- 备份文件: ${backupResult.fileName}${backupResult.hasFailures ? ' (警告：备份不完整！)' : ''}`;
+        if (backupResult.hasFailures) {
+          report += `\n- 备份失败集合: ${backupResult.failedCollections.join(', ')}`;
+        }
+        alert(report);
       }
       
       if (!Array.isArray(charData)) {
@@ -421,7 +455,7 @@ export default function App() {
       onConfirm: async () => {
         try {
           // Backup before deletion
-          const backupFile = await createBackup('delete_character');
+          const backupResult = await createBackup('delete_character');
           
           const isMock = MOCK_CHARACTERS.some(m => m.id === char.id);
           if (isMock) {
@@ -429,7 +463,14 @@ export default function App() {
           } else {
             await deleteDoc(doc(db, 'characters', char.id));
           }
-          alert(`删除成功！\n- 角色：${char.name}\n- 备份已导出: ${backupFile}`);
+          
+          let report = `删除成功！\n- 角色：${char.title} ${char.name}`;
+          report += `\n- 备份文件: ${backupResult.fileName}${backupResult.hasFailures ? ' (警告：备份不完整！)' : ''}`;
+          if (backupResult.hasFailures) {
+            report += `\n- 备份失败集合: ${backupResult.failedCollections.join(', ')}`;
+          }
+          alert(report);
+          
           setSelectedCharacter(null);
           setConfirmModal(prev => ({ ...prev, show: false }));
         } catch (err) {
@@ -461,32 +502,43 @@ export default function App() {
       onConfirm: async () => {
         try {
           // Backup before batch delete
-          const backupFile = await createBackup('batch_delete');
+          const backupResult = await createBackup('batch_delete');
           
           let successCount = 0;
+          const failedIds: string[] = [];
           for (const id of selectedCharacterIds) {
-            const isMock = MOCK_CHARACTERS.some(m => m.id === id);
-            if (isMock) {
-              await setDoc(doc(db, 'characters', id), { deleted: true, lastUpdated: serverTimestamp() });
-            } else {
-              await deleteDoc(doc(db, 'characters', id));
+            try {
+              const charName = characters.find(c => c.id === id)?.name || id;
+              const isMock = MOCK_CHARACTERS.some(m => m.id === id);
+              if (isMock) {
+                await setDoc(doc(db, 'characters', id), { deleted: true, lastUpdated: serverTimestamp() });
+              } else {
+                await deleteDoc(doc(db, 'characters', id));
+              }
+              successCount++;
+            } catch (e: any) {
+              console.error(`Batch delete failed for ${id}`, e);
+              failedIds.push(`${id} (${e.message})`);
             }
-            successCount++;
           }
-          alert(`批量删除完成！\n- 成功删除 ${successCount} 个角色\n- 备份已导出: ${backupFile}`);
+
+          let report = `批量删除完成！\n- 成功删除: ${successCount} 个角色`;
+          if (failedIds.length > 0) {
+            report += `\n- 失败: ${failedIds.length} 个角色\n- 失败名单: ${failedIds.join(', ')}`;
+          }
+          report += `\n- 备份文件: ${backupResult.fileName}${backupResult.hasFailures ? ' (警告：备份不完整！)' : ''}`;
+          if (backupResult.hasFailures) {
+            report += `\n- 备份失败集合: ${backupResult.failedCollections.join(', ')}`;
+          }
+          alert(report);
+          
           setSelectedCharacterIds([]);
           setIsBatchMode(false);
           setSelectedCharacter(null);
           setConfirmModal(prev => ({ ...prev, show: false }));
         } catch (err) {
-          console.error("Batch delete error:", err);
-          setConfirmModal({
-            show: true,
-            title: '删除失败',
-            message: '部分角色删除失败，请检查网络或权限。',
-            onConfirm: () => setConfirmModal(prev => ({ ...prev, show: false })),
-            type: 'info'
-          });
+          console.error("Batch delete summary error:", err);
+          alert("批量删除过程发生系统错误，请检查控制台。");
         }
       }
     });
@@ -732,6 +784,10 @@ export default function App() {
               userProfile={userProfile}
             />
           </div>
+        )}
+
+        {activeTab === 'theory' && (
+          <TheoryPresentation />
         )}
 
         {(activeTab === 'survivors' || activeTab === 'hunters') && (

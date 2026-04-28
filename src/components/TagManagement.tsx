@@ -5,7 +5,7 @@ import { Tag as TagIcon, Plus, Trash2, Save, X, Edit2, Check, Filter, User as Us
 import { User as FirebaseUser } from 'firebase/auth';
 import { Tag, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE, Character, TalentDefinition, CharacterTraitCategory, EXCLUDED_SURVIVOR_TRAITS, EXCLUDED_HUNTER_TRAITS } from '../constants';
 import { renameTagGlobal, deleteTagGlobal } from '../services/tagService';
-import { exportTagMaterialToMarkdown } from '../services/exportService';
+import { exportTagMaterialToMarkdown, exportAllTagMaterialsToMarkdown } from '../services/exportService';
 
 interface TagManagementProps {
   user?: FirebaseUser | null;
@@ -65,19 +65,14 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
       c.presence?.some(p => p.tags?.includes(tag.name))
     );
     const relatedTals = talents.filter(t => t.tags?.includes(tag.name));
-    exportTagMaterialToMarkdown(tag, relatedChars, relatedTals);
+    const fileName = exportTagMaterialToMarkdown(tag, relatedChars, relatedTals);
+    alert(`单标签素材导出成功！\n- 标签: ${tag.name}\n- 文件名: ${fileName}`);
   };
 
   const handleBatchExportTags = () => {
-    tags.forEach(tag => {
-      const relatedChars = characters.filter(c => 
-        c.skills?.some(s => s.tags?.includes(tag.name)) || 
-        c.presence?.some(p => p.tags?.includes(tag.name))
-      );
-      const relatedTals = talents.filter(t => t.tags?.includes(tag.name));
-      exportTagMaterialToMarkdown(tag, relatedChars, relatedTals);
-    });
-    alert(`已触发 ${tags.length} 个标签素材卡的批量导出。`);
+    if (tags.length === 0) return;
+    const fileName = exportAllTagMaterialsToMarkdown(tags, characters, talents);
+    alert(`全量标签素材批量导出成功！\n- 包含标签: ${tags.length} 个\n- 文件名: ${fileName}\n- 每个标签已单独成节，包含索引与详细素材。`);
   };
 
   useEffect(() => {

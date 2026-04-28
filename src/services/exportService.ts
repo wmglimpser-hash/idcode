@@ -1,5 +1,29 @@
 import { Character, Tag, TalentDefinition } from '../constants';
 
+/**
+ * 清洁文件名，去除特殊字符并压缩多余空格
+ */
+export const sanitizeFileName = (input: string): string => {
+  return input
+    .replace(/[\\/:*?"<>|]/g, '_') // 替换 Windows/Linux 禁用字符为下划线
+    .replace(/\s+/g, ' ')          // 压缩多余空格
+    .trim();                       // 去除首尾空格
+};
+
+const downloadMarkdown = (content: string, fileName: string) => {
+  const sanitizedName = sanitizeFileName(fileName);
+  const blob = new Blob([content], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = sanitizedName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  return sanitizedName;
+};
+
 export const exportLeaderboardToMarkdown = (
   title: string,
   role: string,
@@ -32,7 +56,7 @@ export const exportLeaderboardToMarkdown = (
 
   content += `---\n*由 庄园秘典 CODEX 系统自动生成数据素材*\n`;
 
-  downloadMarkdown(content, `leaderboard_${role}_${traitLabel.replace(/\s+/g, '_')}_${Date.now()}.md`);
+  return downloadMarkdown(content, `leaderboard_${role}_${traitLabel}_${Date.now()}.md`);
 };
 
 export const exportCharacterCardToMarkdown = (character: Character, availableTags: Tag[] = []) => {
@@ -85,7 +109,48 @@ export const exportCharacterCardToMarkdown = (character: Character, availableTag
 
   content += `---\n*由 庄园秘典 CODEX 系统自动生成数据素材*\n`;
 
-  downloadMarkdown(content, `character_card_${character.title}_${character.name}_${Date.now()}.md`);
+  return downloadMarkdown(content, `character_card_${character.title}_${character.name}_${Date.now()}.md`);
+};
+
+const generateTagMaterialSection = (
+  tag: Tag,
+  relatedCharacters: Character[],
+  relatedTalents: TalentDefinition[]
+): string => {
+  let content = `## 标签: ${tag.name}\n\n`;
+  content += `- **标签ID**: ${tag.id}\n`;
+  content += `- **适用阵营**: ${tag.affectedRole}\n`;
+  content += `- **关联角色数**: ${relatedCharacters.length}\n`;
+  content += `- **关联天赋数**: ${relatedTalents.length}\n\n`;
+
+  if (relatedCharacters.length > 0) {
+    content += `### 角色技能描述\n\n`;
+    relatedCharacters.forEach(char => {
+      let charSkills = '';
+      char.skills?.forEach(s => {
+        if (s.tags?.includes(tag.name)) {
+          charSkills += `#### 外在特质: ${s.name}\n> ${s.description}\n\n`;
+        }
+      });
+      char.presence?.forEach(p => {
+        if (p.tags?.includes(tag.name)) {
+          charSkills += `#### 存在感能力: ${p.name}\n> ${p.description}\n\n`;
+        }
+      });
+      if (charSkills) {
+        content += `#### [角色] ${char.title} ${char.name}\n${charSkills}`;
+      }
+    });
+  }
+
+  if (relatedTalents.length > 0) {
+    content += `### 天赋描述\n\n`;
+    relatedTalents.forEach(t => {
+      content += `#### [天赋] ${t.name}\n> ${t.description}\n\n`;
+    });
+  }
+
+  return content + `\n---\n`;
 };
 
 export const exportTagMaterialToMarkdown = (
@@ -96,48 +161,40 @@ export const exportTagMaterialToMarkdown = (
   const timestamp = new Date().toLocaleString();
   let content = `# 标签原始素材卡: ${tag.name}\n\n`;
   content += `- **导出时间**: ${timestamp}\n`;
-  content += `- **标签ID**: ${tag.id}\n`;
-  content += `- **适用阵营**: ${tag.affectedRole}\n`;
-  content += `- **关联角色数**: ${relatedCharacters.length}\n`;
-  content += `- **关联天赋数**: ${relatedTalents.length}\n\n`;
+  
+  content += generateTagMaterialSection(tag, relatedCharacters, relatedTalents);
+  content += `\n*由 庄园秘典 CODEX 系统自动生成数据素材*\n`;
 
-  if (relatedCharacters.length > 0) {
-    content += `## 关联角色技能详细描述\n\n`;
-    relatedCharacters.forEach(char => {
-      content += `### ${char.title} ${char.name}\n`;
-      char.skills?.forEach(s => {
-        if (s.tags?.includes(tag.name)) {
-          content += `#### 外在特质: ${s.name}\n> ${s.description}\n\n`;
-        }
-      });
-      char.presence?.forEach(p => {
-        if (p.tags?.includes(tag.name)) {
-          content += `#### 存在感能力: ${p.name}\n> ${p.description}\n\n`;
-        }
-      });
-    });
-  }
-
-  if (relatedTalents.length > 0) {
-    content += `## 命中的天赋描述\n\n`;
-    relatedTalents.forEach(t => {
-      content += `### ${t.name}\n> ${t.description}\n\n`;
-    });
-  }
-
-  content += `---\n*由 庄园秘典 CODEX 系统自动生成数据素材*\n`;
-
-  downloadMarkdown(content, `tag_material_${tag.name}_${Date.now()}.md`);
+  return downloadMarkdown(content, `tag_material_${tag.name}_${Date.now()}.md`);
 };
 
-const downloadMarkdown = (content: string, fileName: string) => {
-  const blob = new Blob([content], { type: 'text/markdown' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+export const exportAllTagMaterialsToMarkdown = (
+  tags: Tag[],
+  characters: Character[],
+  talents: TalentDefinition[]
+) => {
+  const timestamp = new Date().toLocaleString();
+  let content = `# 全量标签素材汇总导出\n\n`;
+  content += `- **导出时间**: ${timestamp}\n`;
+  content += `- **标签总数**: ${tags.length}\n\n`;
+
+  content += `## 标签索引\n\n`;
+  tags.forEach((tag, idx) => {
+    content += `${idx + 1}. [${tag.name}](#标签-${tag.name.replace(/\s+/g, '-')})\n`;
+  });
+  content += `\n---\n\n`;
+
+  tags.forEach(tag => {
+    const relatedChars = characters.filter(c => 
+      c.skills?.some(s => s.tags?.includes(tag.name)) || 
+      c.presence?.some(p => p.tags?.includes(tag.name))
+    );
+    const relatedTalents = talents.filter(t => t.tags?.includes(tag.name));
+    
+    content += generateTagMaterialSection(tag, relatedChars, relatedTalents);
+  });
+
+  content += `\n*由 庄园秘典 CODEX 系统自动生成数据素材*\n`;
+
+  return downloadMarkdown(content, `all_tag_materials_${Date.now()}.md`);
 };

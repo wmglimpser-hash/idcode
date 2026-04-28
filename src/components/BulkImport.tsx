@@ -158,7 +158,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
 
       // 1. Trigger backup before bulk import
       const actionLabel = mode === 'character' ? 'bulk_import_character' : (mode === 'wiki' ? 'bulk_import_wiki' : 'bulk_import_talent');
-      const backupFile = await createBackup(actionLabel);
+      const backupResult = await createBackup(actionLabel);
 
       setProgress({ current: 0, total: data.length });
 
@@ -185,95 +185,115 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
         await bulkSyncTags(allTagsToSync, auth.currentUser?.uid || 'unknown');
       }
 
+      let successCount = 0;
+      const failedItems: string[] = [];
+
       for (let i = 0; i < data.length; i++) {
         const item = data[i];
+        const itemIdentifier = item.title || item.name || `项目 #${i + 1}`;
         
-        if (mode === 'wiki') {
-          if (!item.title) continue;
-          
-          // 1. Create entry
-          const entryRef = await addDoc(collection(db, 'entries'), {
-            title: item.title,
-            type: item.type || 'talent',
-            talentId: item.talentId || null,
-            contentMode: 'text',
-            authorId: auth.currentUser.uid,
-            tags: item.tags || [],
-            lastUpdated: serverTimestamp(),
-          });
-
-          // 2. Create revision
-          const revRef = await addDoc(collection(db, 'revisions'), {
-            entryId: entryRef.id,
-            authorId: auth.currentUser.uid,
-            content: { text: item.content || '暂无内容' },
-            timestamp: serverTimestamp(),
-            status: 'approved',
-            changeSummary: '批量导入',
-          });
-
-          // 3. Link revision
-          await updateDoc(doc(db, 'entries', entryRef.id), {
-            currentRevisionId: revRef.id
-          });
-
-          // 4. Sync tags to global tag system
-          if (item.tags && item.tags.length > 0) {
-            await syncTags(item.tags, 'Both', auth.currentUser.uid);
-          }
-        } else if (mode === 'talent') {
-          // Talent Definition mode
-          const targetRole = item.role || role || 'Survivor';
-          const nodeId = item.nodeId || `gen_${Math.random().toString(36).substr(2, 9)}`;
-          const docId = `${targetRole.toLowerCase()}_${nodeId}`;
-          
-          // Auto-tagging logic
-          const text = ((item.name || '') + (item.description || '')).toLowerCase();
-          const autoTags = DEFAULT_TAG_CONFIG
-            .filter(config => config.keywords.some(k => text.includes(k)))
-            .map(config => config.name);
-          const combinedTags = Array.from(new Set([...(item.tags || []), ...autoTags]));
-
-          // Sync tags to global tag system
-          if (combinedTags.length > 0) {
-            await syncTags(combinedTags, targetRole as any, auth.currentUser.uid);
-          }
-
-          await setDoc(doc(db, 'talent_definitions', docId), {
-            ...item,
-            tags: combinedTags,
-            nodeId: nodeId,
-            role: targetRole,
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-        } else {
-          // Character mode
-          if (!item.name || !item.title) continue;
-          
-          const existing = allCharacters?.find(c => 
-            (item.order && c.order === item.order) || 
-            (c.name === item.name) || 
-            (item.title && c.title === item.title)
-          );
-
-          const characterData = {
-            ...item,
-            lastUpdated: serverTimestamp()
-          };
-
-          if (existing) {
-            await setDoc(doc(db, 'characters', existing.id), characterData, { merge: true });
-          } else {
-            await addDoc(collection(db, 'characters'), {
-              ...characterData,
-              imageUrl: item.imageUrl || `https://picsum.photos/seed/${item.name}/400/600`,
-              skills: item.skills || [{ name: '初始技能', description: '该角色尚未配置详细技能说明。' }]
+        try {
+          if (mode === 'wiki') {
+            if (!item.title) throw new Error("缺少标题");
+            
+            // 1. Create entry
+            const entryRef = await addDoc(collection(db, 'entries'), {
+              title: item.title,
+              type: item.type || 'talent',
+              talentId: item.talentId || null,
+              contentMode: 'text',
+              authorId: auth.currentUser.uid,
+              tags: item.tags || [],
+              lastUpdated: serverTimestamp(),
             });
+
+            // 2. Create revision
+            const revRef = await addDoc(collection(db, 'revisions'), {
+              entryId: entryRef.id,
+              authorId: auth.currentUser.uid,
+              content: { text: item.content || '暂无内容' },
+              timestamp: serverTimestamp(),
+              status: 'approved',
+              changeSummary: '批量导入',
+            });
+
+            // 3. Link revision
+            await updateDoc(doc(db, 'entries', entryRef.id), {
+              currentRevisionId: revRef.id
+            });
+
+            // 4. Sync tags to global tag system
+            if (item.tags && item.tags.length > 0) {
+              await syncTags(item.tags, 'Both', auth.currentUser.uid);
+            }
+          } else if (mode === 'talent') {
+            // Talent Definition mode
+            const targetRole = item.role || role || 'Survivor';
+            const nodeId = item.nodeId || `gen_${Math.random().toString(36).substr(2, 9)}`;
+            const docId = `${targetRole.toLowerCase()}_${nodeId}`;
+            
+            // Auto-tagging logic
+            const text = ((item.name || '') + (item.description || '')).toLowerCase();
+            const autoTags = DEFAULT_TAG_CONFIG
+              .filter(config => config.keywords.some(k => text.includes(k)))
+              .map(config => config.name);
+            const combinedTags = Array.from(new Set([...(item.tags || []), ...autoTags]));
+
+            // Sync tags to global tag system
+            if (combinedTags.length > 0) {
+              await syncTags(combinedTags, targetRole as any, auth.currentUser.uid);
+            }
+
+            await setDoc(doc(db, 'talent_definitions', docId), {
+              ...item,
+              tags: combinedTags,
+              nodeId: nodeId,
+              role: targetRole,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          } else {
+            // Character mode
+            if (!item.name || !item.title) throw new Error("缺少姓名或称号");
+            
+            const existing = allCharacters?.find(c => 
+              (item.order && c.order === item.order) || 
+              (c.name === item.name) || 
+              (item.title && c.title === item.title)
+            );
+
+            const characterData = {
+              ...item,
+              lastUpdated: serverTimestamp()
+            };
+
+            if (existing) {
+              await setDoc(doc(db, 'characters', existing.id), characterData, { merge: true });
+            } else {
+              await addDoc(collection(db, 'characters'), {
+                ...characterData,
+                imageUrl: item.imageUrl || `https://picsum.photos/seed/${item.name}/400/600`,
+                skills: item.skills || [{ name: '初始技能', description: '该角色尚未配置详细技能说明。' }]
+              });
+            }
           }
+          successCount++;
+        } catch (e: any) {
+          console.error(`Import failed for ${itemIdentifier}`, e);
+          failedItems.push(`${itemIdentifier} (${e.message})`);
         }
 
         setProgress(prev => ({ ...prev, current: i + 1 }));
       }
+
+      let report = `批量导入完成！\n- 成功处理: ${successCount} 个项目`;
+      if (failedItems.length > 0) {
+        report += `\n- 失败: ${failedItems.length} 个项目\n- 失败名单: ${failedItems.join(', ')}`;
+      }
+      report += `\n- 备份文件: ${backupResult.fileName}${backupResult.hasFailures ? ' (警告：备份不完整！)' : ''}`;
+      if (backupResult.hasFailures) {
+        report += `\n- 备份失败集合: ${backupResult.failedCollections.join(', ')}`;
+      }
+      alert(report);
 
       onSuccess();
     } catch (err: any) {

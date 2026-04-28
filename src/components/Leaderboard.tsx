@@ -675,15 +675,20 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-end gap-1 text-right">
                       <button
-                        onClick={() => exportLeaderboardToMarkdown(
-                          selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || '未命名',
-                          role,
-                          selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || '',
-                          sortOrder,
-                          factionCharacters.length,
-                          groupedRankedData,
-                          traitRemarks
-                        )}
+                        onClick={() => {
+                          const title = selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || '未命名';
+                          const traitName = selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || '';
+                          const fileName = exportLeaderboardToMarkdown(
+                            title,
+                            role,
+                            traitName,
+                            sortOrder,
+                            factionCharacters.length,
+                            groupedRankedData,
+                            traitRemarks
+                          );
+                          alert(`排行榜数据卡导出成功！\n- 指标: ${traitName}\n- 角色总数: ${factionCharacters.length}\n- 文件名: ${fileName}`);
+                        }}
                         className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all"
                         title="导出 Markdown 数据卡"
                       >
