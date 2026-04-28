@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE } from './constants';
+import { Character, MOCK_CHARACTERS, WikiEntry, SURVIVOR_TRAITS_TEMPLATE, SURVIVOR_TRAITS_MODERN_TEMPLATE, HUNTER_TRAITS_TEMPLATE } from './constants';
 import { bulkSyncTags } from './services/tagService';
 import { createBackup } from './services/backupService';
 import { CharacterForm } from './components/CharacterForm';
@@ -64,6 +64,15 @@ export default function App() {
   // Wiki State
   const [selectedWikiEntry, setSelectedWikiEntry] = useState<WikiEntry | null>(null);
   const [leaderboardTrait, setLeaderboardTrait] = useState<{ role: 'Survivor' | 'Hunter', label: string } | null>(null);
+  const [tags, setTags] = useState<any[]>([]);
+
+  // Fetch Tags
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'tags'), (snapshot) => {
+      setTags(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleViewRanking = (role: 'Survivor' | 'Hunter', label: string) => {
     setLeaderboardTrait({ role, label });
@@ -457,6 +466,13 @@ export default function App() {
           // Backup before deletion
           const backupResult = await createBackup('delete_character');
           
+          if (backupResult.hasFailures && backupResult.failedCollections.includes('characters')) {
+            let errorMsg = `备份失败，删除已中止。\n\n关键集合 'characters' 备份失败，为了数据安全，系统已拦截删除操作。\n\n失败列表: ${backupResult.failedCollections.join(', ')}\n备份文件名: ${backupResult.fileName}`;
+            alert(errorMsg);
+            setConfirmModal(prev => ({ ...prev, show: false }));
+            return;
+          }
+          
           const isMock = MOCK_CHARACTERS.some(m => m.id === char.id);
           if (isMock) {
             await setDoc(doc(db, 'characters', char.id), { deleted: true, lastUpdated: serverTimestamp() });
@@ -503,6 +519,13 @@ export default function App() {
         try {
           // Backup before batch delete
           const backupResult = await createBackup('batch_delete');
+          
+          if (backupResult.hasFailures && backupResult.failedCollections.includes('characters')) {
+            let errorMsg = `备份失败，批量删除已中止。\n\n关键集合 'characters' 备份失败，为了数据安全，系统已拦截删除操作。\n\n失败列表: ${backupResult.failedCollections.join(', ')}\n备份文件名: ${backupResult.fileName}`;
+            alert(errorMsg);
+            setConfirmModal(prev => ({ ...prev, show: false }));
+            return;
+          }
           
           let successCount = 0;
           const failedIds: string[] = [];
@@ -652,8 +675,8 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-4">
-            <div className="flex items-center gap-1 bg-bg/50 p-1 border border-border">
+          <nav className="hidden md:flex items-center gap-2 overflow-x-auto max-w-full no-scrollbar">
+            <div className="flex items-center gap-1 bg-bg/50 p-1 border border-border shrink-0">
               {navItems.map((item) => (
                 <button
                   key={item.id}
@@ -665,7 +688,7 @@ export default function App() {
                     setViewingFactors(null);
                     setViewingExtension(null);
                   }}
-                  className={`px-8 py-2 flex items-center gap-3 transition-all duration-300 relative group overflow-hidden ${
+                  className={`px-3 lg:px-4 xl:px-6 py-2 flex items-center gap-2 transition-all duration-300 relative group overflow-hidden shrink-0 ${
                     activeTab === item.id 
                       ? 'text-accent' 
                       : 'text-muted hover:text-text'
@@ -787,7 +810,13 @@ export default function App() {
         )}
 
         {activeTab === 'theory' && (
-          <TheoryPresentation />
+          <TheoryPresentation 
+            availableTags={tags} 
+            availableTraits={[
+              ...SURVIVOR_TRAITS_MODERN_TEMPLATE.flatMap(cat => cat.items.map(item => ({ id: item.label, label: item.label, category: cat.category as any }))),
+              ...HUNTER_TRAITS_TEMPLATE.flatMap(cat => cat.items.map(item => ({ id: item.label, label: item.label, category: cat.category as any })))
+            ]}
+          />
         )}
 
         {(activeTab === 'survivors' || activeTab === 'hunters') && (

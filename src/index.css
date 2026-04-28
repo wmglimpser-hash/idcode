@@ -95,6 +95,19 @@
   .markdown-body ul {
     @apply list-disc list-inside space-y-1 ml-2;
   }
+
+  /* Fullscreen support */
+  .presentation-container:fullscreen {
+    padding: 2rem;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .presentation-container:fullscreen .aspect-video {
+    flex: 1;
+  }
 }
 
 /* Custom Scrollbar */

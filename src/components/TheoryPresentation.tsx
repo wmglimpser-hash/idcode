@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Maximize2, BookOpen, User, Clock, FileText } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Maximize2, BookOpen, User, Clock, FileText, Plus, Tag as TagIcon, Trophy, X, Save, FilePlus, Sparkles, Search, Info } from 'lucide-react';
+import { Tag } from '../constants';
 
 interface Slide {
   id: string;
@@ -15,6 +16,13 @@ interface TheoryArticle {
   date: string;
   author: string;
   slides: Slide[];
+  relatedTags?: string[]; // Tag names or IDs
+  relatedMetrics?: string[]; // Trait labels/IDs
+}
+
+interface TheoryPresentationProps {
+  availableTags: Tag[];
+  availableTraits: { id: string; label: string; category: string }[];
 }
 
 const MOCK_DATA: TheoryArticle[] = [
@@ -24,6 +32,8 @@ const MOCK_DATA: TheoryArticle[] = [
     series: '纯数据系列 01',
     date: '2024-04-20',
     author: '庄园研究组',
+    relatedTags: ['破译'],
+    relatedMetrics: ['密码机破译时长', '破译触电回退进度'],
     slides: [
       {
         id: 's1',
@@ -114,26 +124,93 @@ const MOCK_DATA: TheoryArticle[] = [
   }
 ];
 
-export const TheoryPresentation: React.FC = () => {
-  const [currentArticle, setCurrentArticle] = useState<TheoryArticle>(MOCK_DATA[0]);
+export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ availableTags, availableTraits }) => {
+  const [articles, setArticles] = useState<TheoryArticle[]>(MOCK_DATA);
+  const [currentArticle, setCurrentArticle] = useState<TheoryArticle>(articles[0]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const slideAreaRef = useRef<HTMLDivElement>(null);
+  const [isAddingArticle, setIsAddingArticle] = useState(false);
+  const [newArticleDoc, setNewArticleDoc] = useState({
+    title: '',
+    series: '',
+    content: '',
+    selectedTags: [] as string[],
+    selectedMetrics: [] as string[]
+  });
+  
+  const presentationContainerRef = useRef<HTMLDivElement>(null);
 
-  const nextSlide = () => {
-    if (currentSlideIndex < currentArticle.slides.length - 1) {
-      setCurrentSlideIndex(currentSlideIndex + 1);
-    }
+  const handleCreateFromDoc = () => {
+    if (!newArticleDoc.title) return;
+
+    // Simple parser: split by "---" for slides
+    const slideTexts = newArticleDoc.content.split('---').map(s => s.trim()).filter(Boolean);
+    const generatedSlides: Slide[] = slideTexts.map((text, idx) => {
+      const lines = text.split('\n');
+      const title = lines[0] || `页面 ${idx + 1}`;
+      const body = lines.slice(1).join('\n') || '暂无详细内容';
+      
+      return {
+        id: `gen-${Date.now()}-${idx}`,
+        title: title,
+        content: (
+          <div className="flex flex-col items-center justify-center h-full text-center p-12">
+            <h2 className="text-3xl font-bold mb-6 text-slate-800">{title}</h2>
+            <p className="text-lg text-slate-500 whitespace-pre-wrap max-w-3xl leading-relaxed">{body}</p>
+          </div>
+        ),
+        notes: "通过文档实验室生成的原始稿件。"
+      };
+    });
+
+    const newArt: TheoryArticle = {
+      id: `art-${Date.now()}`,
+      title: newArticleDoc.title,
+      series: newArticleDoc.series || '实验室草稿',
+      date: new Date().toISOString().split('T')[0],
+      author: '理论编辑器',
+      relatedTags: newArticleDoc.selectedTags,
+      relatedMetrics: newArticleDoc.selectedMetrics,
+      slides: generatedSlides.length > 0 ? generatedSlides : [{
+        id: 'empty',
+        title: '空内容',
+        content: <div className="p-12">文档内容为空</div>,
+        notes: '请检查输入格式'
+      }]
+    };
+
+    setArticles([newArt, ...articles]);
+    setCurrentArticle(newArt);
+    setCurrentSlideIndex(0);
+    setIsAddingArticle(false);
+    setNewArticleDoc({ title: '', series: '', content: '', selectedTags: [], selectedMetrics: [] });
   };
 
-  const prevSlide = () => {
-    if (currentSlideIndex > 0) {
-      setCurrentSlideIndex(currentSlideIndex - 1);
-    }
-  };
+  const nextSlide = useCallback(() => {
+    setCurrentSlideIndex((prev) => Math.min(prev + 1, currentArticle.slides.length - 1));
+  }, [currentArticle.slides.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlideIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Focus element check or other conditions can go here
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        if (e.key === ' ') e.preventDefault(); // Prevent space from scrolling
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nextSlide, prevSlide]);
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
-      slideAreaRef.current?.requestFullscreen();
+      presentationContainerRef.current?.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
@@ -141,34 +218,88 @@ export const TheoryPresentation: React.FC = () => {
 
   const currentSlide = currentArticle.slides[currentSlideIndex];
 
+  // Helper to get real data objects
+  const getSelectedTagData = () => {
+    return availableTags.filter(t => currentArticle.relatedTags?.includes(t.name) || currentArticle.relatedTags?.includes(t.id));
+  };
+
+  const getSelectedMetricData = () => {
+    return availableTraits.filter(t => currentArticle.relatedMetrics?.includes(t.id) || currentArticle.relatedMetrics?.includes(t.label));
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0">
       {/* Sidebar: Article List */}
       <aside className="w-full lg:w-72 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 gap-6">
-        <div>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <BookOpen className="w-3 h-3" /> 内容系列
           </h3>
-          <div className="space-y-2">
-            {MOCK_DATA.map(article => (
-              <button
-                key={article.id}
-                onClick={() => {
-                  setCurrentArticle(article);
-                  setCurrentSlideIndex(0);
-                }}
-                className={`w-full text-left p-4 rounded-2xl transition-all ${
-                  currentArticle.id === article.id 
-                    ? 'bg-slate-900 text-white shadow-lg' 
-                    : 'bg-transparent text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
-                <span className="text-sm font-bold leading-tight">{article.title}</span>
-              </button>
-            ))}
-          </div>
+          <button 
+            onClick={() => setIsAddingArticle(true)}
+            className="p-1.5 hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors rounded-lg"
+            title="输入新文档"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
+        
+        <div className="space-y-2 overflow-y-auto max-h-[300px] lg:max-h-none no-scrollbar">
+          {articles.map(article => (
+            <button
+              key={article.id}
+              onClick={() => {
+                setCurrentArticle(article);
+                setCurrentSlideIndex(0);
+              }}
+              className={`w-full text-left p-4 rounded-2xl transition-all ${
+                currentArticle.id === article.id 
+                  ? 'bg-slate-900 text-white shadow-lg' 
+                  : 'bg-transparent text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
+              <span className="text-sm font-bold leading-tight">{article.title}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* 关联数据区 */}
+        {(currentArticle.relatedTags || currentArticle.relatedMetrics) && (
+          <div className="pt-6 border-t border-slate-100 space-y-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Sparkles className="w-3 h-3" /> 关联研究素材
+            </h3>
+            
+            {currentArticle.relatedTags && (
+              <div className="space-y-2">
+                <span className="text-[10px] text-slate-400 font-bold ml-1">相关标签</span>
+                <div className="flex flex-wrap gap-2">
+                  {currentArticle.relatedTags.map(tag => (
+                    <div key={tag} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold">
+                      <TagIcon className="w-3 h-3" />
+                      {tag}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {currentArticle.relatedMetrics && (
+              <div className="space-y-2">
+                <span className="text-[10px] text-slate-400 font-bold ml-1">关联指标</span>
+                <div className="flex flex-wrap gap-2">
+                  {currentArticle.relatedMetrics.map(m => (
+                    <div key={m} className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-bold">
+                      <Trophy className="w-3 h-3" />
+                      {m}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-slate-400 text-[11px] font-mono">
@@ -184,11 +315,10 @@ export const TheoryPresentation: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col gap-6">
-        {/* Slide Area Container */}
-        <div className="flex-1 flex flex-col gap-4">
+        {/* Fullscreen Wrapper Container */}
+        <div ref={presentationContainerRef} className="presentation-container flex-1 flex flex-col gap-4 bg-[#f8fafc] fullscreen:p-6 lg:fullscreen:p-12">
           <div 
-            ref={slideAreaRef}
-            className="relative w-full aspect-video bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden flex items-center justify-center p-0 transition-all duration-700 ease-in-out"
+            className="flex-1 relative w-full aspect-video bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden flex items-center justify-center p-0 transition-all duration-700 ease-in-out"
           >
             {/* The actual slide content */}
             <div className="w-full h-full animate-in fade-in zoom-in-95 duration-500 overflow-auto">
@@ -205,7 +335,7 @@ export const TheoryPresentation: React.FC = () => {
             <div className="absolute top-6 right-6 flex items-center gap-2 pointer-events-auto">
               <button 
                 onClick={toggleFullScreen}
-                className="p-3 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all"
+                className="p-3 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all border border-slate-100"
                 title="进入演示模式"
               >
                 <Maximize2 className="w-4 h-4" />
@@ -214,7 +344,7 @@ export const TheoryPresentation: React.FC = () => {
           </div>
 
           {/* Controls Footer */}
-          <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-white/40 shadow-sm mt-auto shrink-0">
+          <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-white/40 shadow-sm mt-auto shrink-0 transition-all">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-300 px-4 py-2 border border-slate-100 rounded-2xl mr-2">
                 CODEX 理论引擎 v1.0
@@ -249,17 +379,205 @@ export const TheoryPresentation: React.FC = () => {
         </div>
       </div>
 
-      {/* Sidebar: Notes */}
-      <aside className="w-full lg:w-80 flex flex-col gap-4">
-        <div className="flex-1 bg-slate-50/50 backdrop-blur rounded-3xl border border-slate-100/50 p-8">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-            <FileText className="w-3 h-3" /> 演示备注 / 口播稿
-          </h3>
-          <div className="prose prose-slate prose-sm text-slate-500 leading-relaxed font-serif italic text-lg">
-            {currentSlide.notes}
+      {/* Sidebar: Notes & Related Data */}
+      <aside className="w-full lg:w-96 flex flex-col gap-6">
+        {/* Editor Modal */}
+        {isAddingArticle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
+                    <FilePlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">文档实验室</h3>
+                    <p className="text-xs text-slate-400">导入文本并关联系统数据</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsAddingArticle(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">文章标题</label>
+                      <input 
+                        type="text" 
+                        value={newArticleDoc.title}
+                        onChange={e => setNewArticleDoc({...newArticleDoc, title: e.target.value})}
+                        placeholder="例：解密 01：破译数据"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">系列</label>
+                      <input 
+                        type="text" 
+                        value={newArticleDoc.series}
+                        onChange={e => setNewArticleDoc({...newArticleDoc, series: e.target.value})}
+                        placeholder="例：纯数据系列"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex justify-between">
+                      <span>文档内容</span>
+                      <span>使用 "---" 分隔</span>
+                    </label>
+                    <textarea 
+                      value={newArticleDoc.content}
+                      onChange={e => setNewArticleDoc({...newArticleDoc, content: e.target.value})}
+                      placeholder="标题&#10;内容...&#10;---&#10;下页标题..."
+                      className="w-full h-80 px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 text-sm font-mono resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-2">
+                      <TagIcon className="w-3 h-3" /> 关联系统标签 (排行榜标签)
+                    </label>
+                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl max-h-48 overflow-y-auto">
+                      {availableTags.map(tag => (
+                        <button
+                          key={tag.id}
+                          onClick={() => {
+                            const isSelected = newArticleDoc.selectedTags.includes(tag.name);
+                            setNewArticleDoc({
+                              ...newArticleDoc,
+                              selectedTags: isSelected 
+                                ? newArticleDoc.selectedTags.filter(t => t !== tag.name)
+                                : [...newArticleDoc.selectedTags, tag.name]
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            newArticleDoc.selectedTags.includes(tag.name)
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          {tag.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center gap-2">
+                      <Trophy className="w-3 h-3" /> 关联项目排行榜指标
+                    </label>
+                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl max-h-48 overflow-y-auto">
+                      {availableTraits.map(trait => (
+                        <button
+                          key={trait.id}
+                          onClick={() => {
+                            const isSelected = newArticleDoc.selectedMetrics.includes(trait.id);
+                            setNewArticleDoc({
+                              ...newArticleDoc,
+                              selectedMetrics: isSelected 
+                                ? newArticleDoc.selectedMetrics.filter(t => t !== trait.id)
+                                : [...newArticleDoc.selectedMetrics, trait.id]
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            newArticleDoc.selectedMetrics.includes(trait.id)
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          {trait.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button onClick={() => setIsAddingArticle(false)} className="px-6 py-3 text-slate-500 font-bold">取消</button>
+                <button 
+                  onClick={handleCreateFromDoc}
+                  className="px-8 py-3 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" /> 生成并保存
+                </button>
+              </div>
+            </div>
           </div>
+        )}
+
+        <div className="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-auto flex flex-col gap-8">
+          <section>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <FileText className="w-3 h-3" /> 演示备注 / 口播稿
+            </h3>
+            <div className="prose prose-slate prose-sm text-slate-500 leading-relaxed font-serif italic text-lg whitespace-pre-wrap">
+              {currentSlide?.notes || "无演示备注。"}
+            </div>
+          </section>
+
+          <section className="pt-8 border-t border-slate-100">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Sparkles className="w-3 h-3" /> 本次演示关联资产
+            </h3>
+            
+            <div className="space-y-4">
+              {/* Tags Cards */}
+              {getSelectedTagData().map(tag => (
+                <div key={tag.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200/50 relative overflow-hidden group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <TagIcon className="w-3 h-3 text-slate-400" />
+                      <span className="text-sm font-bold text-slate-800">{tag.name}</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 bg-white text-slate-400 rounded-lg border border-slate-100 font-mono">TAG</span>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed italic line-clamp-3">
+                    "{tag.description || '暂无详细描述数据'}"
+                  </p>
+                  <div className="absolute right-0 bottom-0 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <TagIcon className="w-12 h-12 translate-x-4 translate-y-4" />
+                  </div>
+                </div>
+              ))}
+
+              {/* Metrics Cards */}
+              {getSelectedMetricData().map(trait => (
+                <div key={trait.id} className="bg-slate-900 p-4 rounded-2xl border border-white/5 relative overflow-hidden group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-3 h-3 text-amber-400" />
+                      <span className="text-sm font-bold text-white">{trait.label}</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 bg-white/10 text-white/40 rounded-lg font-mono tracking-tighter">METRIC</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[9px] text-white/30 font-bold uppercase">
+                    分类: {trait.category}
+                  </div>
+                  <div className="absolute right-0 bottom-0 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Trophy className="w-12 h-12 translate-x-4 translate-y-4 text-white" />
+                  </div>
+                </div>
+              ))}
+
+              {getSelectedTagData().length === 0 && getSelectedMetricData().length === 0 && (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-100 rounded-3xl gap-2">
+                  <Sparkles className="w-8 h-8 opacity-20" />
+                  <span className="text-[10px] uppercase font-bold tracking-widest">未发现关联数据内容</span>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
-        <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative group">
+
+        <div className="bg-slate-900 rounded-3xl p-6 text-white overflow-hidden relative group shrink-0">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-3xl group-hover:scale-150 transition-transform duration-1000" />
           <h4 className="text-sm font-bold mb-2">当前主题</h4>
           <p className="text-xs text-white/60 mb-4">{currentSlide.title}</p>
