@@ -122,11 +122,35 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   const [userAssets, setUserAssets] = useState<SlideAsset[]>(() => {
     try {
       const saved = localStorage.getItem('theory_assets');
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const validAssets = parsed.filter(a => 
+            a && typeof a === 'object' && a.id && (a.type === 'image' || a.type === 'icon') && a.name
+          ).map(a => {
+            if (a.type === 'image' && !a.url) return null;
+            if (a.type === 'icon' && !a.iconKey && !a.url) return null;
+            return {
+              ...a,
+              placement: (['hero', 'inline', 'corner'].includes(a.placement)) ? a.placement : 'corner'
+            }
+          }).filter(Boolean) as SlideAsset[];
+          return validAssets;
+        } else {
+          console.warn("Invalid structure in theory_assets");
+          localStorage.removeItem('theory_assets');
+        }
+      }
+    } catch(e) {
+      console.warn("Failed to parse theory_assets", e);
+      localStorage.removeItem('theory_assets');
+    }
     return [];
   });
   const [newAssetUrl, setNewAssetUrl] = useState('');
+  const [newAssetName, setNewAssetName] = useState('');
+  const [newAssetType, setNewAssetType] = useState<'image' | 'icon'>('image');
+  const [newAssetPlacement, setNewAssetPlacement] = useState<'hero' | 'inline' | 'corner'>('hero');
 
   useEffect(() => {
     localStorage.setItem('theory_assets', JSON.stringify(userAssets));
@@ -380,16 +404,16 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   const handleAddUserAsset = () => {
     if (!newAssetUrl) return;
     const newId = `uasset-${Date.now()}`;
-    const isImage = newAssetUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) !== null || newAssetUrl.startsWith('data:image/');
     setUserAssets([...userAssets, {
       id: newId,
-      type: isImage ? 'image' : 'icon',
+      type: newAssetType,
       url: newAssetUrl,
-      name: '网络素材 ' + newId.substring(newId.length - 4),
-      alt: '自定义素材',
-      placement: 'hero'
+      name: newAssetName || ('网络素材 ' + newId.substring(newId.length - 4)),
+      alt: newAssetName || '自定义素材',
+      placement: newAssetPlacement
     }]);
     setNewAssetUrl('');
+    setNewAssetName('');
   };
 
   const handleInsertLeaderboard = (traitLabel: string, role: 'Survivor' | 'Hunter', sortOrder: 'asc' | 'desc', limitGroups: number) => {
@@ -550,10 +574,10 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     return (
       <>
         {slide.assets.filter(a => a.placement === 'hero').map(a => (
-          <div key={a.id} className="absolute inset-8 z-0 opacity-[0.05] pointer-events-none overflow-hidden rounded-3xl flex items-center justify-center pointer-events-none mix-blend-multiply">
+          <div key={a.id} className="absolute inset-8 z-0 opacity-[0.05] pointer-events-none overflow-hidden rounded-3xl flex items-center justify-center mix-blend-multiply">
             {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-[80%] h-[80%] text-slate-900" })}
             {!a.iconKey && a.url && (
-              <img src={a.url} alt={a.alt} className="w-full h-full object-cover filter grayscale" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img src={a.url} alt={a.alt} className="w-full h-full object-cover filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
             )}
           </div>
         ))}
@@ -561,11 +585,34 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           {slide.assets.filter(a => a.placement === 'corner').map(a => (
             <div key={a.id} className="flex items-center justify-center">
               {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-16 h-16 text-slate-800" })}
-              {!a.iconKey && a.url && <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+              {!a.iconKey && a.url && <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />}
             </div>
           ))}
         </div>
       </>
+    );
+  };
+
+  const renderInlineAssets = (slide: Slide) => {
+    if (!slide.assets || slide.assets.length === 0) return null;
+    const inlineAssets = slide.assets.filter(a => a.placement === 'inline');
+    if (inlineAssets.length === 0) return null;
+    
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-6 my-6 relative z-10 w-full shrink-0">
+        {inlineAssets.map(a => (
+          <div key={a.id} className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95">
+            {a.iconKey && IconMap[a.iconKey] ? (
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-800">
+                {React.createElement(IconMap[a.iconKey], { className: "w-8 h-8" })}
+              </div>
+            ) : a.url ? (
+               <img src={a.url} alt={a.alt} className="w-auto h-24 md:h-32 rounded-2xl shadow-sm border border-slate-100 object-contain bg-white p-2" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+            ) : null}
+            <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">{a.name}</span>
+          </div>
+        ))}
+      </div>
     );
   };
 
@@ -582,6 +629,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight relative z-10">
               {slide.title}
             </h1>
+            {renderInlineAssets(slide)}
             <p className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic relative z-10">
               {slide.body}
             </p>
@@ -595,6 +643,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-snug relative z-10">
               {slide.title}
             </h2>
+            {renderInlineAssets(slide)}
             <div className="h-px w-24 bg-white/20 relative z-10" />
             <p className="text-xl text-white/50 max-w-2xl italic font-serif relative z-10">
               {slide.body}
@@ -609,6 +658,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 border-l-8 border-slate-900 pl-6 mb-4 relative z-10">
               {slide.title}
             </h2>
+            {renderInlineAssets(slide)}
             <div className="flex-1 space-y-6 relative z-10">
               {slide.body && <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap">{slide.body}</p>}
               {slide.bullets && (
@@ -637,6 +687,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 </span>
               )}
             </div>
+            {renderInlineAssets(slide)}
             <div className="flex-1 space-y-4 relative z-10">
               {slide.sourceData?.groups ? (
                 slide.sourceData.groups.map((group: any, i: number) => (
@@ -675,6 +726,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className={`${baseClasses}`}>
             {renderAssets(slide)}
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-12 text-center relative z-10">{slide.title}</h2>
+            {renderInlineAssets(slide)}
             <div className="flex-1 flex items-center justify-center gap-8 md:gap-16 relative z-10">
               <div className="flex-1 text-right">
                 <span className="text-4xl md:text-6xl font-bold text-slate-800 tracking-tight">{parts[0]?.trim() || 'A'}</span>
@@ -693,6 +745,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className={`${baseClasses} items-center justify-center text-center`}>
             {renderAssets(slide)}
             <h2 className="text-3xl md:text-4xl font-bold text-slate-400 mb-12 relative z-10">{slide.title}</h2>
+            {renderInlineAssets(slide)}
             <div className="p-8 md:p-12 bg-slate-50 border-2 border-slate-900 rounded-[2rem] shadow-[8px_8px_0_0_#0f172a] transform -rotate-1 hover:rotate-0 transition-all relative z-10">
               <p className="text-4xl md:text-5xl font-mono font-black text-slate-900 tracking-tight leading-tight">
                 {slide.body}
@@ -705,6 +758,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
             {renderAssets(slide)}
             <h2 className="text-4xl font-bold text-slate-900 relative z-10">{slide.title}</h2>
+            {renderInlineAssets(slide)}
             <p className="text-xl text-slate-500 whitespace-pre-wrap relative z-10">{slide.body}</p>
           </div>
         );
@@ -1127,15 +1181,41 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   <div className="flex flex-col gap-2 mb-4">
                     <input 
                       type="text" 
+                      placeholder="素材名称 (选填)..." 
+                      value={newAssetName}
+                      onChange={e => setNewAssetName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs"
+                    />
+                    <input 
+                      type="text" 
                       placeholder="输入图片或图标 URL..." 
                       value={newAssetUrl}
                       onChange={e => setNewAssetUrl(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs"
                     />
+                    <div className="flex gap-2">
+                       <select 
+                         value={newAssetType}
+                         onChange={e => setNewAssetType(e.target.value as 'image' | 'icon')}
+                         className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-2 py-2 text-[10px]"
+                       >
+                         <option value="image">图片 (Image)</option>
+                         <option value="icon">图标 (Icon)</option>
+                       </select>
+                       <select 
+                         value={newAssetPlacement}
+                         onChange={e => setNewAssetPlacement(e.target.value as 'hero' | 'inline' | 'corner')}
+                         className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-2 py-2 text-[10px]"
+                       >
+                         <option value="hero">Hero (背景)</option>
+                         <option value="inline">Inline (正文)</option>
+                         <option value="corner">Corner (角落)</option>
+                       </select>
+                    </div>
                     <button 
                       disabled={!newAssetUrl}
                       onClick={handleAddUserAsset} 
-                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-30 transition-all"
+                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-30 transition-all mt-1"
                     >
                       保存到网络素材库
                     </button>
@@ -1146,9 +1226,14 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       <div key={asset.id} className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl relative group overflow-hidden">
                         <div className="flex items-center gap-3">
                           {asset.type === 'image' && asset.url && (
-                             <img src={asset.url} alt={asset.alt} className="w-8 h-8 object-cover rounded bg-slate-200" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                             <img src={asset.url} alt={asset.alt} className="w-8 h-8 object-cover rounded bg-white border border-slate-200" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
                           )}
-                          {!asset.url && <div className="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-[8px] text-slate-400">NA</div>}
+                          {asset.type === 'icon' && asset.iconKey && IconMap[asset.iconKey] && (
+                             <div className="w-8 h-8 rounded bg-white flex items-center justify-center text-slate-800 border border-slate-200">
+                               {React.createElement(IconMap[asset.iconKey], { className: "w-4 h-4" })}
+                             </div>
+                          )}
+                          {!asset.url && !asset.iconKey && <div className="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-[8px] text-slate-400">NA</div>}
                           <div className="flex-1 min-w-0">
                             <span className="block text-xs font-bold text-slate-700 truncate">{asset.name}</span>
                             <span className="block text-[10px] text-slate-400 truncate font-mono">{asset.type}</span>
