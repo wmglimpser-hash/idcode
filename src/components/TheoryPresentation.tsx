@@ -9,6 +9,16 @@ import { generateLeaderboardData } from '../utils/leaderboardUtils';
 
 type SlideType = 'title' | 'conclusion' | 'list' | 'ranking' | 'compare' | 'formula' | 'summary';
 
+interface SlideAsset {
+  id: string;
+  type: 'icon' | 'image';
+  url?: string;
+  iconKey?: string;
+  name: string;
+  alt: string;
+  placement: 'hero' | 'inline' | 'corner';
+}
+
 interface Slide {
   id: string;
   type: SlideType;
@@ -19,6 +29,7 @@ interface Slide {
   estimatedSeconds?: number;
   sourceType?: 'leaderboard' | 'tag';
   sourceData?: any; // For flexible source storage
+  assets?: SlideAsset[];
 }
 
 interface TheoryArticle {
@@ -92,18 +103,57 @@ const MOCK_DATA: TheoryArticle[] = [
 
 type ViewMode = 'edit' | 'presentation' | 'recording';
 
+const DEFAULT_ICONS = [
+  { iconKey: 'Trophy', name: '数据榜单' },
+  { iconKey: 'TagIcon', name: '分类标签' },
+  { iconKey: 'Zap', name: '公式计算' },
+  { iconKey: 'FileText', name: '文档记录' },
+  { iconKey: 'Clock', name: '时间节点' },
+  { iconKey: 'Monitor', name: '分析对比' },
+  { iconKey: 'Info', name: '提示警示' },
+  { iconKey: 'Sparkles', name: '结论总结' },
+];
+
+const IconMap: Record<string, React.FC<any>> = {
+  Trophy, TagIcon, Zap, FileText, Clock, Monitor, Info, Sparkles
+};
+
 export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characters, talents, availableTags, availableTraits }) => {
+  const [userAssets, setUserAssets] = useState<SlideAsset[]>(() => {
+    try {
+      const saved = localStorage.getItem('theory_assets');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return [];
+  });
+  const [newAssetUrl, setNewAssetUrl] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('theory_assets', JSON.stringify(userAssets));
+  }, [userAssets]);
+
   const [articles, setArticles] = useState<TheoryArticle[]>(() => {
     try {
       const saved = localStorage.getItem('theory_articles');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          const isValid = parsed.every(a => 
+            a && typeof a === 'object' && a.id && typeof a.title === 'string' &&
+            Array.isArray(a.slides) && a.slides.length > 0 &&
+            a.slides.every((s: any) => s && typeof s === 'object' && s.id && s.type && s.title !== undefined)
+          );
+          if (isValid) {
+            return parsed;
+          } else {
+            console.warn("Invalid structure in theory_articles from localStorage");
+            localStorage.removeItem('theory_articles');
+          }
         }
       }
     } catch (err) {
       console.warn("Failed to parse theory_articles from localStorage", err);
+      localStorage.removeItem('theory_articles');
     }
     return MOCK_DATA;
   });
@@ -294,17 +344,80 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
   };
 
-  const handleInsertLeaderboard = (traitLabel: string, role: 'Survivor' | 'Hunter', sortOrder: 'asc' | 'desc', limit: number) => {
-    const { sortedData } = generateLeaderboardData(characters, role, traitLabel, sortOrder);
-    const topData = sortedData.slice(0, limit);
-    const newBody = topData.map(d => `${d.name} (${d.value})`).join('\n');
+  const handleAddAssetToSlide = (assetInfo: any) => {
+    const newSlideAsset: SlideAsset = {
+      id: `asset-${Date.now()}`,
+      type: assetInfo.iconKey ? 'icon' : 'image',
+      url: assetInfo.url,
+      iconKey: assetInfo.iconKey,
+      name: assetInfo.name || '未命名素材',
+      alt: assetInfo.name || '素材图',
+      placement: 'hero'
+    };
+    const currentAssets = currentSlide.assets || [];
+    handleUpdateSlide({
+      ...currentSlide,
+      assets: [...currentAssets, newSlideAsset]
+    });
+  };
+
+  const handleRemoveAssetFromSlide = (assetId: string) => {
+    const currentAssets = currentSlide.assets || [];
+    handleUpdateSlide({
+      ...currentSlide,
+      assets: currentAssets.filter(a => a.id !== assetId)
+    });
+  };
+
+  const handleUpdateAssetPlacement = (assetId: string, placement: 'hero' | 'inline' | 'corner') => {
+    const currentAssets = currentSlide.assets || [];
+    handleUpdateSlide({
+      ...currentSlide,
+      assets: currentAssets.map(a => a.id === assetId ? { ...a, placement } : a)
+    });
+  };
+
+  const handleAddUserAsset = () => {
+    if (!newAssetUrl) return;
+    const newId = `uasset-${Date.now()}`;
+    const isImage = newAssetUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) !== null || newAssetUrl.startsWith('data:image/');
+    setUserAssets([...userAssets, {
+      id: newId,
+      type: isImage ? 'image' : 'icon',
+      url: newAssetUrl,
+      name: '网络素材 ' + newId.substring(newId.length - 4),
+      alt: '自定义素材',
+      placement: 'hero'
+    }]);
+    setNewAssetUrl('');
+  };
+
+  const handleInsertLeaderboard = (traitLabel: string, role: 'Survivor' | 'Hunter', sortOrder: 'asc' | 'desc', limitGroups: number) => {
+    const { groups } = generateLeaderboardData(characters, role, traitLabel, sortOrder);
+    const topGroups = groups.slice(0, limitGroups);
+    
+    if (topGroups.length === 0) {
+      handleUpdateSlide({
+        ...currentSlide,
+        type: 'ranking',
+        body: '暂无该排行榜数据。',
+        sourceType: 'leaderboard',
+        sourceData: { role, metricLabel: traitLabel, sortOrder, limit: limitGroups, groups: [] }
+      });
+      return;
+    }
+
+    const newBody = topGroups.map(g => {
+      const charNames = g.characters.map(c => c.name).join('、');
+      return `第 ${g.rank} 名（${g.value}）：${charNames}`;
+    }).join('\n');
     
     handleUpdateSlide({
       ...currentSlide,
       type: 'ranking',
       body: newBody,
       sourceType: 'leaderboard',
-      sourceData: { role, metricLabel: traitLabel, sortOrder, limit, topData }
+      sourceData: { role, metricLabel: traitLabel, sortOrder, limit: limitGroups, groups: topGroups }
     });
   };
 
@@ -317,19 +430,32 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
 
     let newBody = '';
     if (mode === 'summary') {
-      newBody = `适用阵营：${tag.affectedRole}\n关联角色：${relatedChars.length}名\n关联天赋：${relatedTals.length}个`;
+      newBody = `标签：${tag.name}\n适用阵营：${tag.affectedRole}\n关联属性：${tag.affectedStats?.join(', ') || '无'}\n关联角色：${relatedChars.length}名\n关联天赋：${relatedTals.length}个`;
     } else if (mode === 'characters') {
-      newBody = relatedChars.map(c => `- ${c.title} ${c.name}`).join('\n');
+      const charDetails = relatedChars.map(c => {
+        let skillsInfo = '';
+        c.skills?.forEach(s => {
+          if (s.tags?.includes(tag.name)) skillsInfo += `  - 外在特质 [${s.name}]: ${s.description.substring(0, 50).replace(/\n/g, '')}...\n`;
+        });
+        c.presence?.forEach(p => {
+          if (p.tags?.includes(tag.name)) skillsInfo += `  - 存在感 [${p.name}]: ${p.description.substring(0, 50).replace(/\n/g, '')}...\n`;
+        });
+        return `- ${c.title} ${c.name}\n${skillsInfo}`;
+      });
+      newBody = charDetails.join('\n');
     } else if (mode === 'talents') {
-      newBody = relatedTals.map(t => `- ${t.name}`).join('\n');
+      const talDetails = relatedTals.map(t => {
+        return `- ${t.name}\n  - 描述: ${t.description.substring(0, 60).replace(/\n/g, '')}...${t.effect ? `\n  - 效果: ${t.effect.substring(0, 40).replace(/\n/g, '')}...` : ''}`;
+      });
+      newBody = talDetails.join('\n\n');
     }
 
     handleUpdateSlide({
       ...currentSlide,
-      type: (currentSlide.type !== 'list' && currentSlide.type !== 'summary') ? 'list' : currentSlide.type,
+      type: mode === 'summary' ? 'summary' : 'list',
       body: newBody,
       sourceType: 'tag',
-      sourceData: { tagId: tag.id, tagName: tag.name, insertedMode: mode, relatedChars, relatedTals }
+      sourceData: { tagId: tag.id, tagName: tag.name, insertedMode: mode, relatedCharacters: relatedChars, relatedTalents: relatedTals }
     });
   };
 
@@ -392,7 +518,15 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       md += `## P${idx + 1}: ${slide.title} (${slide.type})\n\n`;
       if (slide.body) md += `${slide.body}\n\n`;
       if (slide.bullets) slide.bullets.forEach(b => md += `- ${b}\n`);
-      md += `\n> **口播备注**：${slide.notes}\n\n---\n\n`;
+      md += `\n> **口播备注**：${slide.notes}\n\n`;
+      if (slide.assets && slide.assets.length > 0) {
+         md += `> **视觉辅助**：\n`;
+         slide.assets.forEach(a => {
+           md += `> - [${a.placement}] ${a.name} (${a.iconKey || a.url})\n`;
+         });
+         md += `\n`;
+      }
+      md += `---\n\n`;
     });
 
     const blob = new Blob([md], { type: 'text/markdown' });
@@ -411,19 +545,44 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     return `${m}分${s}秒`;
   };
 
+  const renderAssets = (slide: Slide) => {
+    if (!slide.assets || slide.assets.length === 0) return null;
+    return (
+      <>
+        {slide.assets.filter(a => a.placement === 'hero').map(a => (
+          <div key={a.id} className="absolute inset-8 z-0 opacity-[0.05] pointer-events-none overflow-hidden rounded-3xl flex items-center justify-center pointer-events-none mix-blend-multiply">
+            {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-[80%] h-[80%] text-slate-900" })}
+            {!a.iconKey && a.url && (
+              <img src={a.url} alt={a.alt} className="w-full h-full object-cover filter grayscale" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            )}
+          </div>
+        ))}
+        <div className="absolute bottom-8 right-8 z-10 flex gap-4 opacity-50 pointer-events-none">
+          {slide.assets.filter(a => a.placement === 'corner').map(a => (
+            <div key={a.id} className="flex items-center justify-center">
+              {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-16 h-16 text-slate-800" })}
+              {!a.iconKey && a.url && <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  };
+
   // Render Slide Content
   const renderSlideContent = (slide: Slide) => {
-    const baseClasses = "flex flex-col h-full p-8 md:p-16 animate-in fade-in slide-in-from-bottom-4 duration-700";
+    const baseClasses = "flex flex-col h-full p-8 md:p-16 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10";
     
     switch (slide.type) {
       case 'title':
         return (
           <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
-            <div className="w-16 h-1 bg-slate-900 mb-4" />
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight">
+            {renderAssets(slide)}
+            <div className="w-16 h-1 bg-slate-900 mb-4 relative z-10" />
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight relative z-10">
               {slide.title}
             </h1>
-            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic">
+            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic relative z-10">
               {slide.body}
             </p>
           </div>
@@ -431,12 +590,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       case 'summary':
         return (
           <div className={`${baseClasses} items-center justify-center text-center bg-slate-900 text-white rounded-[2rem] m-4 gap-8`}>
-            <Sparkles className="w-12 h-12 text-white/20" />
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-snug">
+            {renderAssets(slide)}
+            <Sparkles className="w-12 h-12 text-white/20 relative z-10" />
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-snug relative z-10">
               {slide.title}
             </h2>
-            <div className="h-px w-24 bg-white/20" />
-            <p className="text-xl text-white/50 max-w-2xl italic font-serif">
+            <div className="h-px w-24 bg-white/20 relative z-10" />
+            <p className="text-xl text-white/50 max-w-2xl italic font-serif relative z-10">
               {slide.body}
             </p>
           </div>
@@ -445,10 +605,11 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       case 'conclusion':
         return (
           <div className={`${baseClasses} gap-8`}>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 border-l-8 border-slate-900 pl-6 mb-4">
+            {renderAssets(slide)}
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 border-l-8 border-slate-900 pl-6 mb-4 relative z-10">
               {slide.title}
             </h2>
-            <div className="flex-1 space-y-6">
+            <div className="flex-1 space-y-6 relative z-10">
               {slide.body && <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap">{slide.body}</p>}
               {slide.bullets && (
                 <ul className="space-y-4">
@@ -464,31 +625,87 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           </div>
         );
       case 'ranking':
-        const rankingItems = slide.body?.split('\n').filter(Boolean) || [];
         return (
-          <div className={`${baseClasses} gap-8`}>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">{slide.title}</h2>
-            <div className="flex-1 space-y-4">
-              {rankingItems.map((item, i) => {
-                const [name, rest] = item.split(/[(\-]/);
-                return (
-                  <div key={i} className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md">
+          <div className={`${baseClasses} gap-8 overflow-y-auto no-scrollbar`}>
+            {renderAssets(slide)}
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+              <Trophy className="w-8 h-8 text-amber-400" />
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">{slide.title}</h2>
+              {slide.sourceData?.metricLabel && (
+                <span className="ml-auto px-3 py-1 bg-amber-100 text-amber-800 text-xs font-mono font-bold rounded-full">
+                  {slide.sourceData.metricLabel} {slide.sourceData.sortOrder === 'asc' ? '↑' : '↓'}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 space-y-4 relative z-10">
+              {slide.sourceData?.groups ? (
+                slide.sourceData.groups.map((group: any, i: number) => (
+                  <div key={i} className="flex items-center p-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md animate-in slide-in-from-right-8" style={{ animationDelay: `${i * 100}ms` }}>
                     <div className="flex items-center gap-6">
-                      <span className="text-2xl font-mono font-bold text-slate-200 w-8">{i + 1}</span>
-                      <span className="text-xl font-bold text-slate-800">{name.trim().replace(/^\d+\.\s*/, '')}</span>
+                      <span className="text-3xl font-mono font-black text-amber-200/50 w-12">{group.rank}</span>
+                      <div className="space-x-3">
+                        {group.characters.map((c: any) => (
+                           <span key={c.id} className="inline-block px-4 py-1.5 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-700 shadow-sm">{c.name}</span>
+                        ))}
+                      </div>
                     </div>
-                    {rest && <span className="text-sm font-mono text-slate-400">({rest.replace(/[)]/g, '')}</span>}
+                    <span className="ml-auto text-xl font-mono font-black text-slate-900">{group.value}</span>
                   </div>
-                );
-              })}
+                ))
+              ) : (
+                (slide.body?.split('\n').filter(Boolean) || []).map((item, i) => {
+                  const [name, rest] = item.split(/[(\-]/);
+                  return (
+                    <div key={i} className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md">
+                      <div className="flex items-center gap-6">
+                        <span className="text-2xl font-mono font-bold text-slate-200 w-8">{i + 1}</span>
+                        <span className="text-xl font-bold text-slate-800">{name.trim().replace(/^\d+\.\s*/, '')}</span>
+                      </div>
+                      {rest && <span className="text-sm font-mono text-slate-400">({rest.replace(/[)]/g, '')}</span>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      case 'compare':
+        const parts = slide.body?.split('vs') || [];
+        return (
+          <div className={`${baseClasses}`}>
+            {renderAssets(slide)}
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-12 text-center relative z-10">{slide.title}</h2>
+            <div className="flex-1 flex items-center justify-center gap-8 md:gap-16 relative z-10">
+              <div className="flex-1 text-right">
+                <span className="text-4xl md:text-6xl font-bold text-slate-800 tracking-tight">{parts[0]?.trim() || 'A'}</span>
+              </div>
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                <span className="font-mono font-bold text-slate-400">VS</span>
+              </div>
+              <div className="flex-1 text-left">
+                <span className="text-4xl md:text-6xl font-bold text-slate-400 tracking-tight">{parts[1]?.trim() || 'B'}</span>
+              </div>
+            </div>
+          </div>
+        );
+      case 'formula':
+        return (
+          <div className={`${baseClasses} items-center justify-center text-center`}>
+            {renderAssets(slide)}
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-400 mb-12 relative z-10">{slide.title}</h2>
+            <div className="p-8 md:p-12 bg-slate-50 border-2 border-slate-900 rounded-[2rem] shadow-[8px_8px_0_0_#0f172a] transform -rotate-1 hover:rotate-0 transition-all relative z-10">
+              <p className="text-4xl md:text-5xl font-mono font-black text-slate-900 tracking-tight leading-tight">
+                {slide.body}
+              </p>
             </div>
           </div>
         );
       default:
         return (
           <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
-            <h2 className="text-4xl font-bold text-slate-900">{slide.title}</h2>
-            <p className="text-xl text-slate-500 whitespace-pre-wrap">{slide.body}</p>
+            {renderAssets(slide)}
+            <h2 className="text-4xl font-bold text-slate-900 relative z-10">{slide.title}</h2>
+            <p className="text-xl text-slate-500 whitespace-pre-wrap relative z-10">{slide.body}</p>
           </div>
         );
     }
@@ -765,6 +982,43 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       className="w-full bg-amber-50/50 border border-amber-100 rounded-xl px-4 py-2 text-sm h-32 italic text-amber-900/70"
                     />
                   </div>
+
+                  {/* 视觉素材 (Current Slide) */}
+                  <div className="space-y-3 pt-4 border-t border-slate-100">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center justify-between">
+                      <span>视觉素材管理</span>
+                      <span className="text-slate-300 font-normal normal-case">本页 {currentSlide.assets?.length || 0} 个素材</span>
+                    </label>
+                    {currentSlide.assets && currentSlide.assets.length > 0 ? (
+                      <div className="space-y-2">
+                        {currentSlide.assets.map(a => (
+                          <div key={a.id} className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl animate-in fade-in">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                                {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-3 h-3 text-blue-500" })}
+                                {!a.iconKey && <Monitor className="w-3 h-3 text-indigo-500" />}
+                                {a.name}
+                              </span>
+                              <button onClick={() => handleRemoveAssetFromSlide(a.id)} className="text-red-400 hover:text-red-600 p-1"><X className="w-3 h-3" /></button>
+                            </div>
+                            <select 
+                                value={a.placement}
+                                onChange={(e) => handleUpdateAssetPlacement(a.id, e.target.value as 'hero'|'inline'|'corner')}
+                                className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[10px] font-mono text-slate-500"
+                              >
+                                <option value="hero">Hero (背景图)</option>
+                                <option value="corner">Corner (角落点缀)</option>
+                                <option value="inline">Inline (预留)</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-400 italic text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        请从下方“研究资产引用”面板添加视觉素材
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -848,6 +1102,83 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     <span className="text-[9px] uppercase font-bold tracking-widest">无关联系统数据</span>
                   </div>
                 )}
+
+                {/* Visual Assets Library */}
+                <div className="pt-6 border-t border-slate-100">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">内置系统图标 (图标集)</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DEFAULT_ICONS.map(icon => (
+                      <button 
+                        key={icon.iconKey} 
+                        onClick={() => handleAddAssetToSlide({ iconKey: icon.iconKey, name: icon.name })}
+                        className="flex items-center gap-2 p-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl transition-all group"
+                      >
+                        {React.createElement(IconMap[icon.iconKey], { className: "w-4 h-4 text-slate-400 group-hover:text-slate-900" })}
+                        <span className="text-[10px] font-bold text-slate-600">{icon.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="pt-6 border-t border-slate-100">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
+                    <span>外部网络素材 (自定义)</span>
+                  </h4>
+                  <div className="flex flex-col gap-2 mb-4">
+                    <input 
+                      type="text" 
+                      placeholder="输入图片或图标 URL..." 
+                      value={newAssetUrl}
+                      onChange={e => setNewAssetUrl(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs"
+                    />
+                    <button 
+                      disabled={!newAssetUrl}
+                      onClick={handleAddUserAsset} 
+                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-30 transition-all"
+                    >
+                      保存到网络素材库
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                    {userAssets.map(asset => (
+                      <div key={asset.id} className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl relative group overflow-hidden">
+                        <div className="flex items-center gap-3">
+                          {asset.type === 'image' && asset.url && (
+                             <img src={asset.url} alt={asset.alt} className="w-8 h-8 object-cover rounded bg-slate-200" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                          )}
+                          {!asset.url && <div className="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-[8px] text-slate-400">NA</div>}
+                          <div className="flex-1 min-w-0">
+                            <span className="block text-xs font-bold text-slate-700 truncate">{asset.name}</span>
+                            <span className="block text-[10px] text-slate-400 truncate font-mono">{asset.type}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 relative z-10">
+                           <button 
+                             onClick={() => handleAddAssetToSlide(asset)}
+                             className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded text-[10px] font-bold transition-all shadow-sm"
+                           >
+                             插入当前页面
+                           </button>
+                           <button 
+                             onClick={() => setUserAssets(userAssets.filter(a => a.id !== asset.id))}
+                             className="p-1.5 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded transition-all"
+                             title="删除素材"
+                           >
+                             <Trash2 className="w-3 h-3" />
+                           </button>
+                        </div>
+                      </div>
+                    ))}
+                    {userAssets.length === 0 && (
+                      <div className="text-center py-4 bg-slate-50/50 border border-slate-100 border-dashed rounded-xl">
+                        <span className="text-[10px] text-slate-400 italic">暂无自定义素材</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
           </aside>
