@@ -7,7 +7,7 @@ import {
 import { Tag, Character, TalentDefinition } from '../constants';
 import { generateLeaderboardData } from '../utils/leaderboardUtils';
 
-type SlideType = 'title' | 'conclusion' | 'list' | 'ranking' | 'compare' | 'formula' | 'summary';
+type SlideType = 'title' | 'conclusion' | 'list' | 'ranking' | 'compare' | 'formula' | 'summary' | 'mindmap';
 
 interface SlideAsset {
   id: string;
@@ -98,10 +98,157 @@ const MOCK_DATA: TheoryArticle[] = [
         estimatedSeconds: 12
       }
     ]
+  },
+  {
+    id: 'demo-all-layouts',
+    title: '全版式与资产挂图演示（示例指南）',
+    series: '模板展示',
+    date: '2024-05-04',
+    author: '展示器作者',
+    relatedTags: ['版式', '资产库'],
+    relatedMetrics: [],
+    slides: [
+      {
+        id: 'd1',
+        type: 'title',
+        title: '全版式及挂图展示指南',
+        body: '涵盖标题、列表、对比、公式、结论、排行榜、总结与思维导图8种核心版式，并展示了「背景/内嵌/角标」多种资产挂载形态。',
+        notes: '标题页（Title）：支持在背景挂载Icon或Image做底纹，起基础定调作用。',
+        estimatedSeconds: 12,
+        assets: [
+          {
+            id: 'a1',
+            type: 'icon',
+            iconKey: 'Sparkles',
+            name: '背景闪耀',
+            alt: 'Hero Icon',
+            placement: 'hero'
+          }
+        ]
+      },
+      {
+        id: 'd2',
+        type: 'list',
+        title: '三种不同的资产挂载（Asset Placements）',
+        bullets: [
+          'Hero (背景底层)：平铺在卡片底层做背景装饰，支持纯色去色处理，渲染氛围。',
+          'Inline (内联区域)：直接挂载在主内容区或标题下方，非常适合附加说明图、数据信息统计图。',
+          'Corner (悬停角标)：挂在卡片右下角，半透明展示，适合引述、标识类型。'
+        ],
+        notes: '列表页（List）：通常承载信息最密的条目，配合角标使用。',
+        estimatedSeconds: 20,
+        assets: [
+          {
+            id: 'a2',
+            type: 'icon',
+            iconKey: 'Info',
+            name: '提示角标',
+            alt: 'Info Corner',
+            placement: 'corner'
+          }
+        ]
+      },
+      {
+        id: 'd3',
+        type: 'compare',
+        title: '选择合适的图例',
+        body: '数据可视化截屏 vs 发散抽象画',
+        notes: '对比版式（Compare）：经典的A对B排版，适合展现分歧或抉择。',
+        estimatedSeconds: 15,
+        assets: [
+          {
+            id: 'a3',
+            type: 'image',
+            url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=400&h=200',
+            name: '数据图例',
+            alt: 'Data Chart Image',
+            placement: 'inline'
+          }
+        ]
+      },
+      {
+        id: 'd4',
+        type: 'formula',
+        title: '理论影响力的终极公式',
+        body: 'V = 数据深度 × 视觉感染力²',
+        notes: '公式版式（Formula）：用最霸占屏幕的字号展示理论模型，产生冲击感。搭配了背景全屏资产渲染。',
+        estimatedSeconds: 12,
+        assets: [
+          {
+            id: 'a4',
+            type: 'icon',
+            iconKey: 'Zap',
+            name: '闪电动力',
+            alt: 'Action bg',
+            placement: 'hero'
+          }
+        ]
+      },
+      {
+        id: 'd5',
+        type: 'ranking',
+        title: '阅读焦点获取度排名',
+        notes: '排行榜（Ranking）：自带精美入场动画序列，如果挂载了头像数据可以直接展示头像。',
+        estimatedSeconds: 25,
+        sourceData: {
+          metricLabel: '眼动仪停留比例',
+          sortOrder: 'desc',
+          groups: [
+            { rank: '1', value: '45%', characters: [{id: 'r1', name: '数据图表', imageUrl: 'https://images.unsplash.com/photo-1543286386-713bdd548da4?auto=format&fit=crop&w=100&h=100&q=80'}] },
+            { rank: '2', value: '30%', characters: [{id: 'r2', name: '核心公式', imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=100&h=100&q=80'}] },
+            { rank: '3', value: '15%', characters: [{id: 'r3', name: '总结文段', imageUrl: 'https://images.unsplash.com/photo-1555529733-0e670560f7e1?auto=format&fit=crop&w=100&h=100&q=80'}] }
+          ]
+        }
+      },
+      {
+        id: 'd6',
+        type: 'conclusion',
+        title: '结论（带有统计大图验证）',
+        body: '将关键论据用图片铺在屏幕中央，可以对文字结论产生极好的印证效果，避免了全是文字的疲劳。',
+        notes: '结论版式（Conclusion）：字号可大可小，支持附加图片进行论证说明。',
+        estimatedSeconds: 20,
+        assets: [
+          {
+            id: 'a5',
+            type: 'image',
+            url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600&h=300',
+            name: '统计大图',
+            alt: 'Statistic Evidence',
+            placement: 'inline'
+          }
+        ]
+      },
+      {
+        id: 'd7',
+        type: 'mindmap',
+        title: '演示页面功能树',
+        bullets: ['资产库资源', '版式渲染器', '播放投影控制', 'Markdown 智能解析'],
+        notes: '思维导图版式（Mindmap）：可简单梳理平级逻辑或包含关系。',
+        estimatedSeconds: 15
+      },
+      {
+        id: 'd8',
+        type: 'summary',
+        title: '形式是为了承载更好的内容',
+        body: '期待这套模板能释放你的理论表达能力',
+        notes: '总结版式（Summary）：固定黑底反白设计，气场强，最适合用来作为全篇收尾！',
+        estimatedSeconds: 15,
+        assets: [
+          {
+            id: 'a6',
+            type: 'icon',
+            iconKey: 'Trophy',
+            name: '荣誉总结',
+            alt: 'Trophy final',
+            placement: 'corner'
+          }
+        ]
+      }
+    ]
   }
 ];
 
-type ViewMode = 'edit' | 'presentation' | 'recording';
+type ViewMode = 'edit' | 'presentation';
 
 const DEFAULT_ICONS = [
   { iconKey: 'Trophy', name: '数据榜单' },
@@ -168,6 +315,11 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             a.slides.every((s: any) => s && typeof s === 'object' && s.id && s.type && s.title !== undefined)
           );
           if (isValid) {
+            // migration for new demo draft
+            if (!parsed.some(a => a.id === 'demo-all-layouts')) {
+               const demoDraft = MOCK_DATA.find(a => a.id === 'demo-all-layouts');
+               if (demoDraft) parsed.unshift(demoDraft);
+            }
             return parsed;
           } else {
             console.warn("Invalid structure in theory_articles from localStorage");
@@ -196,6 +348,9 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     selectedMetrics: [] as string[]
   });
 
+  const [isDraftCollapsed, setIsDraftCollapsed] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<'16/9' | '9/16'>('16/9');
+
   // Auto-save articles
   useEffect(() => {
     localStorage.setItem('theory_articles', JSON.stringify(articles));
@@ -216,23 +371,57 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     if (!newArticleDoc.title) return;
 
     // Enhanced parser
-    const sections = newArticleDoc.content.split(/\n---\n|\[画面：/).map(s => s.trim()).filter(Boolean);
-    const generatedSlides: Slide[] = sections.map((section, idx) => {
-      const text = section.endsWith(']') ? section.slice(0, -1) : section;
+    const sections: { title?: string, content: string }[] = [];
+    let currentTitle: string | undefined = undefined;
+    let currentLines: string[] = [];
+    
+    newArticleDoc.content.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed === '---') {
+        if (currentLines.length > 0 || currentTitle) {
+          sections.push({ title: currentTitle, content: currentLines.join('\n') });
+        }
+        currentTitle = undefined;
+        currentLines = [];
+      } else if (trimmed.startsWith('[画面：') && trimmed.endsWith(']')) {
+        if (currentLines.length > 0 || currentTitle) {
+          sections.push({ title: currentTitle, content: currentLines.join('\n') });
+        }
+        currentTitle = trimmed.slice(4, -1);
+        currentLines = [];
+      } else if (trimmed.startsWith('[画面:') && trimmed.endsWith(']')) { // Support half-width colon
+        if (currentLines.length > 0 || currentTitle) {
+          sections.push({ title: currentTitle, content: currentLines.join('\n') });
+        }
+        currentTitle = trimmed.slice(4, -1);
+        currentLines = [];
+      } else {
+        currentLines.push(line);
+      }
+    });
+    if (currentLines.length > 0 || currentTitle) {
+      sections.push({ title: currentTitle, content: currentLines.join('\n') });
+    }
+
+    const validSections = sections.filter(s => s.content.trim() || s.title);
+
+    const generatedSlides: Slide[] = validSections.map((sec, idx) => {
+      const text = sec.content.trim();
       const lines = text.split('\n');
-      const title = lines[0] || `页面 ${idx + 1}`;
-      const body = lines.slice(1).join('\n') || '';
+      const title = sec.title || lines[0] || `页面 ${idx + 1}`;
+      const body = sec.title ? text : lines.slice(1).join('\n');
+      const typeText = (sec.title || '') + '\n' + text;
       
       let type: SlideType = 'list';
       if (idx === 0) type = 'title';
-      else if (idx === sections.length - 1) type = 'summary';
-      else if (text.includes('对比')) type = 'compare';
-      else if (/(排名|排行|TOP|第)/i.test(text)) type = 'ranking';
-      else if (/[=×+x\*]/i.test(text)) type = 'formula';
-      else if (text.length < 50) type = 'conclusion';
+      else if (idx === validSections.length - 1) type = 'summary';
+      else if (typeText.includes('对比')) type = 'compare';
+      else if (/(排名|排行|TOP|第)/i.test(typeText)) type = 'ranking';
+      else if (/[=×+x\*]/i.test(typeText)) type = 'formula';
+      else if (typeText.length < 50) type = 'conclusion';
 
-      const notes = text.match(/\[备注：(.*?)\]/)?.[1] || "自动生成的内容。";
-      const cleanBody = body.replace(/\[备注：.*?\]/g, '').trim();
+      const notes = body.match(/\[备注：(.*?)\]/)?.[1] || body.match(/\[备注:(.*?)\]/)?.[1] || "自动生成的内容。";
+      const cleanBody = body.replace(/\[备注[：:].*?\]/g, '').trim();
 
       // Estimate time: 240 chars per minute = 4 chars per second
       const estimatedSeconds = Math.ceil((title.length + cleanBody.length + notes.length) / 4);
@@ -371,12 +560,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   const handleAddAssetToSlide = (assetInfo: any) => {
     const newSlideAsset: SlideAsset = {
       id: `asset-${Date.now()}`,
-      type: assetInfo.iconKey ? 'icon' : 'image',
+      type: assetInfo.type ?? (assetInfo.iconKey ? 'icon' : 'image'),
       url: assetInfo.url,
       iconKey: assetInfo.iconKey,
       name: assetInfo.name || '未命名素材',
-      alt: assetInfo.name || '素材图',
-      placement: 'hero'
+      alt: assetInfo.alt ?? assetInfo.name ?? '素材图',
+      placement: assetInfo.placement ?? 'hero'
     };
     const currentAssets = currentSlide.assets || [];
     handleUpdateSlide({
@@ -532,42 +721,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     a.click();
   };
 
-  const exportMarkdown = () => {
-    let md = `# ${currentArticle.title}\n\n`;
-    md += `系列：${currentArticle.series}\n`;
-    md += `作者：${currentArticle.author}\n`;
-    md += `日期：${currentArticle.date}\n\n---\n\n`;
-    
-    currentArticle.slides.forEach((slide, idx) => {
-      md += `## P${idx + 1}: ${slide.title} (${slide.type})\n\n`;
-      if (slide.body) md += `${slide.body}\n\n`;
-      if (slide.bullets) slide.bullets.forEach(b => md += `- ${b}\n`);
-      md += `\n> **口播备注**：${slide.notes}\n\n`;
-      if (slide.assets && slide.assets.length > 0) {
-         md += `> **视觉辅助**：\n`;
-         slide.assets.forEach(a => {
-           md += `> - [${a.placement}] ${a.name} (${a.iconKey || a.url})\n`;
-         });
-         md += `\n`;
-      }
-      md += `---\n\n`;
-    });
 
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentArticle.title.replace(/[\\/:*?"<>|]/g, '_')}_口播稿.md`;
-    a.click();
-  };
-
-  // Duration Stats
-  const getTotalSeconds = () => currentArticle.slides.reduce((acc, s) => acc + (s.estimatedSeconds || 0), 0);
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}分${s}秒`;
-  };
 
   const renderAssets = (slide: Slide) => {
     if (!slide.assets || slide.assets.length === 0) return null;
@@ -575,17 +729,29 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       <>
         {slide.assets.filter(a => a.placement === 'hero').map(a => (
           <div key={a.id} className="absolute inset-8 z-0 opacity-[0.05] pointer-events-none overflow-hidden rounded-3xl flex items-center justify-center mix-blend-multiply">
-            {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-[80%] h-[80%] text-slate-900" })}
-            {!a.iconKey && a.url && (
+            {a.type === 'icon' ? (
+              a.iconKey && IconMap[a.iconKey] ? (
+                React.createElement(IconMap[a.iconKey], { className: "w-[80%] h-[80%] text-slate-900" })
+              ) : a.url ? (
+                <img src={a.url} alt={a.alt} className="w-[50%] h-[50%] object-contain filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+              ) : null
+            ) : a.url ? (
               <img src={a.url} alt={a.alt} className="w-full h-full object-cover filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
-            )}
+            ) : null}
           </div>
         ))}
         <div className="absolute bottom-8 right-8 z-10 flex gap-4 opacity-50 pointer-events-none">
           {slide.assets.filter(a => a.placement === 'corner').map(a => (
             <div key={a.id} className="flex items-center justify-center">
-              {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-16 h-16 text-slate-800" })}
-              {!a.iconKey && a.url && <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />}
+              {a.type === 'icon' ? (
+                a.iconKey && IconMap[a.iconKey] ? (
+                  React.createElement(IconMap[a.iconKey], { className: "w-16 h-16 text-slate-800" })
+                ) : a.url ? (
+                  <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+                ) : null
+              ) : a.url ? (
+                <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale border border-slate-200 rounded" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+              ) : null}
             </div>
           ))}
         </div>
@@ -602,9 +768,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       <div className="flex flex-wrap items-center justify-center gap-6 my-6 relative z-10 w-full shrink-0">
         {inlineAssets.map(a => (
           <div key={a.id} className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95">
-            {a.iconKey && IconMap[a.iconKey] ? (
-              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-800">
-                {React.createElement(IconMap[a.iconKey], { className: "w-8 h-8" })}
+            {a.type === 'icon' ? (
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-800 shrink-0">
+                {a.iconKey && IconMap[a.iconKey] ? (
+                  React.createElement(IconMap[a.iconKey], { className: "w-8 h-8" })
+                ) : a.url ? (
+                  <img src={a.url} alt={a.alt} className="w-10 h-10 object-contain" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+                ) : null}
               </div>
             ) : a.url ? (
                <img src={a.url} alt={a.alt} className="w-auto h-24 md:h-32 rounded-2xl shadow-sm border border-slate-100 object-contain bg-white p-2" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
@@ -688,28 +858,34 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
               )}
             </div>
             {renderInlineAssets(slide)}
-            <div className="flex-1 space-y-4 relative z-10">
+            <div className="flex-1 space-y-2 relative z-10">
               {slide.sourceData?.groups ? (
                 slide.sourceData.groups.map((group: any, i: number) => (
-                  <div key={i} className="flex items-center p-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md animate-in slide-in-from-right-8" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div key={i} className="flex items-center py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md animate-in slide-in-from-right-8" style={{ animationDelay: `${i * 100}ms` }}>
                     <div className="flex items-center gap-6">
-                      <span className="text-3xl font-mono font-black text-amber-200/50 w-12">{group.rank}</span>
-                      <div className="space-x-3">
+                      <span className="text-3xl font-mono font-black text-amber-200/50 w-8">{group.rank}</span>
+                      <div className="flex flex-wrap gap-2">
                         {group.characters.map((c: any) => (
-                           <span key={c.id} className="inline-block px-4 py-1.5 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-700 shadow-sm">{c.name}</span>
+                           c.imageUrl ? (
+                             <img key={c.id} src={c.imageUrl} alt={c.name} title={c.name} className="w-28 h-28 rounded-full object-cover shadow-sm border-[3px] border-white bg-slate-100" />
+                           ) : (
+                             <div key={c.id} className="w-28 h-28 rounded-full bg-slate-200 flex items-center justify-center text-xl font-bold text-slate-500 border-[3px] border-white shadow-sm" title={c.name}>
+                               {c.name.slice(0, 2)}
+                             </div>
+                           )
                         ))}
                       </div>
                     </div>
-                    <span className="ml-auto text-xl font-mono font-black text-slate-900">{group.value}</span>
+                    <span className="ml-auto text-3xl font-mono font-black text-slate-900">{group.value}</span>
                   </div>
                 ))
               ) : (
                 (slide.body?.split('\n').filter(Boolean) || []).map((item, i) => {
                   const [name, rest] = item.split(/[(\-]/);
                   return (
-                    <div key={i} className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md">
+                    <div key={i} className="flex items-center justify-between py-3 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md">
                       <div className="flex items-center gap-6">
-                        <span className="text-2xl font-mono font-bold text-slate-200 w-8">{i + 1}</span>
+                        <span className="text-2xl font-mono font-bold text-slate-200 w-6">{i + 1}</span>
                         <span className="text-xl font-bold text-slate-800">{name.trim().replace(/^\d+\.\s*/, '')}</span>
                       </div>
                       {rest && <span className="text-sm font-mono text-slate-400">({rest.replace(/[)]/g, '')}</span>}
@@ -753,6 +929,36 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             </div>
           </div>
         );
+      case 'mindmap':
+        return (
+          <div className={`${baseClasses} items-center justify-center bg-slate-50`}>
+            {renderAssets(slide)}
+            <h2 className="text-xl text-slate-400 font-bold mb-8 tracking-widest uppercase relative z-10">思维导图</h2>
+            <div className="relative z-10 w-full flex items-center justify-center overflow-x-auto py-8 flex-1">
+              <div className="flex items-center gap-12">
+                <div className="px-8 py-6 bg-slate-900 text-white rounded-[2rem] shadow-xl z-20 relative min-w-[200px] text-center border-4 border-slate-50">
+                  <span className="text-2xl font-bold block">{slide.title}</span>
+                </div>
+                {slide.bullets && slide.bullets.length > 0 && (
+                  <div className="flex flex-col gap-6 relative">
+                    <div className="absolute -left-12 top-[50%] bottom-[50%] w-12 border-t-2 border-slate-300 -translate-y-[1px]" />
+                    <div className="absolute -left-12 top-0 bottom-0 border-l-2 border-slate-300 transform translate-y-1/2 -translate-y-1/2" style={{ height: 'calc(100% - 4.5rem)', top: '2.25rem' }} />
+                    {slide.bullets.map((bullet, idx) => (
+                      <div key={idx} className="relative flex items-center pl-12">
+                        <div className="absolute left-0 w-12 border-t-2 border-slate-300 top-1/2 -translate-y-[1px]" />
+                        <div className="px-6 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm z-20 whitespace-nowrap">
+                          <span className="text-lg font-medium text-slate-800">{bullet}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {renderInlineAssets(slide)}
+            {slide.body && <p className="mt-8 text-slate-500 max-w-2xl text-center relative z-10">{slide.body}</p>}
+          </div>
+        );
       default:
         return (
           <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
@@ -775,20 +981,18 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   };
 
   return (
-    <div className={`flex flex-col gap-6 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0 ${viewMode === 'recording' ? 'fixed inset-0 z-[100] bg-black p-0' : ''}`}>
+    <div className={`flex flex-col gap-6 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0`}>
       {/* Top Header Mode Switcher */}
-      {viewMode !== 'recording' && (
-        <div className="flex items-center justify-between bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-6">
-            <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 flex items-center gap-2">
-              <Zap className="w-4 h-4" /> 理论演示工作台
-            </h2>
-            <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100">
-              {[
-                { id: 'edit', label: '制作模式', icon: <Edit className="w-3 h-3" /> },
-                { id: 'presentation', label: '演示模式', icon: <Monitor className="w-3 h-3" /> },
-                { id: 'recording', label: '录制模式', icon: <Video className="w-3 h-3" /> }
-              ].map(mode => (
+      <div className="flex items-center justify-between bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-6">
+          <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 flex items-center gap-2">
+            <Zap className="w-4 h-4" /> 理论演示工作台
+          </h2>
+          <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100">
+            {[
+              { id: 'edit', label: '制作模式', icon: <Edit className="w-3 h-3" /> },
+              { id: 'presentation', label: '演示模式', icon: <Monitor className="w-3 h-3" /> },
+            ].map(mode => (
                 <button
                   key={mode.id}
                   onClick={() => setViewMode(mode.id as ViewMode)}
@@ -810,43 +1014,39 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             >
               <Download className="w-3 h-3" /> 下载 JSON
             </button>
-            <button 
-              onClick={exportMarkdown}
-              className="px-4 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 hover:text-slate-900 rounded-lg flex items-center gap-2"
-            >
-              <FilePlus className="w-3 h-3" /> 导出口播稿
-            </button>
           </div>
         </div>
-      )}
+      {/* End Header */}
 
-      {viewMode === 'recording' && (
-        <button 
-          onClick={() => setViewMode('edit')}
-          className="fixed top-6 right-6 z-[110] px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur text-white text-[10px] font-bold rounded-full transition-all flex items-center gap-2 opacity-0 hover:opacity-100"
-        >
-          <X className="w-3 h-3" /> 退出录屏模式
-        </button>
-      )}
-
-      <div className={`flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden ${viewMode === 'recording' ? 'h-full bg-black' : ''}`}>
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
         {/* Sidebar: Article List */}
         {viewMode === 'edit' && (
-          <aside className="w-full lg:w-72 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 gap-6 shrink-0">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <BookOpen className="w-3 h-3" /> 我的草稿箱
-              </h3>
-              <button 
-                onClick={() => setIsAddingArticle(true)}
-                className="p-1.5 bg-slate-900 text-white rounded-lg hover:scale-105 transition-all"
-                title="导入新文稿"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+          <aside className={`flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 gap-6 shrink-0 transition-all duration-300 ${isDraftCollapsed ? 'w-24 items-center' : 'w-full lg:w-72'}`}>
+            <div className="flex items-center justify-between w-full">
+              {!isDraftCollapsed && (
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <BookOpen className="w-3 h-3" /> 我的草稿箱
+                </h3>
+              )}
+              <div className={`flex items-center ${isDraftCollapsed ? 'flex-col gap-4' : 'gap-2'}`}>
+                <button 
+                  onClick={() => setIsAddingArticle(true)}
+                  className="p-1.5 bg-slate-900 text-white rounded-lg hover:scale-105 transition-all flex items-center justify-center shrink-0"
+                  title="导入新文稿"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setIsDraftCollapsed(!isDraftCollapsed)}
+                  className="p-1.5 border border-slate-200 text-slate-400 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center shrink-0"
+                  title={isDraftCollapsed ? "展开草稿箱" : "收起草稿箱"}
+                >
+                  {isDraftCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             
-            <div className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
+            <div className="flex-1 space-y-2 overflow-y-auto no-scrollbar w-full">
               {articles.map(article => (
                 <div key={article.id} className="group relative">
                   <button
@@ -854,14 +1054,21 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       setCurrentArticle(article);
                       setCurrentSlideIndex(0);
                     }}
-                    className={`w-full text-left p-4 rounded-2xl transition-all ${
+                    className={`w-full text-left p-4 rounded-2xl transition-all ${isDraftCollapsed ? 'flex justify-center px-1' : ''} ${
                       currentArticle.id === article.id 
                         ? 'bg-slate-900 text-white shadow-lg' 
                         : 'bg-transparent text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-100'
                     }`}
+                    title={isDraftCollapsed ? article.title : undefined}
                   >
-                    <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
-                    <span className="text-sm font-bold leading-tight line-clamp-2">{article.title}</span>
+                    {!isDraftCollapsed ? (
+                      <>
+                        <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
+                        <span className="text-sm font-bold leading-tight line-clamp-2">{article.title}</span>
+                      </>
+                    ) : (
+                      <span className="text-sm font-bold truncate leading-tight w-full text-center">{article.title.slice(0, 2)}</span>
+                    )}
                   </button>
                   <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <button 
@@ -899,46 +1106,105 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
         )}
 
         {/* Main Content Area */}
-        <div className={`flex-1 flex flex-col gap-6 ${viewMode === 'recording' ? 'absolute inset-0 z-10 items-center justify-center bg-black p-0' : ''}`}>
+        <div className={`flex-1 flex flex-col gap-6`}>
+          {viewMode === 'presentation' && (
+            <div className="flex items-center justify-center gap-4 bg-white p-3 rounded-[2rem] border border-slate-100 shadow-sm shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">画面比例</span>
+              <div className="flex bg-slate-50 p-1 rounded-xl">
+                <button
+                  onClick={() => setAspectRatio('16/9')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${aspectRatio === '16/9' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >16:9 横屏</button>
+                <button
+                  onClick={() => setAspectRatio('9/16')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${aspectRatio === '9/16' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >9:16 竖屏</button>
+              </div>
+            </div>
+          )}
           {/* Fullscreen Wrapper Container */}
           <div 
             ref={presentationContainerRef} 
-            className={`flex flex-col ${viewMode === 'recording' 
-              ? 'w-full h-auto max-w-[177.78vh] aspect-video animate-in zoom-in-95 duration-700 shadow-2xl relative' 
-              : 'flex-1 gap-4 bg-[#f8fafc]'}`}
+            className={`flex flex-col flex-1 gap-4 bg-[#f8fafc] w-full mx-auto relative ${viewMode === 'presentation' && aspectRatio === '9/16' ? 'max-w-[45vh]' : ''}`}
           >
-            <div 
-              className={`flex-1 relative w-full h-full bg-white overflow-hidden flex items-center justify-center transition-all duration-700 ease-in-out ${viewMode === 'recording' ? 'rounded-none' : 'rounded-[2.5rem] border border-slate-100 shadow-xl'}`}
-            >
+            {/* Center the slide if in presentation mode */}
+            <div className={`flex-1 flex items-center justify-center w-full h-full relative`}>
+              {viewMode === 'presentation' && (
+                <div className="absolute inset-y-0 left-[-4rem] flex flex-col items-center justify-center gap-4 z-40">
+                  <button 
+                    onClick={prevSlide}
+                    className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-slate-900 shadow-lg transition-all"
+                    title="上一页"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+              {viewMode === 'presentation' && (
+                <div className="absolute inset-y-0 right-[-4rem] flex flex-col items-center justify-center gap-4 z-40">
+                  <button 
+                    onClick={nextSlide}
+                    className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-slate-900 shadow-lg transition-all mb-4"
+                    title="下一页"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                  <button 
+                    onClick={toggleFullScreen}
+                    className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-slate-900 shadow-lg transition-all"
+                    title="全屏预览"
+                  >
+                    <Maximize2 className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+              <div 
+                className={`relative bg-white overflow-hidden flex items-center justify-center transition-all duration-700 ease-in-out ${viewMode === 'presentation' ? 'shadow-2xl rounded-[1rem]' : 'w-full h-full rounded-[2.5rem] border border-slate-100 shadow-xl'} group`}
+                style={viewMode === 'presentation' ? { aspectRatio: aspectRatio === '16/9' ? '16/9' : '9/16', width: '100%', maxHeight: '100%' } : {}}
+              >
               {/* The actual slide content */}
-              <div className="w-full h-full">
+              <div className="w-full h-full relative z-0">
                 {renderSlideContent(currentSlide)}
               </div>
 
+              {/* Click-to-Enlarge / Presentation Navigation Overlay */}
+              {viewMode === 'edit' && (
+                <div className="absolute inset-0 z-20 flex">
+                  <div 
+                    className={`h-full w-full cursor-zoom-in flex items-center justify-start p-4 md:p-8 opacity-0 hover:opacity-100 transition-opacity`}
+                    onClick={(e) => {
+                      setViewMode('presentation');
+                      return;
+                    }}
+                    title={"点击放大查看"}
+                  >
+                  </div>
+                </div>
+              )}
+
               {/* Slide Overlay Info */}
-              {viewMode !== 'recording' && (
-                <>
-                  <div className="absolute bottom-10 left-10 flex items-center gap-4 pointer-events-none">
-                    <span className="px-4 py-2 bg-white/80 backdrop-blur shadow-sm border border-slate-100 rounded-2xl text-xs font-bold tracking-widest text-slate-400">
-                      {currentSlideIndex + 1} / {currentArticle.slides.length}
-                    </span>
-                  </div>
-                  
-                  <div className="absolute top-10 right-10 flex items-center gap-2 pointer-events-auto">
-                    <button 
-                      onClick={toggleFullScreen}
-                      className="p-4 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all border border-slate-100"
-                      title="全屏预览"
-                    >
-                      <Maximize2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </>
+              <div className="absolute bottom-10 left-10 flex items-center gap-4 z-30 pointer-events-none">
+                <span className="px-4 py-2 bg-white/80 backdrop-blur shadow-sm border border-slate-100 rounded-2xl text-xs font-bold tracking-widest text-slate-400">
+                  {currentSlideIndex + 1} / {currentArticle.slides.length}
+                </span>
+              </div>
+              
+              {viewMode === 'edit' && (
+                <div className="absolute top-10 right-10 flex items-center gap-2 z-30 pointer-events-auto">
+                  <button 
+                    onClick={toggleFullScreen}
+                    className="p-4 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all border border-slate-100"
+                    title="全屏预览"
+                  >
+                    <Maximize2 className="w-5 h-5" />
+                  </button>
+                </div>
               )}
             </div>
+          </div>
 
-            {/* Controls Footer */}
-            {viewMode !== 'recording' && (
+          {/* Controls Footer */}
+          {viewMode === 'edit' && (
               <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-[2rem] border border-white/40 shadow-sm mt-auto shrink-0 transition-all">
                 <div className="flex items-center gap-2">
                   {viewMode === 'edit' && (
@@ -982,13 +1248,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
         </div>
 
         {/* Sidebar: Editor / Info */}
-        {viewMode !== 'recording' && (
+        {viewMode === 'edit' && (
           <aside className="w-full lg:w-96 flex flex-col gap-6 overflow-y-auto no-scrollbar">
             {/* Editor Console */}
-            {viewMode === 'edit' && (
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Edit className="w-3 h-3" /> 环节编辑器
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Edit className="w-3 h-3" /> 环节编辑器
                 </h3>
                 
                 <div className="space-y-4">
@@ -1006,6 +1271,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       <option value="formula">公式页 (Formula)</option>
                       <option value="summary">总结页 (Summary)</option>
                       <option value="conclusion">纯文字 (Text)</option>
+                      <option value="mindmap">思维导图 (Mindmap)</option>
                     </select>
                   </div>
 
@@ -1027,85 +1293,45 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm h-32 resize-none"
                     />
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">口播稿 / 专家备注</label>
-                    <textarea 
-                      value={currentSlide.notes}
-                      onChange={(e) => handleUpdateSlide({...currentSlide, notes: e.target.value})}
-                      className="w-full bg-amber-50/50 border border-amber-100 rounded-xl px-4 py-2 text-sm h-32 italic text-amber-900/70"
-                    />
-                  </div>
-
-                  {/* 视觉素材 (Current Slide) */}
-                  <div className="space-y-3 pt-4 border-t border-slate-100">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 flex items-center justify-between">
-                      <span>视觉素材管理</span>
-                      <span className="text-slate-300 font-normal normal-case">本页 {currentSlide.assets?.length || 0} 个素材</span>
-                    </label>
-                    {currentSlide.assets && currentSlide.assets.length > 0 ? (
-                      <div className="space-y-2">
-                        {currentSlide.assets.map(a => (
-                          <div key={a.id} className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl animate-in fade-in">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-700 flex items-center gap-2">
-                                {a.iconKey && IconMap[a.iconKey] && React.createElement(IconMap[a.iconKey], { className: "w-3 h-3 text-blue-500" })}
-                                {!a.iconKey && <Monitor className="w-3 h-3 text-indigo-500" />}
-                                {a.name}
-                              </span>
-                              <button onClick={() => handleRemoveAssetFromSlide(a.id)} className="text-red-400 hover:text-red-600 p-1"><X className="w-3 h-3" /></button>
-                            </div>
-                            <select 
-                                value={a.placement}
-                                onChange={(e) => handleUpdateAssetPlacement(a.id, e.target.value as 'hero'|'inline'|'corner')}
-                                className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[10px] font-mono text-slate-500"
-                              >
-                                <option value="hero">Hero (背景图)</option>
-                                <option value="corner">Corner (角落点缀)</option>
-                                <option value="inline">Inline (预留)</option>
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-slate-400 italic text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
-                        请从下方“研究资产引用”面板添加视觉素材
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
-            )}
-
-            {/* Stats Panel */}
-            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col gap-6">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">录制统计</span>
-                <Clock className="w-4 h-4 text-white/40" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="block text-[10px] text-white/30 font-bold mb-1 uppercase">当前环节</span>
-                  <span className="text-xl font-bold font-mono">{formatTime(currentSlide.estimatedSeconds || 0)}</span>
-                  {(currentSlide.estimatedSeconds || 0) > 45 && (
-                    <span className="block mt-1 text-[8px] text-amber-400 flex items-center gap-1">
-                      <Search className="w-2 h-2" /> 建议精简内容
-                    </span>
-                  )}
-                </div>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="block text-[10px] text-white/30 font-bold mb-1 uppercase">全片时长</span>
-                  <span className="text-xl font-bold font-mono">{formatTime(getTotalSeconds())}</span>
-                  <span className="block mt-1 text-[8px] text-white/20">{currentArticle.slides.length} 个环节</span>
-                </div>
-              </div>
-            </div>
-
+            
             {/* Related Research */}
             <div className="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-auto flex flex-col gap-6">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Sparkles className="w-3 h-3" /> 研究资产引用
               </h3>
+              
+              <div className="flex flex-col gap-2">
+                <select
+                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs font-bold text-slate-600 outline-none focus:border-blue-300"
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const [type, id] = e.target.value.split(':');
+                    const updatedArticle = { ...currentArticle };
+                    if (type === 'tag') {
+                       updatedArticle.relatedTags = Array.from(new Set([...(updatedArticle.relatedTags || []), id]));
+                    } else if (type === 'metric') {
+                       updatedArticle.relatedMetrics = Array.from(new Set([...(updatedArticle.relatedMetrics || []), id]));
+                    }
+                    setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                    e.target.value = '';
+                  }}
+                  value=""
+                >
+                  <option value="">+ 添加可用资产...</option>
+                  <optgroup label="标签 (Tags)">
+                    {availableTags.filter(t => !(currentArticle.relatedTags?.includes(t.name) || currentArticle.relatedTags?.includes(t.id))).map(t => (
+                      <option key={`tag:${t.id}`} value={`tag:${t.name}`}>{t.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="指标排行榜 (Metrics)">
+                    {availableTraits.filter(t => !(currentArticle.relatedMetrics?.includes(t.id) || currentArticle.relatedMetrics?.includes(t.label))).map(t => (
+                      <option key={`metric:${t.id}`} value={`metric:${t.label}`}>{t.label} ({t.role})</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
               
               <div className="space-y-4">
                 {getSelectedTagData().map(tag => (
@@ -1115,7 +1341,19 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <TagIcon className="w-3 h-3 text-blue-400" />
                         <span className="text-xs font-bold text-blue-900">{tag.name}</span>
                       </div>
-                      <span className="text-[10px] text-blue-300 font-mono">TAG</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-blue-300 font-mono">TAG</span>
+                        <button 
+                          onClick={() => {
+                            const updatedArticle = { ...currentArticle, relatedTags: (currentArticle.relatedTags || []).filter(t => t !== tag.name && t !== tag.id) };
+                            setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                          }}
+                          className="text-blue-300 hover:text-red-500 transition-colors"
+                          title="移除资产"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex gap-2 mt-3">
                       <button onClick={() => handleInsertTag(tag, 'summary')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
@@ -1138,7 +1376,19 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <Trophy className="w-3 h-3 text-amber-400" />
                         <span className="text-xs font-bold text-amber-900">{trait.label}</span>
                       </div>
-                      <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
+                        <button 
+                          onClick={() => {
+                            const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(t => t !== trait.label && t !== trait.id) };
+                            setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                          }}
+                          className="text-amber-300 hover:text-red-500 transition-colors"
+                          title="移除资产"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex gap-2 mt-3">
                       <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
@@ -1156,114 +1406,6 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     <span className="text-[9px] uppercase font-bold tracking-widest">无关联系统数据</span>
                   </div>
                 )}
-
-                {/* Visual Assets Library */}
-                <div className="pt-6 border-t border-slate-100">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">内置系统图标 (图标集)</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {DEFAULT_ICONS.map(icon => (
-                      <button 
-                        key={icon.iconKey} 
-                        onClick={() => handleAddAssetToSlide({ iconKey: icon.iconKey, name: icon.name })}
-                        className="flex items-center gap-2 p-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl transition-all group"
-                      >
-                        {React.createElement(IconMap[icon.iconKey], { className: "w-4 h-4 text-slate-400 group-hover:text-slate-900" })}
-                        <span className="text-[10px] font-bold text-slate-600">{icon.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="pt-6 border-t border-slate-100">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
-                    <span>外部网络素材 (自定义)</span>
-                  </h4>
-                  <div className="flex flex-col gap-2 mb-4">
-                    <input 
-                      type="text" 
-                      placeholder="素材名称 (选填)..." 
-                      value={newAssetName}
-                      onChange={e => setNewAssetName(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs"
-                    />
-                    <input 
-                      type="text" 
-                      placeholder="输入图片或图标 URL..." 
-                      value={newAssetUrl}
-                      onChange={e => setNewAssetUrl(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs"
-                    />
-                    <div className="flex gap-2">
-                       <select 
-                         value={newAssetType}
-                         onChange={e => setNewAssetType(e.target.value as 'image' | 'icon')}
-                         className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-2 py-2 text-[10px]"
-                       >
-                         <option value="image">图片 (Image)</option>
-                         <option value="icon">图标 (Icon)</option>
-                       </select>
-                       <select 
-                         value={newAssetPlacement}
-                         onChange={e => setNewAssetPlacement(e.target.value as 'hero' | 'inline' | 'corner')}
-                         className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-2 py-2 text-[10px]"
-                       >
-                         <option value="hero">Hero (背景)</option>
-                         <option value="inline">Inline (正文)</option>
-                         <option value="corner">Corner (角落)</option>
-                       </select>
-                    </div>
-                    <button 
-                      disabled={!newAssetUrl}
-                      onClick={handleAddUserAsset} 
-                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold disabled:opacity-30 transition-all mt-1"
-                    >
-                      保存到网络素材库
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
-                    {userAssets.map(asset => (
-                      <div key={asset.id} className="flex flex-col gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl relative group overflow-hidden">
-                        <div className="flex items-center gap-3">
-                          {asset.type === 'image' && asset.url && (
-                             <img src={asset.url} alt={asset.alt} className="w-8 h-8 object-cover rounded bg-white border border-slate-200" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
-                          )}
-                          {asset.type === 'icon' && asset.iconKey && IconMap[asset.iconKey] && (
-                             <div className="w-8 h-8 rounded bg-white flex items-center justify-center text-slate-800 border border-slate-200">
-                               {React.createElement(IconMap[asset.iconKey], { className: "w-4 h-4" })}
-                             </div>
-                          )}
-                          {!asset.url && !asset.iconKey && <div className="w-8 h-8 rounded bg-slate-200 flex items-center justify-center text-[8px] text-slate-400">NA</div>}
-                          <div className="flex-1 min-w-0">
-                            <span className="block text-xs font-bold text-slate-700 truncate">{asset.name}</span>
-                            <span className="block text-[10px] text-slate-400 truncate font-mono">{asset.type}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 relative z-10">
-                           <button 
-                             onClick={() => handleAddAssetToSlide(asset)}
-                             className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded text-[10px] font-bold transition-all shadow-sm"
-                           >
-                             插入当前页面
-                           </button>
-                           <button 
-                             onClick={() => setUserAssets(userAssets.filter(a => a.id !== asset.id))}
-                             className="p-1.5 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded transition-all"
-                             title="删除素材"
-                           >
-                             <Trash2 className="w-3 h-3" />
-                           </button>
-                        </div>
-                      </div>
-                    ))}
-                    {userAssets.length === 0 && (
-                      <div className="text-center py-4 bg-slate-50/50 border border-slate-100 border-dashed rounded-xl">
-                        <span className="text-[10px] text-slate-400 italic">暂无自定义素材</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
               </div>
             </div>
           </aside>
@@ -1396,7 +1538,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     智能解析提示
                   </div>
                   <p className="text-blue-700/60 text-xs leading-relaxed">
-                    系统将自动识别标题、列表、公式等不同版式。在文本最后添加 <code className="bg-blue-100 px-1 rounded">[备注：...]</code> 可自动同步到口播稿中。
+                    系统将自动识别标题、列表、公式等不同版式。在文本中直接输入所需内容，暂不支持口播稿及备注。
                   </p>
                 </div>
               </div>
