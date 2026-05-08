@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-  ChevronLeft, ChevronRight, Maximize2, BookOpen, User, Clock, FileText, Plus, 
+  ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Maximize2, BookOpen, User, Clock, FileText, Plus, 
   Tag as TagIcon, Trophy, X, Save, FilePlus, Sparkles, Search, Info, 
-  Copy, Trash2, ArrowUp, ArrowDown, Monitor, Video, Edit, Download, Zap
+  Copy, Trash2, ArrowUp, ArrowDown, Monitor, Video, Edit, Download, Zap, Calculator, Layout, List
 } from 'lucide-react';
 import { Tag, Character, TalentDefinition } from '../constants';
-import { generateLeaderboardData } from '../utils/leaderboardUtils';
+import { generateLeaderboardData, extractValue } from '../utils/leaderboardUtils';
+import { toPng } from 'html-to-image';
+import download from 'downloadjs';
 
-type SlideType = 'title' | 'conclusion' | 'list' | 'ranking' | 'compare' | 'formula' | 'summary' | 'mindmap';
+type SlideType = 'title' | 'conclusion' | 'content' | 'ranking' | 'mindmap' | 'summary';
 
 interface SlideAsset {
   id: string;
@@ -17,6 +19,15 @@ interface SlideAsset {
   name: string;
   alt: string;
   placement: 'hero' | 'inline' | 'corner';
+}
+
+interface MindmapBranch {
+  id: string;
+  title: string;
+  children?: string[];
+}
+interface MindmapData {
+  branches: MindmapBranch[];
 }
 
 interface Slide {
@@ -30,6 +41,7 @@ interface Slide {
   sourceType?: 'leaderboard' | 'tag';
   sourceData?: any; // For flexible source storage
   assets?: SlideAsset[];
+  mindmapData?: MindmapData;
 }
 
 interface TheoryArticle {
@@ -48,201 +60,80 @@ interface TheoryPresentationProps {
   talents: TalentDefinition[];
   availableTags: Tag[];
   availableTraits: { id: string; label: string; category: string; role: 'Survivor' | 'Hunter' }[];
+  customMetrics?: { id: string; name: string; traitLabels: string[]; role: 'Survivor' | 'Hunter' }[];
 }
 
 const MOCK_DATA: TheoryArticle[] = [
   {
-    id: 'decoding-01',
-    title: '破译相关数据',
-    series: '纯数据系列 01',
-    date: '2024-04-20',
-    author: '庄园研究组',
-    relatedTags: ['破译'],
-    relatedMetrics: ['密码机破译时长', '破译触电回退进度'],
+    id: 'template-v2',
+    title: '理论演示标准版式指南',
+    series: '官方模板 2.0',
+    date: '2024-05-08',
+    author: '演示助手',
     slides: [
       {
         id: 's1',
         type: 'title',
-        title: '为什么“修机快”不等于“破译收益高”？',
-        body: '效率 vs 收益\n破译速度只是纸面指标，真实的对局收益往往被后期节奏、补电机成本和失误容错率所稀释。',
-        notes: "开场观点：引导读者思考破译速度以外的变量。注意强调'纸面指标'与'对局收益'的对立。",
-        estimatedSeconds: 15
+        title: '为什么您的表达需要“理论版式”？',
+        body: '从混乱的信息到清晰的洞察\n基于 AIGC 辅助演示系统的核心板式展示',
+        notes: "标题页：用于开场定调。建议使用加重的大号字体。",
+        estimatedSeconds: 10,
+        assets: [{ id: 'a1', type: 'icon', iconKey: 'Sparkles', name: 'Spark', alt: 'spark', placement: 'hero' }]
       },
       {
         id: 's2',
-        type: 'list',
-        title: '破译收益的四个维度',
-        bullets: [
-          '速度：单位时间内的进度产出',
-          '稳定性：受校准、特殊机制影响的下限',
-          '干扰承受：面对监管者干扰时的博弈资本',
-          '团队适配：对后续补位、转点节奏的支持'
-        ],
-        notes: "核心模型介绍。速度是基础，稳定性决定下限，干扰承受是上限，团队适配决定上限的上限。",
-        estimatedSeconds: 25
+        type: 'conclusion',
+        title: 'CONTENTS',
+        body: '版式概览与应用场景\n什么是好的“内容页”？\n数据驱动的“榜单页”\n结构化的“思维导图”',
+        notes: "目录页：输入多行短语自动识别。用于建立预期。",
+        estimatedSeconds: 15
       },
       {
         id: 's3',
-        type: 'ranking',
-        title: '破译收益简化排行榜 (理论值)',
-        body: '1. 机械师 (98) - 高上限/低稳定性\n2. 盲女 (92) - 高效率/极低生存\n3. 囚徒 (88) - 灵活转场/中等波动\n4. 律师 (85) - 极高稳定/中等效率',
-        notes: "展示部分理论计算后的排名。律师虽然效率不是最高，但稳定性带来的收益在实战中往往超出预期。",
+        type: 'content',
+        title: '内容页：信息的高效平铺',
+        bullets: ['清晰的层级：保持论点独立', '留白的艺术：每页只讲一个重点', '配图辅助：视觉化说明文字论据'],
+        notes: "内容页：最常用的基础版式。支持多级列表。",
         estimatedSeconds: 20
       },
       {
         id: 's4',
-        type: 'summary',
-        title: '不追求瞬时的火花，而追求持续的燃料。',
-        body: '"破译收益 = 理论效率 × 过程稳定性 + 团队节奏增益"',
-        notes: "总结句。强调稳健和持续性。收尾干净利落。",
-        estimatedSeconds: 12
-      }
-    ]
-  },
-  {
-    id: 'demo-all-layouts',
-    title: '全版式与资产挂图演示（示例指南）',
-    series: '模板展示',
-    date: '2024-05-04',
-    author: '展示器作者',
-    relatedTags: ['版式', '资产库'],
-    relatedMetrics: [],
-    slides: [
-      {
-        id: 'd1',
-        type: 'title',
-        title: '全版式及挂图展示指南',
-        body: '涵盖标题、列表、对比、公式、结论、排行榜、总结与思维导图8种核心版式，并展示了「背景/内嵌/角标」多种资产挂载形态。',
-        notes: '标题页（Title）：支持在背景挂载Icon或Image做底纹，起基础定调作用。',
-        estimatedSeconds: 12,
-        assets: [
-          {
-            id: 'a1',
-            type: 'icon',
-            iconKey: 'Sparkles',
-            name: '背景闪耀',
-            alt: 'Hero Icon',
-            placement: 'hero'
-          }
-        ]
-      },
-      {
-        id: 'd2',
-        type: 'list',
-        title: '三种不同的资产挂载（Asset Placements）',
-        bullets: [
-          'Hero (背景底层)：平铺在卡片底层做背景装饰，支持纯色去色处理，渲染氛围。',
-          'Inline (内联区域)：直接挂载在主内容区或标题下方，非常适合附加说明图、数据信息统计图。',
-          'Corner (悬停角标)：挂在卡片右下角，半透明展示，适合引述、标识类型。'
-        ],
-        notes: '列表页（List）：通常承载信息最密的条目，配合角标使用。',
-        estimatedSeconds: 20,
-        assets: [
-          {
-            id: 'a2',
-            type: 'icon',
-            iconKey: 'Info',
-            name: '提示角标',
-            alt: 'Info Corner',
-            placement: 'corner'
-          }
-        ]
-      },
-      {
-        id: 'd3',
-        type: 'compare',
-        title: '选择合适的图例',
-        body: '数据可视化截屏 vs 发散抽象画',
-        notes: '对比版式（Compare）：经典的A对B排版，适合展现分歧或抉择。',
-        estimatedSeconds: 15,
-        assets: [
-          {
-            id: 'a3',
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=400&h=200',
-            name: '数据图例',
-            alt: 'Data Chart Image',
-            placement: 'inline'
-          }
-        ]
-      },
-      {
-        id: 'd4',
-        type: 'formula',
-        title: '理论影响力的终极公式',
-        body: 'V = 数据深度 × 视觉感染力²',
-        notes: '公式版式（Formula）：用最霸占屏幕的字号展示理论模型，产生冲击感。搭配了背景全屏资产渲染。',
-        estimatedSeconds: 12,
-        assets: [
-          {
-            id: 'a4',
-            type: 'icon',
-            iconKey: 'Zap',
-            name: '闪电动力',
-            alt: 'Action bg',
-            placement: 'hero'
-          }
-        ]
-      },
-      {
-        id: 'd5',
         type: 'ranking',
-        title: '阅读焦点获取度排名',
-        notes: '排行榜（Ranking）：自带精美入场动画序列，如果挂载了头像数据可以直接展示头像。',
-        estimatedSeconds: 25,
+        title: '因子权重排行榜',
+        body: '数据证明逻辑',
+        sourceType: 'tag',
         sourceData: {
-          metricLabel: '眼动仪停留比例',
-          sortOrder: 'desc',
+          metricLabel: '影响力指标',
           groups: [
-            { rank: '1', value: '45%', characters: [{id: 'r1', name: '数据图表', imageUrl: 'https://images.unsplash.com/photo-1543286386-713bdd548da4?auto=format&fit=crop&w=100&h=100&q=80'}] },
-            { rank: '2', value: '30%', characters: [{id: 'r2', name: '核心公式', imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=100&h=100&q=80'}] },
-            { rank: '3', value: '15%', characters: [{id: 'r3', name: '总结文段', imageUrl: 'https://images.unsplash.com/photo-1555529733-0e670560f7e1?auto=format&fit=crop&w=100&h=100&q=80'}] }
+            { rank: 1, value: 95, characters: [{ name: '核心洞察' }] },
+            { rank: 2, value: 88, characters: [{ name: '交互设计' }] },
+            { rank: 3, value: 72, characters: [{ name: '数据支持' }] }
           ]
-        }
+        },
+        notes: "榜单页：展示竞争或优先级数据。自带排名动画。",
+        estimatedSeconds: 20
       },
       {
-        id: 'd6',
-        type: 'conclusion',
-        title: '结论（带有统计大图验证）',
-        body: '将关键论据用图片铺在屏幕中央，可以对文字结论产生极好的印证效果，避免了全是文字的疲劳。',
-        notes: '结论版式（Conclusion）：字号可大可小，支持附加图片进行论证说明。',
-        estimatedSeconds: 20,
-        assets: [
-          {
-            id: 'a5',
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600&h=300',
-            name: '统计大图',
-            alt: 'Statistic Evidence',
-            placement: 'inline'
-          }
-        ]
-      },
-      {
-        id: 'd7',
+        id: 's5',
         type: 'mindmap',
-        title: '演示页面功能树',
-        bullets: ['资产库资源', '版式渲染器', '播放投影控制', 'Markdown 智能解析'],
-        notes: '思维导图版式（Mindmap）：可简单梳理平级逻辑或包含关系。',
-        estimatedSeconds: 15
+        title: '系统核心架构',
+        mindmapData: {
+          branches: [
+            { id: 'b1', title: '表现层', children: ['多板式渲染', '动态过渡'] },
+            { id: 'b2', title: '数据层', children: ['语义识别', '标记解析'] }
+          ]
+        },
+        notes: "思维导图：展现复杂树状逻辑。",
+        estimatedSeconds: 25
       },
       {
-        id: 'd8',
+        id: 's6',
         type: 'summary',
-        title: '形式是为了承载更好的内容',
-        body: '期待这套模板能释放你的理论表达能力',
-        notes: '总结版式（Summary）：固定黑底反白设计，气场强，最适合用来作为全篇收尾！',
-        estimatedSeconds: 15,
-        assets: [
-          {
-            id: 'a6',
-            type: 'icon',
-            iconKey: 'Trophy',
-            name: '荣誉总结',
-            alt: 'Trophy final',
-            placement: 'corner'
-          }
-        ]
+        title: '立即开始创作您的演示文档',
+        body: '输入原始内容，点击一键识别。\n感谢您的使用。',
+        notes: "总结页：最后一页收尾。加黑背景增加视觉重点。",
+        estimatedSeconds: 12,
+        assets: [{ id: 'a2', type: 'icon', iconKey: 'Trophy', name: 'win', alt: 'win', placement: 'corner' }]
       }
     ]
   }
@@ -265,81 +156,134 @@ const IconMap: Record<string, React.FC<any>> = {
   Trophy, TagIcon, Zap, FileText, Clock, Monitor, Info, Sparkles
 };
 
-export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characters, talents, availableTags, availableTraits }) => {
-  const [userAssets, setUserAssets] = useState<SlideAsset[]>(() => {
-    try {
-      const saved = localStorage.getItem('theory_assets');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const validAssets = parsed.filter(a => 
-            a && typeof a === 'object' && a.id && (a.type === 'image' || a.type === 'icon') && a.name
-          ).map(a => {
-            if (a.type === 'image' && !a.url) return null;
-            if (a.type === 'icon' && !a.iconKey && !a.url) return null;
-            return {
-              ...a,
-              placement: (['hero', 'inline', 'corner'].includes(a.placement)) ? a.placement : 'corner'
-            }
-          }).filter(Boolean) as SlideAsset[];
-          return validAssets;
-        } else {
-          console.warn("Invalid structure in theory_assets");
-          localStorage.removeItem('theory_assets');
-        }
-      }
-    } catch(e) {
-      console.warn("Failed to parse theory_assets", e);
-      localStorage.removeItem('theory_assets');
-    }
-    return [];
-  });
-  const [newAssetUrl, setNewAssetUrl] = useState('');
-  const [newAssetName, setNewAssetName] = useState('');
-  const [newAssetType, setNewAssetType] = useState<'image' | 'icon'>('image');
-  const [newAssetPlacement, setNewAssetPlacement] = useState<'hero' | 'inline' | 'corner'>('hero');
+// Extracted to top-level to prevent re-creation on every render (fixes cursor jumping)
+const EditableTitle = ({ className, value, onChange, isEdit }: { className: string, value: string, onChange: (v: string) => void, isEdit: boolean }) => {
+  if (!isEdit) return <h2 className={className}>{value}</h2>;
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={e => e.stopPropagation()}
+      className={`${className} bg-transparent border-b-2 border-slate-100 focus:border-slate-300 outline-none w-full text-center resize-none p-0 overflow-hidden min-h-[1.5em]`}
+      rows={1}
+      onInput={(e) => {
+        const target = e.target as HTMLTextAreaElement;
+        target.style.height = 'auto';
+        target.style.height = target.scrollHeight + 'px';
+      }}
+    />
+  );
+};
 
-  useEffect(() => {
-    localStorage.setItem('theory_assets', JSON.stringify(userAssets));
-  }, [userAssets]);
+const EditableBody = ({ className, value, onChange, isEdit }: { className: string, value: string, onChange: (val: string) => void, isEdit: boolean }) => {
+  if (!isEdit) return <p className={className}>{value}</p>;
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={e => e.stopPropagation()}
+      className={`${className} bg-transparent border-2 border-dashed border-slate-100 focus:border-slate-300 rounded-xl outline-none w-full text-center resize-none p-4 min-h-[100px] font-medium transition-all`}
+      onInput={(e) => {
+        const target = e.target as HTMLTextAreaElement;
+        target.style.height = 'auto';
+        target.style.height = target.scrollHeight + 'px';
+      }}
+    />
+  );
+};
 
+export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characters, talents, availableTags, availableTraits, customMetrics = [] }) => {
   const [articles, setArticles] = useState<TheoryArticle[]>(() => {
     try {
-      const saved = localStorage.getItem('theory_articles');
+      const saved = localStorage.getItem('theory_articles_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const isValid = parsed.every(a => 
-            a && typeof a === 'object' && a.id && typeof a.title === 'string' &&
-            Array.isArray(a.slides) && a.slides.length > 0 &&
-            a.slides.every((s: any) => s && typeof s === 'object' && s.id && s.type && s.title !== undefined)
-          );
-          if (isValid) {
-            // migration for new demo draft
-            if (!parsed.some(a => a.id === 'demo-all-layouts')) {
-               const demoDraft = MOCK_DATA.find(a => a.id === 'demo-all-layouts');
-               if (demoDraft) parsed.unshift(demoDraft);
-            }
-            return parsed;
-          } else {
-            console.warn("Invalid structure in theory_articles from localStorage");
-            localStorage.removeItem('theory_articles');
-          }
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (err) {
-      console.warn("Failed to parse theory_articles from localStorage", err);
-      localStorage.removeItem('theory_articles');
+      console.warn("Failed to parse theory_articles_v2 from localStorage", err);
     }
     return MOCK_DATA;
   });
+
+  // State for raw drafting
+  const [rawText, setRawText] = useState('');
+  const [showRecognitionGuide, setShowRecognitionGuide] = useState(false);
+
+  // Auto-save articles
+  useEffect(() => {
+    localStorage.setItem('theory_articles_v2', JSON.stringify(articles));
+  }, [articles]);
+
+  const generateArticleFromDraft = () => {
+    if (!rawText.trim()) return;
+
+    const sections = rawText.split(/\n\s*---\s*\n/).filter(s => s.trim());
+    const validSections = sections.length > 0 ? sections : [rawText];
+    
+    const generatedSlides: Slide[] = validSections.map((sec, idx) => {
+      const lines = sec.trim().split('\n');
+      const title = lines[0].replace(/^#+\s*/, '').trim() || `页面 ${idx + 1}`;
+      const bodyLines = lines.length > 1 ? lines.slice(1) : [];
+      const fullText = (title + '\n' + bodyLines.join('\n')).toLowerCase();
+      
+      let type: SlideType = 'content';
+      
+      // Smart detection
+      if (idx === 0) {
+        type = 'title';
+      } else if (idx === validSections.length - 1 || fullText.includes('谢谢') || fullText.includes('总结') || fullText.includes('end') || fullText.includes('finish')) {
+        type = 'summary';
+      } else if (fullText.includes('目录') || fullText.includes('contents') || fullText.includes('overview') || (bodyLines.length > 3 && bodyLines.slice(0, 5).every(l => l.length < 20))) {
+        type = 'conclusion';
+      } else if (/(排名|排行|top|榜单|第\d+名|胜率|权重)/i.test(fullText)) {
+        type = 'ranking';
+      } else if (fullText.includes('导图') || fullText.includes('架构') || fullText.includes('逻辑') || fullText.includes('mindmap')) {
+        type = 'mindmap';
+      }
+
+      const rawBody = bodyLines.join('\n');
+      const notes = rawBody.match(/\[备注：(.*?)\]/)?.[1] || rawBody.match(/\[备注:(.*?)\]/)?.[1] || "自动识别生成的页面。";
+      const cleanBody = rawBody.replace(/\[备注[：:].*?\]/g, '').trim();
+
+      return {
+        id: `gen-${Date.now()}-${idx}`,
+        type,
+        title,
+        body: cleanBody,
+        notes,
+        estimatedSeconds: 15,
+        assets: []
+      };
+    });
+
+    const newArt: TheoryArticle = {
+      id: `art-${Date.now()}`,
+      title: generatedSlides[0]?.title || '未命名文稿',
+      series: '快速草稿',
+      date: new Date().toISOString().split('T')[0],
+      author: 'AI 识别助手',
+      slides: generatedSlides
+    };
+
+    setArticles([newArt, ...articles]);
+    setCurrentArticle(newArt);
+    setCurrentSlideIndex(0);
+    setRawText('');
+  };
+
   const [currentArticle, setCurrentArticle] = useState<TheoryArticle>(articles[0] || MOCK_DATA[0]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isAddingArticle, setIsAddingArticle] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [isEditingSlide, setIsEditingSlide] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [slideDeleteConfirm, setSlideDeleteConfirm] = useState(false);
   
+  const [isDraftCollapsed, setIsDraftCollapsed] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<'16/9' | '9/16'>('16/9');
+  const [importSortOrder, setImportSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const [newArticleDoc, setNewArticleDoc] = useState({
     title: '',
     series: '',
@@ -348,20 +292,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     selectedMetrics: [] as string[]
   });
 
-  const [isDraftCollapsed, setIsDraftCollapsed] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<'16/9' | '9/16'>('16/9');
-
-  // Auto-save articles
-  useEffect(() => {
-    localStorage.setItem('theory_articles', JSON.stringify(articles));
-  }, [articles]);
-
   // Sync current article if articles change
   useEffect(() => {
     if (!currentArticle) return;
     const fresh = articles.find(a => a.id === currentArticle.id);
     if (fresh && fresh !== currentArticle) {
-      setCurrentArticle(fresh);
+      setCurrentArticle(fresh || articles[0]);
     }
   }, [articles, currentArticle?.id]);
   
@@ -370,90 +306,55 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   const handleCreateFromDoc = () => {
     if (!newArticleDoc.title) return;
 
-    // Enhanced parser
-    const sections: { title?: string, content: string }[] = [];
-    let currentTitle: string | undefined = undefined;
-    let currentLines: string[] = [];
-    
-    newArticleDoc.content.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed === '---') {
-        if (currentLines.length > 0 || currentTitle) {
-          sections.push({ title: currentTitle, content: currentLines.join('\n') });
-        }
-        currentTitle = undefined;
-        currentLines = [];
-      } else if (trimmed.startsWith('[画面：') && trimmed.endsWith(']')) {
-        if (currentLines.length > 0 || currentTitle) {
-          sections.push({ title: currentTitle, content: currentLines.join('\n') });
-        }
-        currentTitle = trimmed.slice(4, -1);
-        currentLines = [];
-      } else if (trimmed.startsWith('[画面:') && trimmed.endsWith(']')) { // Support half-width colon
-        if (currentLines.length > 0 || currentTitle) {
-          sections.push({ title: currentTitle, content: currentLines.join('\n') });
-        }
-        currentTitle = trimmed.slice(4, -1);
-        currentLines = [];
-      } else {
-        currentLines.push(line);
-      }
-    });
-    if (currentLines.length > 0 || currentTitle) {
-      sections.push({ title: currentTitle, content: currentLines.join('\n') });
-    }
-
-    const validSections = sections.filter(s => s.content.trim() || s.title);
+    const lines = newArticleDoc.content.split('\n');
+    const sections = newArticleDoc.content.split(/\n\s*---\s*\n/).filter(s => s.trim());
+    const validSections = sections.length > 0 ? sections : [newArticleDoc.content];
 
     const generatedSlides: Slide[] = validSections.map((sec, idx) => {
-      const text = sec.content.trim();
-      const lines = text.split('\n');
-      const title = sec.title || lines[0] || `页面 ${idx + 1}`;
-      const body = sec.title ? text : lines.slice(1).join('\n');
-      const typeText = (sec.title || '') + '\n' + text;
+      const sLines = sec.trim().split('\n');
+      const title = sLines[0].replace(/^#+\s*/, '').trim() || `页面 ${idx + 1}`;
+      const bodyLines = sLines.length > 1 ? sLines.slice(1) : [];
+      const fullText = (title + '\n' + bodyLines.join('\n')).toLowerCase();
+
+      let type: SlideType = 'content';
       
-      let type: SlideType = 'list';
-      if (idx === 0) type = 'title';
-      else if (idx === validSections.length - 1) type = 'summary';
-      else if (typeText.includes('对比')) type = 'compare';
-      else if (/(排名|排行|TOP|第)/i.test(typeText)) type = 'ranking';
-      else if (/[=×+x\*]/i.test(typeText)) type = 'formula';
-      else if (typeText.length < 50) type = 'conclusion';
+      // Use the same smart detection logic
+      if (idx === 0) {
+        type = 'title';
+      } else if (idx === validSections.length - 1 || fullText.includes('谢谢') || fullText.includes('总结') || fullText.includes('end') || fullText.includes('finish')) {
+        type = 'summary';
+      } else if (fullText.includes('目录') || fullText.includes('contents') || fullText.includes('overview') || (bodyLines.length > 3 && bodyLines.slice(0, 5).every(l => l.length < 20))) {
+        type = 'conclusion';
+      } else if (/(排名|排行|top|榜单|第\d+名|胜率|权重)/i.test(fullText)) {
+        type = 'ranking';
+      } else if (fullText.includes('导图') || fullText.includes('架构') || fullText.includes('逻辑') || fullText.includes('mindmap')) {
+        type = 'mindmap';
+      }
 
-      const notes = body.match(/\[备注：(.*?)\]/)?.[1] || body.match(/\[备注:(.*?)\]/)?.[1] || "自动生成的内容。";
-      const cleanBody = body.replace(/\[备注[：:].*?\]/g, '').trim();
-
-      // Estimate time: 240 chars per minute = 4 chars per second
-      const estimatedSeconds = Math.ceil((title.length + cleanBody.length + notes.length) / 4);
+      const rawBody = bodyLines.join('\n');
+      const notes = rawBody.match(/\[备注：(.*?)\]/)?.[1] || rawBody.match(/\[备注:(.*?)\]/)?.[1] || "从对话框导入的页面。";
+      const cleanBody = rawBody.replace(/\[备注[：:].*?\]/g, '').trim();
 
       return {
-        id: `gen-${Date.now()}-${idx}`,
+        id: `man-${Date.now()}-${idx}`,
         type,
         title,
         body: cleanBody,
         notes,
-        estimatedSeconds
+        assets: []
       };
     });
 
     const newArt: TheoryArticle = {
-      id: `art-${Date.now()}`,
+      id: `man-art-${Date.now()}`,
       title: newArticleDoc.title,
-      series: newArticleDoc.series || '实验室草稿',
+      series: newArticleDoc.series || '手动导入',
       date: new Date().toISOString().split('T')[0],
-      author: '理论编辑器',
-      relatedTags: newArticleDoc.selectedTags,
-      relatedMetrics: newArticleDoc.selectedMetrics,
-      slides: generatedSlides.length > 0 ? generatedSlides : [{
-        id: 'empty',
-        type: 'conclusion',
-        title: '空内容',
-        notes: '请检查输入格式'
-      }]
+      author: '演示助手',
+      slides: generatedSlides
     };
 
-    const updatedArticles = [newArt, ...articles];
-    setArticles(updatedArticles);
+    setArticles([newArt, ...articles]);
     setCurrentArticle(newArt);
     setCurrentSlideIndex(0);
     setIsAddingArticle(false);
@@ -505,7 +406,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     }
   };
 
-  const currentSlide = currentArticle.slides[currentSlideIndex];
+  const currentSlide = currentArticle.slides[currentSlideIndex] || currentArticle.slides[0] || { id: 'fallback', type: 'title', title: '加载中...', notes: '', estimatedSeconds: 0 };
 
   // Article Management
   const handleDeleteArticle = (id: string) => {
@@ -555,59 +456,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     updatedSlides[currentSlideIndex] = fullUpdatedSlide;
     const updatedArticle = { ...currentArticle, slides: updatedSlides };
     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+    setCurrentArticle(updatedArticle);
   };
 
-  const handleAddAssetToSlide = (assetInfo: any) => {
-    const newSlideAsset: SlideAsset = {
-      id: `asset-${Date.now()}`,
-      type: assetInfo.type ?? (assetInfo.iconKey ? 'icon' : 'image'),
-      url: assetInfo.url,
-      iconKey: assetInfo.iconKey,
-      name: assetInfo.name || '未命名素材',
-      alt: assetInfo.alt ?? assetInfo.name ?? '素材图',
-      placement: assetInfo.placement ?? 'hero'
-    };
-    const currentAssets = currentSlide.assets || [];
-    handleUpdateSlide({
-      ...currentSlide,
-      assets: [...currentAssets, newSlideAsset]
-    });
-  };
-
-  const handleRemoveAssetFromSlide = (assetId: string) => {
-    const currentAssets = currentSlide.assets || [];
-    handleUpdateSlide({
-      ...currentSlide,
-      assets: currentAssets.filter(a => a.id !== assetId)
-    });
-  };
-
-  const handleUpdateAssetPlacement = (assetId: string, placement: 'hero' | 'inline' | 'corner') => {
-    const currentAssets = currentSlide.assets || [];
-    handleUpdateSlide({
-      ...currentSlide,
-      assets: currentAssets.map(a => a.id === assetId ? { ...a, placement } : a)
-    });
-  };
-
-  const handleAddUserAsset = () => {
-    if (!newAssetUrl) return;
-    const newId = `uasset-${Date.now()}`;
-    setUserAssets([...userAssets, {
-      id: newId,
-      type: newAssetType,
-      url: newAssetUrl,
-      name: newAssetName || ('网络素材 ' + newId.substring(newId.length - 4)),
-      alt: newAssetName || '自定义素材',
-      placement: newAssetPlacement
-    }]);
-    setNewAssetUrl('');
-    setNewAssetName('');
-  };
-
-  const handleInsertLeaderboard = (traitLabel: string, role: 'Survivor' | 'Hunter', sortOrder: 'asc' | 'desc', limitGroups: number) => {
-    const { groups } = generateLeaderboardData(characters, role, traitLabel, sortOrder);
-    const topGroups = groups.slice(0, limitGroups);
+  const handleInsertLeaderboard = (traitLabel: string, role: 'Survivor' | 'Hunter', sortOrder: 'asc' | 'desc', limitGroups?: number, customMetricId?: string) => {
+    const customMetric = customMetrics.find(m => m.id === customMetricId);
+    const { groups } = generateLeaderboardData(characters, role, traitLabel, sortOrder, customMetric ? { traitLabels: customMetric.traitLabels } : undefined);
+    const topGroups = limitGroups ? groups.slice(0, limitGroups) : groups;
     
     if (topGroups.length === 0) {
       handleUpdateSlide({
@@ -615,13 +470,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
         type: 'ranking',
         body: '暂无该排行榜数据。',
         sourceType: 'leaderboard',
-        sourceData: { role, metricLabel: traitLabel, sortOrder, limit: limitGroups, groups: [] }
+        sourceData: { role, metricLabel: traitLabel, sortOrder, limit: limitGroups, groups: [], customMetricId }
       });
       return;
     }
 
     const newBody = topGroups.map(g => {
-      const charNames = g.characters.map(c => c.name).join('、');
+      const charNames = g.characters.map((c: any) => c.name).join('、');
       return `第 ${g.rank} 名（${g.value}）：${charNames}`;
     }).join('\n');
     
@@ -630,7 +485,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       type: 'ranking',
       body: newBody,
       sourceType: 'leaderboard',
-      sourceData: { role, metricLabel: traitLabel, sortOrder, limit: limitGroups, groups: topGroups }
+      sourceData: { role, metricLabel: traitLabel, sortOrder, limit: limitGroups, groups: topGroups, customMetricId }
     });
   };
 
@@ -638,7 +493,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     const relatedChars = characters.filter(c => 
       c.skills?.some(s => s.tags?.includes(tag.name)) || 
       c.presence?.some(p => p.tags?.includes(tag.name))
-    );
+    ).sort((a, b) => {
+      const orderA = a.order ?? 999;
+      const orderB = b.order ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.id.localeCompare(b.id);
+    });
     const relatedTals = talents.filter(t => t.tags?.includes(tag.name));
 
     let newBody = '';
@@ -665,7 +525,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
 
     handleUpdateSlide({
       ...currentSlide,
-      type: mode === 'summary' ? 'summary' : 'list',
+      type: mode === 'summary' ? 'summary' : 'content',
       body: newBody,
       sourceType: 'tag',
       sourceData: { tagId: tag.id, tagName: tag.name, insertedMode: mode, relatedCharacters: relatedChars, relatedTalents: relatedTals }
@@ -675,7 +535,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   const handleAddSlide = () => {
     const newSlide: Slide = {
       id: `slide-${Date.now()}`,
-      type: 'list',
+      type: 'content',
       title: '新页面',
       body: '输入内容...',
       notes: '',
@@ -685,17 +545,25 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     updatedSlides.splice(currentSlideIndex + 1, 0, newSlide);
     const updatedArticle = { ...currentArticle, slides: updatedSlides };
     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+    setCurrentArticle(updatedArticle);
     setCurrentSlideIndex(currentSlideIndex + 1);
   };
 
   const handleDeleteSlide = () => {
     if (currentArticle.slides.length <= 1) return;
-    if (window.confirm('确定要删除当前页面吗？')) {
-      const updatedSlides = currentArticle.slides.filter((_, i) => i !== currentSlideIndex);
-      const updatedArticle = { ...currentArticle, slides: updatedSlides };
-      setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
-      setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1));
+    
+    if (!slideDeleteConfirm) {
+      setSlideDeleteConfirm(true);
+      setTimeout(() => setSlideDeleteConfirm(false), 3000);
+      return;
     }
+
+    const updatedSlides = currentArticle.slides.filter((_, i) => i !== currentSlideIndex);
+    const updatedArticle = { ...currentArticle, slides: updatedSlides };
+    setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+    setCurrentArticle(updatedArticle);
+    setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1));
+    setSlideDeleteConfirm(false);
   };
 
   const handleMoveSlide = (direction: 'up' | 'down') => {
@@ -707,6 +575,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     
     const updatedArticle = { ...currentArticle, slides: updatedSlides };
     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+    setCurrentArticle(updatedArticle);
     setCurrentSlideIndex(newIdx);
   };
 
@@ -718,6 +587,65 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     const a = document.createElement('a');
     a.href = url;
     a.download = `${currentArticle.title.replace(/[\\/:*?"<>|]/g, '_')}.json`;
+    a.click();
+  };
+
+  const exportCurrentSlideImage = async () => {
+    if (!presentationContainerRef.current) return;
+    
+    // Find the actual slide container (the one with the background and content)
+    const slideElement = presentationContainerRef.current.querySelector('.relative.bg-white.overflow-hidden');
+    if (!slideElement) return;
+
+    try {
+      // Small delay to ensure any layout updates complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const dataUrl = await toPng(slideElement as HTMLElement, {
+        quality: 1,
+        pixelRatio: 2, // High resolution
+        backgroundColor: '#ffffff'
+      });
+      
+      const fileName = `${currentArticle.title}_${currentSlideIndex + 1}.png`.replace(/[\\/:*?"<>|]/g, '_');
+      download(dataUrl, fileName);
+    } catch (err) {
+      console.error('Failed to export slide image:', err);
+      alert('导出图片失败，请稍后重试');
+    }
+  };
+
+  const exportCurrentSlideMarkdown = () => {
+    let content = `# ${currentSlide.title}\n\n`;
+    
+    if (currentSlide.body) {
+      content += `${currentSlide.body}\n\n`;
+    }
+    
+    if (currentSlide.bullets && currentSlide.bullets.length > 0) {
+      currentSlide.bullets.forEach((b, i) => {
+        content += `${i + 1}. ${b}\n`;
+      });
+      content += '\n';
+    }
+
+    if (currentSlide.type === 'ranking' && currentSlide.sourceData?.groups) {
+      content += `## 排行榜数据 (${currentSlide.sourceData.metricLabel || '常规'})\n\n`;
+      currentSlide.sourceData.groups.forEach((g: any) => {
+        content += `- 第 ${g.rank} 名 (${g.value}): ${g.characters.map((c: any) => c.name).join('、')}\n`;
+      });
+      content += '\n';
+    }
+
+    if (currentSlide.notes) {
+      content += `---\n\n> **演说笔记**:\n> ${currentSlide.notes.replace(/\n/g, '\n> ')}\n`;
+    }
+
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentArticle.title}_第${currentSlideIndex + 1}页.md`.replace(/[\\/:*?"<>|]/g, '_');
     a.click();
   };
 
@@ -740,9 +668,22 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             ) : null}
           </div>
         ))}
-        <div className="absolute bottom-8 right-8 z-10 flex gap-4 opacity-50 pointer-events-none">
+        <div className="absolute bottom-10 right-10 z-10 flex gap-4 pointer-events-auto">
           {slide.assets.filter(a => a.placement === 'corner').map(a => (
-            <div key={a.id} className="flex items-center justify-center">
+            <div key={a.id} className="group relative flex items-center justify-center">
+              {viewMode === 'edit' && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newAssets = slide.assets?.filter(asset => asset.id !== a.id);
+                    handleUpdateSlide({...slide, assets: newAssets});
+                  }}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 shadow-md"
+                  title="删除角标"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
               {a.type === 'icon' ? (
                 a.iconKey && IconMap[a.iconKey] ? (
                   React.createElement(IconMap[a.iconKey], { className: "w-16 h-16 text-slate-800" })
@@ -763,11 +704,25 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     if (!slide.assets || slide.assets.length === 0) return null;
     const inlineAssets = slide.assets.filter(a => a.placement === 'inline');
     if (inlineAssets.length === 0) return null;
+    const isEdit = viewMode === 'edit';
     
     return (
       <div className="flex flex-wrap items-center justify-center gap-6 my-6 relative z-10 w-full shrink-0">
         {inlineAssets.map(a => (
-          <div key={a.id} className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95">
+          <div key={a.id} className="group relative flex flex-col items-center gap-3 animate-in fade-in zoom-in-95">
+            {isEdit && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newAssets = slide.assets?.filter(asset => asset.id !== a.id);
+                  handleUpdateSlide({...slide, assets: newAssets});
+                }}
+                className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 shadow-md"
+                title="删除资产"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
             {a.type === 'icon' ? (
               <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-800 shrink-0">
                 {a.iconKey && IconMap[a.iconKey] ? (
@@ -789,6 +744,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   // Render Slide Content
   const renderSlideContent = (slide: Slide) => {
     const baseClasses = "flex flex-col h-full p-8 md:p-16 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10";
+    const isEdit = viewMode === 'edit';
     
     switch (slide.type) {
       case 'title':
@@ -796,13 +752,23 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
             {renderAssets(slide)}
             <div className="w-16 h-1 bg-slate-900 mb-4 relative z-10" />
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight relative z-10">
-              {slide.title}
-            </h1>
+            <div className="relative z-10 w-full">
+              <EditableTitle 
+                className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight" 
+                value={slide.title}
+                onChange={(v) => handleUpdateSlide({...slide, title: v})}
+                isEdit={isEdit}
+              />
+            </div>
             {renderInlineAssets(slide)}
-            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic relative z-10">
-              {slide.body}
-            </p>
+            <div className="relative z-10 w-full">
+              <EditableBody 
+                className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic" 
+                value={slide.body || ''}
+                onChange={(v) => handleUpdateSlide({...slide, body: v})}
+                isEdit={isEdit}
+              />
+            </div>
           </div>
         );
       case 'summary':
@@ -810,36 +776,153 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className={`${baseClasses} items-center justify-center text-center bg-slate-900 text-white rounded-[2rem] m-4 gap-8`}>
             {renderAssets(slide)}
             <Sparkles className="w-12 h-12 text-white/20 relative z-10" />
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-snug relative z-10">
-              {slide.title}
-            </h2>
+            <div className="relative z-10 w-full px-12">
+              <EditableTitle 
+                className="text-4xl md:text-5xl font-bold tracking-tight leading-snug border-white/10 focus:border-white/30" 
+                value={slide.title}
+                onChange={(v) => handleUpdateSlide({...slide, title: v})}
+                isEdit={isEdit}
+              />
+            </div>
             {renderInlineAssets(slide)}
             <div className="h-px w-24 bg-white/20 relative z-10" />
-            <p className="text-xl text-white/50 max-w-2xl italic font-serif relative z-10">
-              {slide.body}
-            </p>
+            <div className="relative z-10 w-full px-12">
+              <EditableBody 
+                className="text-xl text-white/50 max-w-2xl italic font-serif border-white/5 focus:border-white/20" 
+                value={slide.body || ''}
+                onChange={(v) => handleUpdateSlide({...slide, body: v})}
+                isEdit={isEdit}
+              />
+            </div>
           </div>
         );
-      case 'list':
       case 'conclusion':
+        const tocLines = slide.body ? slide.body.split('\n').map(l => l.trim()).filter(Boolean) : ['请输入目录项...'];
+        return (
+          <div className={`${baseClasses} items-center justify-center bg-slate-50/50`}>
+            {renderAssets(slide)}
+            <div className="relative z-10 w-full mb-12">
+              <EditableTitle 
+                className="text-2xl md:text-3xl font-bold text-slate-400 tracking-[0.2em] uppercase text-center" 
+                value={slide.title || 'CONTENTS'}
+                onChange={(v) => handleUpdateSlide({...slide, title: v})}
+                isEdit={isEdit}
+              />
+            </div>
+            
+            <div className="relative z-10 w-full max-w-2xl px-6 flex-1 flex flex-col justify-center">
+              <div className="flex flex-col gap-4 md:gap-6 relative">
+                {/* Vertical line decoration */}
+                <div className="absolute left-[24px] top-4 bottom-4 w-px bg-slate-200 hidden md:block" />
+                
+                {tocLines.map((line, idx) => (
+                  <div key={idx} className="flex items-center gap-4 md:gap-6 group/toc animate-in fade-in slide-in-from-left-4" style={{ animationDelay: `${idx * 100}ms` }}>
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm md:text-lg font-black shrink-0 z-10 shadow-lg border-4 border-white transition-transform group-hover/toc:scale-110">
+                      {(idx + 1).toString().padStart(2, '0')}
+                    </div>
+                    <div className="flex-1 py-1 border-b border-slate-100 group-hover/toc:border-slate-900 transition-colors">
+                      {isEdit && idx === 0 ? (
+                        <textarea
+                          value={slide.body || ''}
+                          onChange={(e) => handleUpdateSlide({...slide, body: e.target.value})}
+                          onKeyDown={e => e.stopPropagation()}
+                          className="w-full bg-transparent outline-none text-lg md:text-2xl font-bold text-slate-800 resize-none py-2"
+                          placeholder="每行一个目录项..."
+                          rows={1}
+                        />
+                      ) : (
+                        <span className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight block hover:translate-x-1 transition-transform cursor-default">
+                          {line}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {renderInlineAssets(slide)}
+            {/* Batch Edit Helper */}
+            {isEdit && (
+               <div className="mt-8 text-center opacity-40 hover:opacity-100 transition-opacity">
+                  <p className="text-[10px] text-slate-400 mb-1 font-bold">在该页正文输入多行内容以生成目录</p>
+               </div>
+            )}
+          </div>
+        );
+      case 'content':
+        const hasExplicitBullets = slide.bullets && slide.bullets.length > 0;
+        const lines = slide.body ? slide.body.split('\n').map(l => l.trim()).filter(Boolean) : [];
+        const isListView = hasExplicitBullets || (lines.length > 1 && lines.every(l => l.length < 50));
+
         return (
           <div className={`${baseClasses} gap-8`}>
             {renderAssets(slide)}
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 border-l-8 border-slate-900 pl-6 mb-4 relative z-10">
-              {slide.title}
-            </h2>
+            <div className={`relative z-10 w-full ${isListView ? 'border-l-8 border-slate-900 pl-6' : ''}`}>
+              <EditableTitle 
+                className={`text-3xl md:text-4xl font-bold text-slate-900 ${!isListView ? 'text-center' : ''}`} 
+                value={slide.title}
+                onChange={(v) => handleUpdateSlide({...slide, title: v})}
+                isEdit={isEdit}
+              />
+            </div>
             {renderInlineAssets(slide)}
-            <div className="flex-1 space-y-6 relative z-10">
-              {slide.body && <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap">{slide.body}</p>}
-              {slide.bullets && (
-                <ul className="space-y-4">
-                  {slide.bullets.map((b, i) => (
-                    <li key={i} className="flex gap-4 text-lg text-slate-500">
-                      <span className="text-slate-900 font-mono font-bold">{i + 1}.</span>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
+            <div className={`flex-1 relative z-10 w-full ${isListView ? 'space-y-6' : 'flex items-center justify-center'}`}>
+              {isListView ? (
+                <div className="w-full">
+                  <EditableBody 
+                    className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap mb-6 text-left" 
+                    value={slide.body || ''}
+                    onChange={(v) => handleUpdateSlide({...slide, body: v})}
+                    isEdit={isEdit}
+                  />
+                  {hasExplicitBullets && (
+                    <ul className="space-y-4">
+                      {slide.bullets!.map((b, i) => (
+                        <li key={i} className="flex gap-4 text-lg text-slate-500 items-start group">
+                          <span className="text-slate-900 font-mono font-bold mt-1 shrink-0">{i + 1}.</span>
+                          <div className="flex-1 flex gap-2">
+                             <input 
+                               value={b}
+                               onChange={(e) => {
+                                 const newBullets = [...slide.bullets!];
+                                 newBullets[i] = e.target.value;
+                                 handleUpdateSlide({...slide, bullets: newBullets});
+                               }}
+                               className="flex-1 bg-transparent border-b border-transparent focus:border-slate-200 outline-none"
+                             />
+                             {isEdit && (
+                               <button 
+                                 onClick={() => {
+                                   const newBullets = slide.bullets!.filter((_, idx) => idx !== i);
+                                   handleUpdateSlide({...slide, bullets: newBullets});
+                                 }}
+                                 className="opacity-0 group-hover:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity"
+                               >
+                                 <X className="w-3 h-3" />
+                               </button>
+                             )}
+                          </div>
+                        </li>
+                      ))}
+                      {isEdit && (
+                        <button 
+                          onClick={() => handleUpdateSlide({...slide, bullets: [...(slide.bullets || []), '新要点']})}
+                          className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-900 p-2 mt-4 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" /> 添加要点
+                        </button>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              ) : (
+                <EditableBody 
+                  className="text-2xl text-slate-700 leading-relaxed max-w-4xl text-center font-medium" 
+                  value={slide.body || ''}
+                  onChange={(v) => handleUpdateSlide({...slide, body: v})}
+                  isEdit={isEdit}
+                />
               )}
             </div>
           </div>
@@ -850,7 +933,14 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             {renderAssets(slide)}
             <div className="flex items-center gap-4 mb-6 relative z-10">
               <Trophy className="w-8 h-8 text-amber-400" />
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">{slide.title}</h2>
+              <div className="flex-1">
+                <EditableTitle 
+                  className="text-3xl md:text-4xl font-bold text-slate-900 text-left" 
+                  value={slide.title}
+                  onChange={(v) => handleUpdateSlide({...slide, title: v})}
+                  isEdit={isEdit}
+                />
+              </div>
               {slide.sourceData?.metricLabel && (
                 <span className="ml-auto px-3 py-1 bg-amber-100 text-amber-800 text-xs font-mono font-bold rounded-full">
                   {slide.sourceData.metricLabel} {slide.sourceData.sortOrder === 'asc' ? '↑' : '↓'}
@@ -861,15 +951,15 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             <div className="flex-1 space-y-2 relative z-10">
               {slide.sourceData?.groups ? (
                 slide.sourceData.groups.map((group: any, i: number) => (
-                  <div key={i} className="flex items-center py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md animate-in slide-in-from-right-8" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div key={i} className="flex items-center py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md group/item">
                     <div className="flex items-center gap-6">
                       <span className="text-3xl font-mono font-black text-amber-200/50 w-8">{group.rank}</span>
                       <div className="flex flex-wrap gap-2">
                         {group.characters.map((c: any) => (
                            c.imageUrl ? (
-                             <img key={c.id} src={c.imageUrl} alt={c.name} title={c.name} className="w-28 h-28 rounded-full object-cover shadow-sm border-[3px] border-white bg-slate-100" />
+                             <img key={c.id} src={c.imageUrl} alt={c.name} title={c.name} className="w-20 h-20 md:w-28 md:h-28 rounded-full object-cover shadow-sm border-[3px] border-white bg-slate-100" />
                            ) : (
-                             <div key={c.id} className="w-28 h-28 rounded-full bg-slate-200 flex items-center justify-center text-xl font-bold text-slate-500 border-[3px] border-white shadow-sm" title={c.name}>
+                             <div key={c.id} className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-slate-200 flex items-center justify-center text-xl font-bold text-slate-500 border-[3px] border-white shadow-sm" title={c.name}>
                                {c.name.slice(0, 2)}
                              </div>
                            )
@@ -877,78 +967,244 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       </div>
                     </div>
                     <span className="ml-auto text-3xl font-mono font-black text-slate-900">{group.value}</span>
+                    {isEdit && (
+                      <button 
+                        onClick={() => {
+                          const newGroups = slide.sourceData.groups.filter((_: any, idx: number) => idx !== i);
+                          handleUpdateSlide({...slide, sourceData: {...slide.sourceData, groups: newGroups}});
+                        }}
+                        className="opacity-0 group-hover/item:opacity-100 ml-4 p-2 text-red-300 hover:text-red-500 transition-opacity"
+                        title="移除此项"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))
               ) : (
-                (slide.body?.split('\n').filter(Boolean) || []).map((item, i) => {
-                  const [name, rest] = item.split(/[(\-]/);
-                  return (
-                    <div key={i} className="flex items-center justify-between py-3 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md">
-                      <div className="flex items-center gap-6">
-                        <span className="text-2xl font-mono font-bold text-slate-200 w-6">{i + 1}</span>
-                        <span className="text-xl font-bold text-slate-800">{name.trim().replace(/^\d+\.\s*/, '')}</span>
-                      </div>
-                      {rest && <span className="text-sm font-mono text-slate-400">({rest.replace(/[)]/g, '')}</span>}
-                    </div>
-                  );
-                })
+                <EditableBody 
+                  className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap text-left" 
+                  value={slide.body || ''}
+                  onChange={(v) => handleUpdateSlide({...slide, body: v})}
+                  isEdit={isEdit}
+                />
               )}
             </div>
           </div>
         );
-      case 'compare':
-        const parts = slide.body?.split('vs') || [];
+      case 'mindmap': {
+        const mindmap = slide.mindmapData || (slide.bullets && slide.bullets.length > 0 
+          ? { branches: slide.bullets.map((b, i) => ({ id: `fallback-${i}`, title: b, children: [] })) }
+          : { branches: [] });
+        const branches = mindmap.branches;
+        const leftBranches = branches.filter((_, i) => i % 2 !== 0);
+        const rightBranches = branches.filter((_, i) => i % 2 === 0);
+
+        const handleUpdateBranchTitle = (id: string, newTitle: string) => {
+          const newMindmap = { 
+            branches: branches.map(b => b.id === id ? { ...b, title: newTitle } : b) 
+          };
+          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+        };
+
+        const handleUpdateChildTitle = (branchId: string, childIdx: number, newTitle: string) => {
+          const newMindmap = {
+            branches: branches.map(b => {
+              if (b.id !== branchId) return b;
+              const newChildren = [...(b.children || [])];
+              newChildren[childIdx] = newTitle;
+              return { ...b, children: newChildren };
+            })
+          };
+          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+        };
+
+        const handleDeleteBranch = (id: string) => {
+          const newMindmap = { branches: branches.filter(b => b.id !== id) };
+          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+        };
+        
+        const handleAddBranch = () => {
+          const newBranch = { id: `branch-${Date.now()}`, title: '新分支', children: [] };
+          const newMindmap = { branches: [...branches, newBranch] };
+          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+        };
+
+        const handleAddChild = (branchId: string) => {
+          const newMindmap = {
+            branches: branches.map(b => b.id === branchId ? { ...b, children: [...(b.children || []), '新节点'] } : b)
+          };
+          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+        };
+
         return (
-          <div className={`${baseClasses}`}>
+          <div className={`${baseClasses} items-center justify-center bg-slate-50 overflow-hidden`}>
             {renderAssets(slide)}
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-12 text-center relative z-10">{slide.title}</h2>
-            {renderInlineAssets(slide)}
-            <div className="flex-1 flex items-center justify-center gap-8 md:gap-16 relative z-10">
-              <div className="flex-1 text-right">
-                <span className="text-4xl md:text-6xl font-bold text-slate-800 tracking-tight">{parts[0]?.trim() || 'A'}</span>
-              </div>
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                <span className="font-mono font-bold text-slate-400">VS</span>
-              </div>
-              <div className="flex-1 text-left">
-                <span className="text-4xl md:text-6xl font-bold text-slate-400 tracking-tight">{parts[1]?.trim() || 'B'}</span>
-              </div>
+            <div className="flex items-center gap-4 mb-4 relative z-10 shrink-0">
+               <h2 className="text-sm text-slate-400 font-bold tracking-widest uppercase">思维导图</h2>
+               {isEdit && (
+                 <button 
+                   onClick={handleAddBranch}
+                   className="p-1 px-3 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:scale-105 transition-all flex items-center gap-1 shadow-sm"
+                 >
+                   <Plus className="w-3 h-3" /> 添加分支
+                 </button>
+               )}
             </div>
-          </div>
-        );
-      case 'formula':
-        return (
-          <div className={`${baseClasses} items-center justify-center text-center`}>
-            {renderAssets(slide)}
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-400 mb-12 relative z-10">{slide.title}</h2>
-            {renderInlineAssets(slide)}
-            <div className="p-8 md:p-12 bg-slate-50 border-2 border-slate-900 rounded-[2rem] shadow-[8px_8px_0_0_#0f172a] transform -rotate-1 hover:rotate-0 transition-all relative z-10">
-              <p className="text-4xl md:text-5xl font-mono font-black text-slate-900 tracking-tight leading-tight">
-                {slide.body}
-              </p>
-            </div>
-          </div>
-        );
-      case 'mindmap':
-        return (
-          <div className={`${baseClasses} items-center justify-center bg-slate-50`}>
-            {renderAssets(slide)}
-            <h2 className="text-xl text-slate-400 font-bold mb-8 tracking-widest uppercase relative z-10">思维导图</h2>
-            <div className="relative z-10 w-full flex items-center justify-center overflow-x-auto py-8 flex-1">
-              <div className="flex items-center gap-12">
-                <div className="px-8 py-6 bg-slate-900 text-white rounded-[2rem] shadow-xl z-20 relative min-w-[200px] text-center border-4 border-slate-50">
-                  <span className="text-2xl font-bold block">{slide.title}</span>
-                </div>
-                {slide.bullets && slide.bullets.length > 0 && (
-                  <div className="flex flex-col gap-6 relative">
-                    <div className="absolute -left-12 top-[50%] bottom-[50%] w-12 border-t-2 border-slate-300 -translate-y-[1px]" />
-                    <div className="absolute -left-12 top-0 bottom-0 border-l-2 border-slate-300 transform translate-y-1/2 -translate-y-1/2" style={{ height: 'calc(100% - 4.5rem)', top: '2.25rem' }} />
-                    {slide.bullets.map((bullet, idx) => (
-                      <div key={idx} className="relative flex items-center pl-12">
-                        <div className="absolute left-0 w-12 border-t-2 border-slate-300 top-1/2 -translate-y-[1px]" />
-                        <div className="px-6 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm z-20 whitespace-nowrap">
-                          <span className="text-lg font-medium text-slate-800">{bullet}</span>
+            <div className="relative z-10 w-full flex items-center justify-center overflow-auto py-4 flex-1 no-scrollbar min-h-0">
+              <div className="flex items-center justify-center gap-8 w-max px-8">
+                {/* Left Branches */}
+                {leftBranches.length > 0 && (
+                  <div className="flex flex-col gap-4 relative items-end">
+                    <div className="absolute -right-8 top-[50%] bottom-[50%] w-8 border-t-2 border-slate-200 -translate-y-[1px]" />
+                    <div className="absolute -right-8 top-0 bottom-0 border-r-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (leftBranches.length - 1) * 2)}rem)`, top: '1rem' }} />
+                    {leftBranches.map(branch => (
+                      <div key={branch.id} className="relative flex items-start pr-8 gap-6 flex-row-reverse group/branch">
+                        <div className="absolute right-0 w-8 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                        <div className="px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm z-20 whitespace-nowrap self-center relative max-w-[200px]">
+                          {isEdit ? (
+                            <div className="flex items-center gap-2">
+                               <button onClick={(e) => { e.stopPropagation(); handleAddChild(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-slate-400 hover:text-slate-900 transition-opacity" title="添加子节点">
+                                <Plus className="w-3 h-3" />
+                              </button>
+                              <textarea 
+                                value={branch.title}
+                                onChange={(e) => handleUpdateBranchTitle(branch.id, e.target.value)}
+                                onKeyDown={e => e.stopPropagation()}
+                                className="text-base font-bold text-slate-800 bg-transparent border-none outline-none text-right w-full resize-none p-0"
+                                rows={1}
+                              />
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBranch(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-base font-bold text-slate-800 break-words whitespace-normal inline-block text-right">{branch.title}</span>
+                          )}
                         </div>
+                        {branch.children && branch.children.length > 0 && (
+                          <div className="flex flex-col gap-2 relative self-center items-end">
+                            <div className="absolute -right-6 top-[50%] bottom-[50%] w-6 border-t-2 border-slate-200 -translate-y-[1px]" />
+                            <div className="absolute -right-6 top-0 bottom-0 border-r-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (branch.children.length - 1) * 0.5)}rem)`, top: '0.4rem' }} />
+                            {branch.children.map((child, cIdx) => (
+                              <div key={cIdx} className="relative flex items-center pr-6 group/child">
+                                <div className="absolute right-0 w-6 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                                <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl z-20 whitespace-normal text-slate-600 max-w-[150px]">
+                                  {isEdit ? (
+                                    <div className="flex items-center gap-1">
+                                      <textarea 
+                                        value={child}
+                                        onChange={(e) => handleUpdateChildTitle(branch.id, cIdx, e.target.value)}
+                                        onKeyDown={e => e.stopPropagation()}
+                                        className="text-xs font-medium bg-transparent border-none outline-none text-right w-full resize-none p-0"
+                                        rows={1}
+                                      />
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const newChildren = branch.children!.filter((_, idx) => idx !== cIdx);
+                                          const newMindmap = { branches: branches.map(b => b.id === branch.id ? { ...b, children: newChildren } : b) };
+                                          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+                                        }} 
+                                        className="opacity-0 group-hover/child:opacity-100 p-0.5 text-red-300 hover:text-red-500 transition-opacity"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs font-medium">{child}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Center Node */}
+                <div className="px-6 py-4 bg-slate-900 text-white rounded-[2rem] shadow-xl z-20 relative min-w-[150px] max-w-[300px] text-center border-4 border-slate-50 flex-shrink-0">
+                  {isEdit ? (
+                    <textarea 
+                      value={slide.title}
+                      onChange={(e) => handleUpdateSlide({ ...slide, title: e.target.value })}
+                      onKeyDown={e => e.stopPropagation()}
+                      className="text-xl font-bold bg-transparent border-none outline-none text-center w-full resize-none p-0 text-white"
+                      rows={1}
+                    />
+                  ) : (
+                    <span className="text-xl font-bold block break-words whitespace-normal leading-snug">{slide.title}</span>
+                  )}
+                </div>
+                
+                {/* Right Branches */}
+                {rightBranches.length > 0 && (
+                  <div className="flex flex-col gap-4 relative items-start">
+                    <div className="absolute -left-8 top-[50%] bottom-[50%] w-8 border-t-2 border-slate-200 -translate-y-[1px]" />
+                    <div className="absolute -left-8 top-0 bottom-0 border-l-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (rightBranches.length - 1) * 2)}rem)`, top: '1rem' }} />
+                    {rightBranches.map(branch => (
+                      <div key={branch.id} className="relative flex items-start pl-8 gap-6 group/branch">
+                        <div className="absolute left-0 w-8 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                        <div className="px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm z-20 whitespace-nowrap self-center relative max-w-[200px]">
+                          {isEdit ? (
+                            <div className="flex items-center gap-2">
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBranch(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                              <textarea 
+                                value={branch.title}
+                                onChange={(e) => handleUpdateBranchTitle(branch.id, e.target.value)}
+                                onKeyDown={e => e.stopPropagation()}
+                                className="text-base font-bold text-slate-800 bg-transparent border-none outline-none text-left w-full resize-none p-0"
+                                rows={1}
+                              />
+                              <button onClick={(e) => { e.stopPropagation(); handleAddChild(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-slate-400 hover:text-slate-900 transition-opacity" title="添加子节点">
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-base font-bold text-slate-800 break-words whitespace-normal inline-block">{branch.title}</span>
+                          )}
+                        </div>
+                        {branch.children && branch.children.length > 0 && (
+                          <div className="flex flex-col gap-2 relative self-center items-start">
+                            <div className="absolute -left-6 top-[50%] bottom-[50%] w-6 border-t-2 border-slate-200 -translate-y-[1px]" />
+                            <div className="absolute -left-6 top-0 bottom-0 border-l-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (branch.children.length - 1) * 0.5)}rem)`, top: '0.4rem' }} />
+                            {branch.children.map((child, cIdx) => (
+                              <div key={cIdx} className="relative flex items-center pl-6 group/child">
+                                <div className="absolute left-0 w-6 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                                <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl z-20 whitespace-normal text-slate-600 max-w-[150px]">
+                                  {isEdit ? (
+                                    <div className="flex items-center gap-1">
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const newChildren = branch.children!.filter((_, idx) => idx !== cIdx);
+                                          const newMindmap = { branches: branches.map(b => b.id === branch.id ? { ...b, children: newChildren } : b) };
+                                          handleUpdateSlide({ ...slide, mindmapData: newMindmap });
+                                        }} 
+                                        className="opacity-0 group-hover/child:opacity-100 p-0.5 text-red-300 hover:text-red-500 transition-opacity"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                      <textarea 
+                                        value={child}
+                                        onChange={(e) => handleUpdateChildTitle(branch.id, cIdx, e.target.value)}
+                                        onKeyDown={e => e.stopPropagation()}
+                                        className="text-xs font-medium bg-transparent border-none outline-none text-left w-full resize-none p-0"
+                                        rows={1}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs font-medium">{child}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -956,9 +1212,10 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
               </div>
             </div>
             {renderInlineAssets(slide)}
-            {slide.body && <p className="mt-8 text-slate-500 max-w-2xl text-center relative z-10">{slide.body}</p>}
+            {slide.body && <p className="mt-4 text-slate-500 max-w-2xl text-center relative z-10 shrink-0 text-xs">{slide.body}</p>}
           </div>
         );
+      }
       default:
         return (
           <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
@@ -981,7 +1238,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   };
 
   return (
-    <div className={`flex flex-col gap-6 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0`}>
+    <div className={`flex flex-col gap-4 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0`}>
       {/* Top Header Mode Switcher */}
       <div className="flex items-center justify-between bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex items-center gap-6">
@@ -1008,34 +1265,48 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 mr-2">
+              <button 
+                onClick={exportCurrentSlideImage}
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all"
+                title="导出当前页为图片"
+              >
+                <Monitor className="w-3 h-3" /> 导图
+              </button>
+              <button 
+                onClick={exportCurrentSlideMarkdown}
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all"
+                title="导出当前页为 Markdown"
+              >
+                <FileText className="w-3 h-3" /> 导文
+              </button>
+            </div>
             <button 
               onClick={exportJSON}
               className="px-4 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2"
             >
-              <Download className="w-3 h-3" /> 下载 JSON
+              <Download className="w-3 h-3" /> 下载全稿 JSON
             </button>
           </div>
         </div>
       {/* End Header */}
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
         {/* Sidebar: Article List */}
         {viewMode === 'edit' && (
-          <aside className={`flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 gap-6 shrink-0 transition-all duration-300 ${isDraftCollapsed ? 'w-24 items-center' : 'w-full lg:w-72'}`}>
+          <aside className={`flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden gap-4 shrink-0 transition-all duration-300 ${isDraftCollapsed ? 'w-24 p-4 items-center' : 'w-full lg:w-80 p-6'}`}>
             <div className="flex items-center justify-between w-full">
-              {!isDraftCollapsed && (
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <BookOpen className="w-3 h-3" /> 我的草稿箱
-                </h3>
+              {!isDraftCollapsed ? (
+                <div className="flex flex-col">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Edit className="w-3 h-3" /> 草稿箱
+                  </h3>
+                  <p className="text-[10px] text-slate-300 font-medium">输入原始内容自动识别</p>
+                </div>
+              ) : (
+                <Edit className="w-5 h-5 text-slate-300" />
               )}
               <div className={`flex items-center ${isDraftCollapsed ? 'flex-col gap-4' : 'gap-2'}`}>
-                <button 
-                  onClick={() => setIsAddingArticle(true)}
-                  className="p-1.5 bg-slate-900 text-white rounded-lg hover:scale-105 transition-all flex items-center justify-center shrink-0"
-                  title="导入新文稿"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
                 <button 
                   onClick={() => setIsDraftCollapsed(!isDraftCollapsed)}
                   className="p-1.5 border border-slate-200 text-slate-400 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center shrink-0"
@@ -1046,7 +1317,59 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
               </div>
             </div>
             
-            <div className="flex-1 space-y-2 overflow-y-auto no-scrollbar w-full">
+            {!isDraftCollapsed && (
+              <div className="flex flex-col flex-1 overflow-hidden gap-4">
+                <div className="flex-1 flex flex-col gap-2 min-h-0">
+                  <div className="relative group flex-1">
+                    <textarea 
+                      value={rawText}
+                      onChange={(e) => setRawText(e.target.value)}
+                      placeholder="# 演示标题&#10;核心内容第一行&#10;核心内容第二行&#10;[备注：这是演说备注]&#10;&#10;---&#10;&#10;# 下一页标题&#10;..."
+                      className="w-full h-full bg-slate-50 rounded-2xl p-4 text-xs font-medium text-slate-700 border-2 border-transparent focus:border-slate-200 focus:bg-white outline-none transition-all resize-none leading-relaxed placeholder:text-slate-300"
+                    />
+                    <button 
+                      onClick={() => setShowRecognitionGuide(!showRecognitionGuide)}
+                      className="absolute bottom-3 right-3 p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-slate-900 rounded-lg flex items-center gap-1.5"
+                    >
+                      <Info className="w-3 h-3" />
+                      <span className="text-[9px] font-bold">识别指南</span>
+                    </button>
+                  </div>
+
+                  {showRecognitionGuide && (
+                    <div className="p-4 bg-slate-900 rounded-2xl text-white text-[10px] space-y-3 mb-2 animate-in fade-in slide-in-from-bottom-4">
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                        <span className="font-bold text-slate-400 uppercase tracking-widest">内容识别模板</span>
+                        <X className="w-3 h-3 cursor-pointer" onClick={() => setShowRecognitionGuide(false)} />
+                      </div>
+                      <div className="space-y-2">
+                        <p><span className="text-blue-400 font-mono"># 页标题</span>：每段首行作为标题</p>
+                        <p><span className="text-blue-400 font-mono">---</span>：三个短横线实现强制分页</p>
+                        <p><span className="text-blue-400 font-mono">目录 [Contents]</span>：触发目录/结论版式</p>
+                        <p><span className="text-blue-400 font-mono">榜单 [Ranking]</span>：触发排名/权重榜单</p>
+                        <p><span className="text-blue-400 font-mono">导图 [Mindmap]</span>：由结构化短语触发思维导图</p>
+                        <p><span className="text-blue-400 font-mono">[备注：...]</span>：录制在页面背后的演说词</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
+                    disabled={!rawText.trim()}
+                    onClick={generateArticleFromDraft}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-30 transition-all shadow-lg active:scale-95 shrink-0"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-xs font-bold tracking-widest">智能生成文稿</span>
+                  </button>
+                </div>
+
+                <div className="h-px bg-slate-100" />
+                
+                <div className="flex-1 space-y-2 overflow-y-auto no-scrollbar w-full py-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-400 px-1">历史草稿 ({articles.length})</span>
+                    <button onClick={() => setIsAddingArticle(true)} className="p-1 hover:bg-slate-100 rounded text-slate-400" title="手动导入"><FilePlus className="w-3 h-3" /></button>
+                  </div>
               {articles.map(article => (
                 <div key={article.id} className="group relative">
                   <button
@@ -1070,11 +1393,11 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       <span className="text-sm font-bold truncate leading-tight w-full text-center">{article.title.slice(0, 2)}</span>
                     )}
                   </button>
-                  <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <div className={`absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 ${isDraftCollapsed ? 'scale-110 translate-x-2 -translate-y-2' : ''}`}>
                     <button 
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleDuplicateArticle(article); }}
-                      className="p-1.5 bg-slate-800/80 backdrop-blur rounded-lg text-white/50 hover:text-white transition-all shadow-sm"
+                      className="p-1 px-2 bg-slate-800 backdrop-blur rounded-lg text-white/50 hover:text-white transition-all shadow-md"
                       title="克隆副本"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1085,10 +1408,10 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         e.stopPropagation(); 
                         handleDeleteArticle(article.id); 
                       }}
-                      className={`p-1.5 backdrop-blur rounded-lg transition-all shadow-sm flex items-center justify-center ${
+                      className={`p-1 px-2 backdrop-blur rounded-lg transition-all shadow-md flex items-center justify-center ${
                         deleteConfirmId === article.id 
                           ? 'bg-red-500 text-white animate-pulse scale-110' 
-                          : 'bg-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white'
+                          : 'bg-slate-800 text-red-400 hover:bg-red-500 hover:text-white'
                       }`}
                       title={deleteConfirmId === article.id ? "再次点击确认删除" : "删除文稿"}
                     >
@@ -1102,30 +1425,87 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 </div>
               ))}
             </div>
-          </aside>
+          </div>
         )}
+      </aside>
+    )}
 
         {/* Main Content Area */}
-        <div className={`flex-1 flex flex-col gap-6`}>
-          {viewMode === 'presentation' && (
-            <div className="flex items-center justify-center gap-4 bg-white p-3 rounded-[2rem] border border-slate-100 shadow-sm shrink-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">画面比例</span>
-              <div className="flex bg-slate-50 p-1 rounded-xl">
-                <button
-                  onClick={() => setAspectRatio('16/9')}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${aspectRatio === '16/9' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                >16:9 横屏</button>
-                <button
-                  onClick={() => setAspectRatio('9/16')}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${aspectRatio === '9/16' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                >9:16 竖屏</button>
-              </div>
-            </div>
-          )}
+        <div className={`flex-1 flex flex-col gap-4`}>
+          {/* Top Bar for Actions & Navigation */}
+          <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-3 rounded-[2rem] border border-white/40 shadow-sm shrink-0">
+             <div className="flex items-center gap-4 px-4 overflow-hidden">
+                <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-xs font-bold text-slate-600 truncate max-w-[120px] md:max-w-xs">{currentArticle.title}</span>
+                <span className="w-px h-3 bg-slate-200 shrink-0" />
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest shrink-0">
+                  {currentSlideIndex + 1} / {currentArticle.slides.length}
+                </span>
+             </div>
+
+             <div className="flex items-center gap-2">
+                {viewMode === 'presentation' && (
+                  <div className="flex bg-slate-50 p-1 rounded-xl mr-2">
+                    <button
+                      onClick={() => setAspectRatio('16/9')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === '16/9' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >16:9</button>
+                    <button
+                      onClick={() => setAspectRatio('9/16')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === '9/16' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >9:16</button>
+                  </div>
+                )}
+                
+                {viewMode === 'edit' && (
+                   <div className="hidden md:flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-100 mr-2">
+                      <button onClick={() => handleMoveSlide('up')} disabled={currentSlideIndex === 0} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20" title="上移"><ArrowUp className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleMoveSlide('down')} disabled={currentSlideIndex === currentArticle.slides.length - 1} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20" title="下移"><ArrowDown className="w-3.5 h-3.5" /></button>
+                      <div className="w-px h-4 bg-slate-100 mx-1" />
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSlide();
+                        }} 
+                        className={`p-2 transition-all rounded-lg overflow-hidden flex items-center gap-2 group/del-slide ${
+                          slideDeleteConfirm ? 'bg-red-500 text-white ring-2 ring-red-200 animate-pulse w-auto px-3' : 'hover:bg-red-50 text-red-400 w-10'
+                        }`} 
+                        title="删除本页"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                        {slideDeleteConfirm && <span className="text-[10px] font-extrabold whitespace-nowrap">确认删除</span>}
+                      </button>
+                      <button onClick={handleAddSlide} className="p-2 hover:bg-slate-50 text-slate-900 flex items-center gap-2 px-3" title="添加新页"><Plus className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">加页</span></button>
+                   </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                   <button 
+                     onClick={prevSlide}
+                     disabled={currentSlideIndex === 0}
+                     className="p-1.5 px-3 md:p-2 md:px-4 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
+                     title="上一页"
+                   >
+                     <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                     <span className="hidden lg:inline text-[10px] font-bold tracking-widest">上一页</span>
+                   </button>
+                   <button 
+                     onClick={nextSlide}
+                     disabled={currentSlideIndex === currentArticle.slides.length - 1}
+                     className="p-1.5 px-4 md:p-2 md:px-6 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg"
+                     title="下一页"
+                   >
+                     <span className="hidden sm:inline text-xs font-bold tracking-widest">下一页</span>
+                     <ChevronRight className="w-5 h-5" />
+                   </button>
+                </div>
+             </div>
+          </div>
+
           {/* Fullscreen Wrapper Container */}
           <div 
             ref={presentationContainerRef} 
-            className={`flex flex-col flex-1 gap-4 bg-[#f8fafc] w-full mx-auto relative ${viewMode === 'presentation' && aspectRatio === '9/16' ? 'max-w-[45vh]' : ''}`}
+            className={`flex flex-col flex-1 gap-2 bg-[#f8fafc] w-full mx-auto relative ${viewMode === 'presentation' && aspectRatio === '9/16' ? 'max-w-[45vh]' : ''}`}
           >
             {/* Center the slide if in presentation mode */}
             <div className={`flex-1 flex items-center justify-center w-full h-full relative`}>
@@ -1167,20 +1547,20 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 {renderSlideContent(currentSlide)}
               </div>
 
-              {/* Click-to-Enlarge / Presentation Navigation Overlay */}
-              {viewMode === 'edit' && (
-                <div className="absolute inset-0 z-20 flex">
-                  <div 
-                    className={`h-full w-full cursor-zoom-in flex items-center justify-start p-4 md:p-8 opacity-0 hover:opacity-100 transition-opacity`}
-                    onClick={(e) => {
-                      setViewMode('presentation');
-                      return;
-                    }}
-                    title={"点击放大查看"}
-                  >
+                {/* Inline Editing Overlay */}
+                {viewMode === 'edit' && (
+                  <div className="absolute inset-0 z-10 p-8 flex flex-col pointer-events-none">
+                    <div className="mt-auto ml-auto pointer-events-auto">
+                      <button 
+                        onClick={() => handleUpdateSlide({...currentSlide, body: ''})}
+                        className="p-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-full transition-all shadow-sm flex items-center justify-center border border-red-500/20"
+                        title="清空内容"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Slide Overlay Info */}
               <div className="absolute bottom-10 left-10 flex items-center gap-4 z-30 pointer-events-none">
@@ -1203,47 +1583,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             </div>
           </div>
 
-          {/* Controls Footer */}
-          {viewMode === 'edit' && (
-              <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-4 rounded-[2rem] border border-white/40 shadow-sm mt-auto shrink-0 transition-all">
-                <div className="flex items-center gap-2">
-                  {viewMode === 'edit' && (
-                    <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-100">
-                      <button onClick={() => handleMoveSlide('up')} disabled={currentSlideIndex === 0} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20"><ArrowUp className="w-4 h-4" /></button>
-                      <button onClick={() => handleMoveSlide('down')} disabled={currentSlideIndex === currentArticle.slides.length - 1} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20"><ArrowDown className="w-4 h-4" /></button>
-                      <div className="w-px h-4 bg-slate-100 mx-1" />
-                      <button onClick={handleDeleteSlide} className="p-2 hover:bg-red-50 text-red-400"><Trash2 className="w-4 h-4" /></button>
-                      <button onClick={handleAddSlide} className="p-2 hover:bg-slate-50 text-slate-900 flex items-center gap-2 px-4"><Plus className="w-4 h-4" /><span className="text-xs font-bold">加页</span></button>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={prevSlide}
-                    disabled={currentSlideIndex === 0}
-                    className={`p-4 rounded-2xl transition-all ${
-                      currentSlideIndex === 0 
-                        ? 'opacity-30 cursor-not-allowed text-slate-300' 
-                        : 'bg-white hover:bg-slate-50 border border-slate-100 text-slate-900 shadow-sm active:scale-95'
-                    }`}
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  <button 
-                    onClick={nextSlide}
-                    disabled={currentSlideIndex === currentArticle.slides.length - 1}
-                    className={`px-12 py-4 rounded-2xl transition-all flex items-center gap-3 font-bold ${
-                      currentSlideIndex === currentArticle.slides.length - 1 
-                        ? 'opacity-30 cursor-not-allowed bg-slate-100 text-slate-300' 
-                        : 'bg-slate-900 hover:bg-slate-800 text-white shadow-lg active:scale-95'
-                    }`}
-                  >
-                    <span className="tracking-widest">下个环节</span>
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-            )}
+          {/* Controls Footer Removed - navigation moved to top bar */}
           </div>
         </div>
 
@@ -1257,42 +1597,159 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 </h3>
                 
                 <div className="space-y-4">
-                  <div className="space-y-1">
+                  <div className="space-y-3">
                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">版式类型</label>
-                    <select 
-                      value={currentSlide.type}
-                      onChange={(e) => handleUpdateSlide({...currentSlide, type: e.target.value as SlideType})}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold"
-                    >
-                      <option value="title">标题页 (Title)</option>
-                      <option value="list">列表页 (List)</option>
-                      <option value="ranking">排行榜 (Ranking)</option>
-                      <option value="compare">对比页 (Compare)</option>
-                      <option value="formula">公式页 (Formula)</option>
-                      <option value="summary">总结页 (Summary)</option>
-                      <option value="conclusion">纯文字 (Text)</option>
-                      <option value="mindmap">思维导图 (Mindmap)</option>
-                    </select>
+                    <div className="grid grid-cols-2 lg:grid-cols-2 gap-2">
+                      {[
+                        { id: 'title', label: '标题页', icon: Layout },
+                        { id: 'conclusion', label: '目录页', icon: List },
+                        { id: 'content', label: '内容页', icon: FileText },
+                        { id: 'ranking', label: '榜单页', icon: Trophy },
+                        { id: 'mindmap', label: '思维导图', icon: Zap },
+                        { id: 'summary', label: '总结页', icon: Sparkles },
+                      ].map(type => (
+                        <button
+                          key={type.id}
+                          onClick={() => handleUpdateSlide({...currentSlide, type: type.id as SlideType})}
+                          className={`px-2 py-3 rounded-xl text-xs font-bold transition-all border flex flex-col items-center gap-2 ${
+                            (currentSlide.type === type.id) 
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+                            : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100 hover:text-slate-700'
+                          }`}
+                        >
+                          <type.icon className="w-4 h-4" />
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">环节标题</label>
+                  <div className="space-y-1 mt-4">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">{currentSlide.type === 'mindmap' ? '中心主题' : '环节标题'}</label>
                     <input 
                       type="text" 
                       value={currentSlide.title}
                       onChange={(e) => handleUpdateSlide({...currentSlide, title: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm"
+                      onKeyDown={e => e.stopPropagation()}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">正文内容 / 数据列表</label>
-                    <textarea 
-                      value={currentSlide.body}
-                      onChange={(e) => handleUpdateSlide({...currentSlide, body: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm h-32 resize-none"
-                    />
-                  </div>
+                  {currentSlide.type === 'mindmap' ? (() => {
+                    const mindmap = currentSlide.mindmapData || (currentSlide.bullets && currentSlide.bullets.length > 0 
+                      ? { branches: currentSlide.bullets.map((b, i) => ({ id: `fallback-${i}`, title: b, children: [] })) }
+                      : { branches: [
+                          { id: `b-${Date.now()}-1`, title: '分支一', children: [] },
+                          { id: `b-${Date.now()}-2`, title: '分支二', children: [] },
+                          { id: `b-${Date.now()}-3`, title: '分支三', children: [] }
+                        ] });
+
+                    const updateMindmap = (newMindmap: MindmapData) => {
+                      handleUpdateSlide({...currentSlide, mindmapData: newMindmap});
+                    };
+
+                    const handleAddBranch = () => {
+                      updateMindmap({ branches: [...mindmap.branches, { id: `b-${Date.now()}`, title: '新分支', children: [] }] });
+                    };
+
+                    const handleRemoveBranch = (id: string) => {
+                      updateMindmap({ branches: mindmap.branches.filter(b => b.id !== id) });
+                    };
+
+                    const handleUpdateBranch = (id: string, title: string) => {
+                      updateMindmap({ branches: mindmap.branches.map(b => b.id === id ? { ...b, title } : b) });
+                    };
+
+                    const handleAddChild = (branchId: string) => {
+                      updateMindmap({ branches: mindmap.branches.map(b => b.id === branchId ? { ...b, children: [...(b.children || []), '新节点'] } : b) });
+                    };
+
+                    const handleRemoveChild = (branchId: string, idx: number) => {
+                      updateMindmap({ branches: mindmap.branches.map(b => {
+                        if (b.id !== branchId) return b;
+                        const newChildren = [...(b.children || [])];
+                        newChildren.splice(idx, 1);
+                        return { ...b, children: newChildren };
+                      }) });
+                    };
+
+                    const handleUpdateChild = (branchId: string, idx: number, val: string) => {
+                      updateMindmap({ branches: mindmap.branches.map(b => {
+                        if (b.id !== branchId) return b;
+                        const newChildren = [...(b.children || [])];
+                        newChildren[idx] = val;
+                        return { ...b, children: newChildren };
+                      }) });
+                    };
+
+                    return (
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">思维导图结构 (1级分支及子节点)</label>
+                          <button onClick={handleAddBranch} className="p-1 px-2 text-xs bg-slate-900 text-white rounded-lg font-bold flex items-center gap-1 hover:bg-slate-800 transition-colors">
+                            <Plus className="w-3 h-3" /> 一级分支
+                          </button>
+                        </div>
+                        <div className="space-y-3 bg-slate-50 border border-slate-100 rounded-xl p-3">
+                          {mindmap.branches.map(branch => (
+                            <div key={branch.id} className="bg-white border border-slate-200 rounded-xl p-3 space-y-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                                <input 
+                                  value={branch.title} 
+                                  onChange={e => handleUpdateBranch(branch.id, e.target.value)} 
+                                  onKeyDown={e => e.stopPropagation()}
+                                  className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none border-b border-transparent focus:border-slate-300"
+                                  placeholder="一级分支" 
+                                />
+                                <button onClick={() => handleAddChild(branch.id)} className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors" title="添加二级节点">
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => handleRemoveBranch(branch.id)} className="p-1.5 bg-red-50 hover:bg-red-100 rounded text-red-500 transition-colors" title="删除">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                              {branch.children && branch.children.length > 0 && (
+                                <div className="pl-4 space-y-2 relative">
+                                  <div className="absolute left-[3px] top-0 bottom-0 border-l border-slate-200" />
+                                  {branch.children.map((child, cIdx) => (
+                                    <div key={cIdx} className="flex items-center gap-2 relative pl-3">
+                                      <div className="absolute left-0 top-1/2 w-3 border-t border-slate-200" />
+                                      <input 
+                                        value={child}
+                                        onChange={e => handleUpdateChild(branch.id, cIdx, e.target.value)}
+                                        onKeyDown={e => e.stopPropagation()}
+                                        className="flex-1 bg-slate-50 text-xs text-slate-600 px-2 py-1 rounded focus:outline-none border border-transparent focus:border-slate-300 focus:bg-white"
+                                        placeholder="二级节点"
+                                      />
+                                      <button onClick={() => handleRemoveChild(branch.id, cIdx)} className="p-1 text-slate-400 hover:text-red-500 transition-colors" title="删除节点">
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          {mindmap.branches.length === 0 && (
+                            <div className="text-center py-6 text-xs text-slate-400 font-bold tracking-widest uppercase">
+                              暂无分支
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">正文内容 / 数据列表</label>
+                      <textarea 
+                        value={currentSlide.body || ''}
+                        onChange={(e) => handleUpdateSlide({...currentSlide, body: e.target.value})}
+                        onKeyDown={e => e.stopPropagation()}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             
@@ -1325,12 +1782,35 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       <option key={`tag:${t.id}`} value={`tag:${t.name}`}>{t.name}</option>
                     ))}
                   </optgroup>
-                  <optgroup label="指标排行榜 (Metrics)">
+                  <optgroup label="常规指标 (Traits)">
                     {availableTraits.filter(t => !(currentArticle.relatedMetrics?.includes(t.id) || currentArticle.relatedMetrics?.includes(t.label))).map(t => (
                       <option key={`metric:${t.id}`} value={`metric:${t.label}`}>{t.label} ({t.role})</option>
                     ))}
                   </optgroup>
+                  <optgroup label="自定义综合指标 (Custom)">
+                    {customMetrics.filter(m => !(currentArticle.relatedMetrics?.includes(m.id) || currentArticle.relatedMetrics?.includes(m.name))).map(m => (
+                      <option key={`custom:${m.id}`} value={`custom:${m.id}`}>{m.name} ({m.role})</option>
+                    ))}
+                  </optgroup>
                 </select>
+
+                <div className="flex items-center justify-between px-1 mt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">导入排序</span>
+                  <div className="flex bg-slate-100 rounded-lg p-0.5">
+                    <button 
+                      onClick={() => setImportSortOrder('asc')}
+                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'asc' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      升序
+                    </button>
+                    <button 
+                      onClick={() => setImportSortOrder('desc')}
+                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'desc' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      降序
+                    </button>
+                  </div>
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -1390,12 +1870,54 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
-                        插入前5降序
+                    <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                          前5降序
+                        </button>
+                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'asc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                          前5升序
+                        </button>
+                      </div>
+                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', importSortOrder)} className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-[10px] font-bold text-white rounded shadow-sm transition-all border border-amber-500">
+                        {`导入完整排行榜 (${importSortOrder === 'asc' ? '升序' : '降序'})`}
                       </button>
-                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'asc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
-                        插入前5升序
+                    </div>
+                  </div>
+                ))}
+
+                {customMetrics.filter(m => currentArticle.relatedMetrics?.includes(m.id) || currentArticle.relatedMetrics?.includes(m.name)).map(metric => (
+                  <div key={metric.id} className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="w-3 h-3 text-purple-400" />
+                        <span className="text-xs font-bold text-purple-900">{metric.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-purple-300 font-mono">{metric.role}</span>
+                        <button 
+                          onClick={() => {
+                            const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(t => t !== metric.name && t !== metric.id) };
+                            setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                          }}
+                          className="text-purple-300 hover:text-red-500 transition-colors"
+                          title="移除资产"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleInsertLeaderboard(metric.name, metric.role as 'Survivor' | 'Hunter', 'desc', 5, metric.id)} className="flex-1 py-1.5 bg-white hover:bg-purple-100 text-[10px] font-bold text-purple-700 rounded drop-shadow-sm transition-all border border-purple-200">
+                          前5降序
+                        </button>
+                        <button onClick={() => handleInsertLeaderboard(metric.name, metric.role as 'Survivor' | 'Hunter', 'asc', 5, metric.id)} className="flex-1 py-1.5 bg-white hover:bg-purple-100 text-[10px] font-bold text-purple-700 rounded drop-shadow-sm transition-all border border-purple-200">
+                          前5升序
+                        </button>
+                      </div>
+                      <button onClick={() => handleInsertLeaderboard(metric.name, metric.role as 'Survivor' | 'Hunter', importSortOrder, undefined, metric.id)} className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 text-[10px] font-bold text-white rounded shadow-sm transition-all border border-purple-500">
+                        {`导入完整排行榜 (${importSortOrder === 'asc' ? '升序' : '降序'})`}
                       </button>
                     </div>
                   </div>

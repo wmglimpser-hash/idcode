@@ -49,7 +49,7 @@ export const exportLeaderboardToMarkdown = (
       const traitLabelClean = traitLabel.replace(/[.#$/[\]]/g, '_');
       const remarkId = `${char.id}_${traitLabelClean}_${char.value}`.replace(/[.#$/[\]]/g, '_');
       const remark = traitRemarks[remarkId] ? ` [备注: ${traitRemarks[remarkId]}]` : '';
-      content += `- **${char.title}** (${char.name})${remark}\n`;
+      content += `- **${char.title}** (${char.name}) [${char.imageUrl}]${remark}\n`;
     });
     content += `\n`;
   });

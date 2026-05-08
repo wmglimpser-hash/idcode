@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Character, CharacterTraitCategory } from '../constants';
-import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator, Maximize2, Minimize2, Download, FileText } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Search, Activity, Shield, Zap, Target, RefreshCcw, ChevronRight, Plus, Trash2, Edit3, Check, X, Calculator, Maximize2, Minimize2, Download, FileText, Camera } from 'lucide-react';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { CharacterComparison } from './CharacterComparison';
 import { exportLeaderboardToMarkdown } from '../services/exportService';
+import { generateLeaderboardData, extractValue } from '../utils/leaderboardUtils';
+import { toPng } from 'html-to-image';
+import download from 'downloadjs';
 
 interface CustomMetric {
   id: string;
@@ -32,7 +35,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
     return null;
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('asc');
   const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
   const [selectedCustomMetric, setSelectedCustomMetric] = useState<CustomMetric | null>(null);
   const [showMetricForm, setShowMetricForm] = useState(false);
@@ -44,6 +47,8 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
   const [newItemLabel, setNewItemLabel] = useState('');
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const screenshotRef = React.useRef<HTMLDivElement>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   
   // Disable body scroll when full screen
   useEffect(() => {
@@ -171,19 +176,44 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
     }
   };
 
+  const handleExportImage = async () => {
+    if (!screenshotRef.current) return;
+    
+    setIsCapturing(true);
+    try {
+      const title = selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || 'Ranking';
+      const fileName = `Ranking_${title}_${new Date().getTime()}.png`;
+
+      // Define optimized capture styles (White Theme)
+      const dataUrl = await toPng(screenshotRef.current, {
+        quality: 1,
+        pixelRatio: 2, // High resolution
+        backgroundColor: '#ffffff',
+        skipFonts: true, // Skip external fonts to avoid CORS errors
+        fontEmbedCSS: '', // Disable font embedding to prevent cross-origin errors
+        style: {
+          overflow: 'visible',
+          height: 'auto',
+          maxHeight: 'none',
+          backgroundColor: '#ffffff',
+          color: '#000000',
+          padding: '24px',
+          borderRadius: '0'
+        }
+      });
+      
+      download(dataUrl, fileName);
+    } catch (err) {
+      console.error("Error capturing leaderboard image:", err);
+      alert("截图生成失败，请重试。");
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   const factionCharacters = useMemo(() => {
     return characters.filter(c => c.role === role && !c.id.startsWith('base_'));
   }, [characters, role]);
-
-  // Helper to extract numeric value for sorting
-  const extractValue = (valStr: string): number => {
-    if (!valStr || valStr === 'N/A') return -Infinity;
-    // Handle cases like "4.64 / 4.82" by taking the first number if not already split
-    // But since we split before calling this, it should be fine.
-    // We use a more robust regex for numbers
-    const match = valStr.match(/(-?\d+(\.\d+)?)/);
-    return match ? parseFloat(match[1]) : -Infinity;
-  };
 
   const handleSaveConfig = async (newConfig: { survivorTraits: CharacterTraitCategory[], hunterTraits: CharacterTraitCategory[] }) => {
     try {
@@ -265,101 +295,17 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
 
   const groupedRankedData = useMemo(() => {
     if (!selectedTrait && !selectedCustomMetric) return [];
-
-    const explodedData: any[] = [];
-
-    factionCharacters.forEach(char => {
-      if (selectedCustomMetric) {
-        const charTraits = char.traits?.flatMap(t => t.items) || [];
-        const values = selectedCustomMetric.traitLabels.map(label => {
-          const item = charTraits.find(i => i.label === label);
-          return item ? extractValue(item.value) : 0;
-        });
-        
-        const validValues = values.filter(v => v !== -Infinity);
-        if (validValues.length > 0) {
-          const numericValue = validValues.reduce((sum, v) => sum + v, 0);
-          explodedData.push({
-            id: char.id,
-            name: char.name,
-            title: char.title,
-            imageUrl: char.imageUrl,
-            value: numericValue.toString(),
-            numericValue
-          });
-        }
-      } else if (selectedTrait) {
-        const matchingItems = char.traits?.flatMap(t => t.items).filter(i => i.label === selectedTrait.label) || [];
-        
-        if (matchingItems.length > 0) {
-          matchingItems.forEach(item => {
-            if (item && item.value && item.value !== 'N/A') {
-              // Support multiple values split by '/', '／', '、', or commas
-              const parts = item.value.split(/[/／、,，]/);
-              parts.forEach(part => {
-                const trimmedPart = part.trim();
-                if (!trimmedPart) return;
-                
-                const numVal = extractValue(trimmedPart);
-                // Only add if it contains a valid number
-                if (numVal !== -Infinity) {
-                  explodedData.push({
-                    id: char.id,
-                    name: char.name,
-                    title: char.title,
-                    imageUrl: char.imageUrl,
-                    value: trimmedPart,
-                    numericValue: numVal
-                  });
-                }
-              });
-            }
-          });
-        }
-      }
-    });
-
-    const sortedData = explodedData.sort((a, b) => {
-      if (a.numericValue === b.numericValue) {
-        // Find respective character objects to get their secondary sort criteria
-        const charA = characters.find(c => c.id === a.id);
-        const charB = characters.find(c => c.id === b.id);
-        const orderA = charA?.order ?? 999;
-        const orderB = charB?.order ?? 999;
-        
-        if (orderA !== orderB) return orderA - orderB;
-        return a.id.localeCompare(b.id);
-      }
-      if (a.numericValue === -Infinity) return 1;
-      if (b.numericValue === -Infinity) return -1;
-      
-      return sortOrder === 'asc' ? a.numericValue - b.numericValue : b.numericValue - a.numericValue;
-    });
-
-    const groups: { rank: number, value: string, numericValue: number, characters: any[] }[] = [];
     
-    let currentRank = 1;
-    sortedData.forEach((item, index) => {
-      if (item.value === 'N/A' || item.numericValue === -Infinity) {
-        return;
-      }
-
-      if (index > 0 && item.numericValue === sortedData[index - 1].numericValue) {
-        const lastGroup = groups[groups.length - 1];
-        lastGroup.characters.push(item);
-      } else {
-        groups.push({
-          rank: currentRank,
-          value: item.value,
-          numericValue: item.numericValue,
-          characters: [item]
-        });
-        currentRank++;
-      }
-    });
-
+    const { groups } = generateLeaderboardData(
+      characters, 
+      role, 
+      selectedTrait?.label || '', 
+      sortOrder, 
+      selectedCustomMetric ? { traitLabels: selectedCustomMetric.traitLabels } : undefined
+    );
+    
     return groups;
-  }, [factionCharacters, selectedTrait, selectedCustomMetric, sortOrder]);
+  }, [characters, role, selectedTrait, selectedCustomMetric, sortOrder]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -659,7 +605,10 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
           {/* Ranking Section */}
           <div className={`${isFullScreen ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-6`}>
             {selectedTrait || selectedCustomMetric ? (
-              <div className={`flex flex-col ${isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 cyber-border'}`}>
+              <div 
+                ref={screenshotRef}
+                className={`flex flex-col ${isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 cyber-border'}`}
+              >
                 <div className={`flex justify-between items-start mb-4 border-b border-border pb-4 flex-shrink-0 ${isFullScreen ? 'max-w-7xl mx-auto w-full' : ''}`}>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
@@ -694,6 +643,21 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                       >
                         <Download className="w-3.5 h-3.5" /> 导出数据卡
                       </button>
+                      
+                      <button
+                        onClick={handleExportImage}
+                        disabled={isCapturing}
+                        className={`flex items-center gap-2 px-3 py-1 border text-[10px] font-mono transition-all ${
+                          isCapturing 
+                            ? 'bg-slate-800 border-slate-700 text-slate-500' 
+                            : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-white'
+                        }`}
+                        title="导出完整排名截图"
+                      >
+                        {isCapturing ? <RefreshCcw className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                        {isCapturing ? '生成中...' : '导出排名截图'}
+                      </button>
+
                       <button
                         onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                         className="flex items-center gap-2 px-3 py-1 bg-bg/50 border border-border hover:border-accent group transition-all"
@@ -714,12 +678,12 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   </div>
                 </div>
 
-                <div className={`flex-grow overflow-y-auto custom-scrollbar ${isFullScreen ? 'px-2 max-w-7xl mx-auto w-full' : 'pr-2'}`}>
-                  <div className="grid grid-cols-1 gap-1.5 pb-4">
+                <div className={`flex-grow overflow-y-auto custom-scrollbar ranking-list-container ${isFullScreen ? 'px-2 max-w-7xl mx-auto w-full' : 'pr-2'}`}>
+                  <div className="grid grid-cols-1 gap-1.5 pb-4 ranking-items-grid">
                     {groupedRankedData.map((group) => (
                       <div 
                         key={group.rank} 
-                        className={`flex items-center gap-3 p-2 border transition-all ${
+                        className={`flex items-center gap-3 p-2 border transition-all rank-group-row ${
                           group.rank === 1 ? 'bg-gold/10 border-gold/50' : 
                           group.rank === 2 ? 'bg-accent/5 border-accent/20' :
                           group.rank === 3 ? 'bg-primary/5 border-primary/30' :
@@ -777,11 +741,11 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                                     </div>
                                   ) : (
                                     <div className="flex flex-col overflow-hidden leading-tight">
-                                      <div className={`${isFullScreen ? 'text-xs' : 'text-[10px]'} font-bold text-accent group-hover:text-primary transition-colors truncate w-full tracking-tighter uppercase`}>
+                                      <div className={`${isFullScreen ? 'text-xs' : 'text-[10px]'} font-bold text-accent group-hover:text-primary transition-colors truncate w-full tracking-tighter uppercase rank-character-title`}>
                                         {char.title}
                                       </div>
                                       {remark && (
-                                        <div className={`${isFullScreen ? 'text-[10px]' : 'text-[8px]'} text-primary font-mono opacity-80 truncate w-full tracking-tighter`}>
+                                        <div className={`${isFullScreen ? 'text-[10px]' : 'text-[8px]'} text-primary font-mono opacity-80 truncate w-full tracking-tighter rank-character-remark`}>
                                           [{remark}]
                                         </div>
                                       )}

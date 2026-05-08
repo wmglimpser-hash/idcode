@@ -125,7 +125,12 @@ export const TagManagement = ({ user, userProfile }: TagManagementProps) => {
       const matchedChars = characters.filter(c => 
         c.skills?.some(s => s.tags?.includes(tagName)) || 
         c.presence?.some(p => p.tags?.includes(tagName))
-      );
+      ).sort((a, b) => {
+        const orderA = a.order ?? 999;
+        const orderB = b.order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id.localeCompare(b.id);
+      });
       const matchedTalents = talents.filter(t => t.tags?.includes(tagName));
       setSearchResults({ characters: matchedChars, talents: matchedTalents });
     }

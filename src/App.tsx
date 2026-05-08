@@ -66,13 +66,20 @@ export default function App() {
   const [selectedWikiEntry, setSelectedWikiEntry] = useState<WikiEntry | null>(null);
   const [leaderboardTrait, setLeaderboardTrait] = useState<{ role: 'Survivor' | 'Hunter', label: string } | null>(null);
   const [tags, setTags] = useState<any[]>([]);
+  const [customMetrics, setCustomMetrics] = useState<any[]>([]);
 
-  // Fetch Tags
+  // Fetch Tags and Custom Metrics
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'tags'), (snapshot) => {
+    const unsubTags = onSnapshot(collection(db, 'tags'), (snapshot) => {
       setTags(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return () => unsubscribe();
+    const unsubMetrics = onSnapshot(collection(db, 'custom_metrics'), (snapshot) => {
+      setCustomMetrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => {
+      unsubTags();
+      unsubMetrics();
+    };
   }, []);
 
   const handleViewRanking = (role: 'Survivor' | 'Hunter', label: string) => {
@@ -823,6 +830,7 @@ export default function App() {
             characters={characters}
             talents={talents}
             availableTags={tags} 
+            customMetrics={customMetrics}
             availableTraits={[
               ...SURVIVOR_TRAITS_MODERN_TEMPLATE.flatMap(cat => cat.items.map(item => ({ 
                 id: `Survivor:${cat.category}:${item.label}`, 
