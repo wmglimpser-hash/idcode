@@ -194,14 +194,64 @@ const EditableBody = ({ className, value, onChange, isEdit }: { className: strin
 
 export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characters, talents, availableTags, availableTraits, customMetrics = [] }) => {
   const [articles, setArticles] = useState<TheoryArticle[]>(() => {
+    const validateAndMigrateData = (data: any[]): TheoryArticle[] => {
+      return data.map(article => {
+        // Enforce basic structure
+        if (!article.id || !article.title || !Array.isArray(article.slides)) {
+          throw new Error("Invalid article structure");
+        }
+        
+        // Migrate slides
+        const validSlides: Slide[] = article.slides.map((s: any) => {
+          let type = s.type as SlideType;
+          // Legacy mapping
+          const legacyTypes = ['list', 'compare', 'formula', 'text'];
+          if (legacyTypes.includes(s.type)) {
+            type = 'content';
+          }
+          
+          return {
+            ...s,
+            type: type || 'content',
+            id: s.id || `mig-${Math.random().toString(36).substr(2, 9)}`,
+            title: s.title || '无标题页面',
+            body: s.body || '',
+            notes: s.notes || ''
+          };
+        });
+
+        return {
+          ...article,
+          slides: validSlides,
+          relatedTags: Array.isArray(article.relatedTags) ? article.relatedTags : [],
+          relatedMetrics: Array.isArray(article.relatedMetrics) ? article.relatedMetrics : []
+        };
+      });
+    };
+
     try {
-      const saved = localStorage.getItem('theory_articles_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const v2 = localStorage.getItem('theory_articles_v2');
+      if (v2) {
+        const parsed = JSON.parse(v2);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return validateAndMigrateData(parsed);
+        }
+      }
+
+      // Fallback to legacy v1
+      const v1 = localStorage.getItem('theory_articles');
+      if (v1) {
+        const parsed = JSON.parse(v1);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log("Migrating theory_articles V1 to V2...");
+          const migrated = validateAndMigrateData(parsed);
+          // Save to V2 immediately
+          localStorage.setItem('theory_articles_v2', JSON.stringify(migrated));
+          return migrated;
+        }
       }
     } catch (err) {
-      console.warn("Failed to parse theory_articles_v2 from localStorage", err);
+      console.warn("Storage migration failed, falling back to mock data", err);
     }
     return MOCK_DATA;
   });
@@ -351,7 +401,9 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       series: newArticleDoc.series || '手动导入',
       date: new Date().toISOString().split('T')[0],
       author: '演示助手',
-      slides: generatedSlides
+      slides: generatedSlides,
+      relatedTags: [...newArticleDoc.selectedTags],
+      relatedMetrics: [...newArticleDoc.selectedMetrics]
     };
 
     setArticles([newArt, ...articles]);
@@ -1230,11 +1282,36 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
 
   // Helper to get real data objects
   const getSelectedTagData = () => {
-    return availableTags.filter(t => currentArticle.relatedTags?.includes(t.name) || currentArticle.relatedTags?.includes(t.id));
+    const results: { tag: Tag, matchKey: string }[] = [];
+    currentArticle.relatedTags?.forEach(tagKey => {
+      const tag = availableTags.find(t => t.id === tagKey || t.name === tagKey);
+      if (tag) {
+        results.push({ tag, matchKey: tagKey });
+      }
+    });
+    return results;
   };
 
   const getSelectedMetricData = () => {
-    return availableTraits.filter(t => currentArticle.relatedMetrics?.includes(t.id) || currentArticle.relatedMetrics?.includes(t.label));
+    const results: { trait: typeof availableTraits[0], matchKey: string }[] = [];
+    currentArticle.relatedMetrics?.forEach(metricKey => {
+      const trait = availableTraits.find(t => t.id === metricKey || t.label === metricKey);
+      if (trait) {
+        results.push({ trait, matchKey: metricKey });
+      }
+    });
+    return results;
+  };
+
+  const getSelectedCustomMetricData = () => {
+    const results: { metric: typeof customMetrics[0], matchKey: string }[] = [];
+    currentArticle.relatedMetrics?.forEach(metricKey => {
+      const custom = customMetrics.find(m => m.id === metricKey || m.name === metricKey);
+      if (custom) {
+        results.push({ metric: custom, matchKey: metricKey });
+      }
+    });
+    return results;
   };
 
   return (
@@ -1768,7 +1845,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     const updatedArticle = { ...currentArticle };
                     if (type === 'tag') {
                        updatedArticle.relatedTags = Array.from(new Set([...(updatedArticle.relatedTags || []), id]));
-                    } else if (type === 'metric') {
+                    } else if (type === 'metric' || type === 'custom') {
                        updatedArticle.relatedMetrics = Array.from(new Set([...(updatedArticle.relatedMetrics || []), id]));
                     }
                     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
@@ -1778,13 +1855,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 >
                   <option value="">+ 添加可用资产...</option>
                   <optgroup label="标签 (Tags)">
-                    {availableTags.filter(t => !(currentArticle.relatedTags?.includes(t.name) || currentArticle.relatedTags?.includes(t.id))).map(t => (
-                      <option key={`tag:${t.id}`} value={`tag:${t.name}`}>{t.name}</option>
+                    {availableTags.filter(t => !currentArticle.relatedTags?.includes(t.id)).map(t => (
+                      <option key={`tag:${t.id}`} value={`tag:${t.id}`}>{t.name}</option>
                     ))}
                   </optgroup>
                   <optgroup label="常规指标 (Traits)">
-                    {availableTraits.filter(t => !(currentArticle.relatedMetrics?.includes(t.id) || currentArticle.relatedMetrics?.includes(t.label))).map(t => (
-                      <option key={`metric:${t.id}`} value={`metric:${t.label}`}>{t.label} ({t.role})</option>
+                    {availableTraits.filter(t => !currentArticle.relatedMetrics?.includes(t.id)).map(t => (
+                      <option key={`metric:${t.id}`} value={`metric:${t.id}`}>{t.label} ({t.role})</option>
                     ))}
                   </optgroup>
                   <optgroup label="自定义综合指标 (Custom)">
@@ -1814,8 +1891,8 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
               </div>
               
               <div className="space-y-4">
-                {getSelectedTagData().map(tag => (
-                  <div key={tag.id} className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 relative overflow-hidden group">
+                {getSelectedTagData().map(({ tag, matchKey }) => (
+                  <div key={`${tag.id}-${matchKey}`} className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <TagIcon className="w-3 h-3 text-blue-400" />
@@ -1825,7 +1902,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <span className="text-[10px] text-blue-300 font-mono">TAG</span>
                         <button 
                           onClick={() => {
-                            const updatedArticle = { ...currentArticle, relatedTags: (currentArticle.relatedTags || []).filter(t => t !== tag.name && t !== tag.id) };
+                            const updatedArticle = { ...currentArticle, relatedTags: (currentArticle.relatedTags || []).filter(k => k !== matchKey) };
                             setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
                           }}
                           className="text-blue-300 hover:text-red-500 transition-colors"
@@ -1849,8 +1926,8 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   </div>
                 ))}
 
-                {getSelectedMetricData().map(trait => (
-                  <div key={trait.id} className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 relative overflow-hidden group">
+                {getSelectedMetricData().map(({ trait, matchKey }) => (
+                  <div key={`${trait.id}-${matchKey}`} className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Trophy className="w-3 h-3 text-amber-400" />
@@ -1860,7 +1937,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
                         <button 
                           onClick={() => {
-                            const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(t => t !== trait.label && t !== trait.id) };
+                            const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(k => k !== matchKey) };
                             setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
                           }}
                           className="text-amber-300 hover:text-red-500 transition-colors"
@@ -1886,8 +1963,8 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   </div>
                 ))}
 
-                {customMetrics.filter(m => currentArticle.relatedMetrics?.includes(m.id) || currentArticle.relatedMetrics?.includes(m.name)).map(metric => (
-                  <div key={metric.id} className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100 relative overflow-hidden group">
+                {getSelectedCustomMetricData().map(({ metric, matchKey }) => (
+                  <div key={`${metric.id}-${matchKey}`} className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100 relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Calculator className="w-3 h-3 text-purple-400" />
@@ -1897,7 +1974,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <span className="text-[10px] text-purple-300 font-mono">{metric.role}</span>
                         <button 
                           onClick={() => {
-                            const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(t => t !== metric.name && t !== metric.id) };
+                            const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(k => k !== matchKey) };
                             setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
                           }}
                           className="text-purple-300 hover:text-red-500 transition-colors"
@@ -1923,7 +2000,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   </div>
                 ))}
 
-                {getSelectedTagData().length === 0 && getSelectedMetricData().length === 0 && (
+                {getSelectedTagData().length === 0 && getSelectedMetricData().length === 0 && getSelectedCustomMetricData().length === 0 && (
                   <div className="py-8 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-50 rounded-2xl gap-2">
                     <span className="text-[9px] uppercase font-bold tracking-widest">无关联系统数据</span>
                   </div>

@@ -180,6 +180,9 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
     if (!screenshotRef.current) return;
     
     setIsCapturing(true);
+    // Give it a moment to re-render without height/overflow constraints
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     try {
       const title = selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label || 'Ranking';
       const fileName = `Ranking_${title}_${new Date().getTime()}.png`;
@@ -191,13 +194,18 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
         backgroundColor: '#ffffff',
         skipFonts: true, // Skip external fonts to avoid CORS errors
         fontEmbedCSS: '', // Disable font embedding to prevent cross-origin errors
+        filter: (node: any) => {
+          // Hide buttons and controls during export
+          if (node.classList?.contains('no-export')) return false;
+          return true;
+        },
         style: {
           overflow: 'visible',
           height: 'auto',
           maxHeight: 'none',
           backgroundColor: '#ffffff',
           color: '#000000',
-          padding: '24px',
+          padding: '40px',
           borderRadius: '0'
         }
       });
@@ -607,21 +615,21 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
             {selectedTrait || selectedCustomMetric ? (
               <div 
                 ref={screenshotRef}
-                className={`flex flex-col ${isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 cyber-border'}`}
+                className={`flex flex-col ${isCapturing ? 'bg-white p-8 h-auto min-h-screen text-slate-900 border-none' : (isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 cyber-border')}`}
               >
-                <div className={`flex justify-between items-start mb-4 border-b border-border pb-4 flex-shrink-0 ${isFullScreen ? 'max-w-7xl mx-auto w-full' : ''}`}>
+                <div className={`flex justify-between items-start mb-4 border-b border-border pb-4 flex-shrink-0 ${isFullScreen ? 'max-w-7xl mx-auto w-full' : ''} ${isCapturing ? 'border-slate-200' : ''}`}>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-accent animate-pulse" />
-                      <div className="text-[10px] text-primary font-bold uppercase tracking-[0.1em]">
+                      <div className={`w-1.5 h-1.5 ${isCapturing ? 'bg-slate-900' : 'bg-accent animate-pulse'}`} />
+                      <div className={`text-[10px] font-bold uppercase tracking-[0.1em] ${isCapturing ? 'text-slate-400' : 'text-primary'}`}>
                         {selectedCustomMetric ? '自定义计算' : selectedTrait?.category}
                       </div>
                     </div>
-                    <h3 className={`${isFullScreen ? 'text-4xl' : 'text-2xl'} font-serif text-accent cyber-glow-text`}>
+                    <h3 className={`${isFullScreen ? 'text-4xl' : 'text-2xl'} font-serif ${isCapturing ? 'text-slate-900' : 'text-accent cyber-glow-text'}`}>
                       {selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label} 排行榜
                     </h3>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className={`flex items-center gap-4 ${isCapturing ? 'hidden' : ''} no-export`}>
                     <div className="flex flex-col items-end gap-1 text-right">
                       <button
                         onClick={() => {
@@ -678,23 +686,25 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   </div>
                 </div>
 
-                <div className={`flex-grow overflow-y-auto custom-scrollbar ranking-list-container ${isFullScreen ? 'px-2 max-w-7xl mx-auto w-full' : 'pr-2'}`}>
+                <div className={`flex-grow ${isCapturing ? 'overflow-visible h-auto' : 'overflow-y-auto custom-scrollbar'} ranking-list-container ${isFullScreen ? 'px-2 max-w-7xl mx-auto w-full' : 'pr-2'}`}>
                   <div className="grid grid-cols-1 gap-1.5 pb-4 ranking-items-grid">
                     {groupedRankedData.map((group) => (
                       <div 
                         key={group.rank} 
                         className={`flex items-center gap-3 p-2 border transition-all rank-group-row ${
-                          group.rank === 1 ? 'bg-gold/10 border-gold/50' : 
-                          group.rank === 2 ? 'bg-accent/5 border-accent/20' :
-                          group.rank === 3 ? 'bg-primary/5 border-primary/30' :
-                          'bg-bg/40 border-border/30'
+                          isCapturing ? 'bg-white border-slate-100 text-slate-800' : (
+                            group.rank === 1 ? 'bg-gold/10 border-gold/50' : 
+                            group.rank === 2 ? 'bg-accent/5 border-accent/20' :
+                            group.rank === 3 ? 'bg-primary/5 border-primary/30' :
+                            'bg-bg/40 border-border/30'
+                          )
                         }`}
                       >
                         {/* Rank */}
                         <div className="w-10 text-center font-mono font-bold flex-shrink-0">
-                          {group.rank === 1 ? <span className="text-gold text-xl">1</span> :
-                           group.rank === 2 ? <span className="text-accent text-lg">2</span> :
-                           group.rank === 3 ? <span className="text-primary text-base">3</span> :
+                          {group.rank === 1 ? <span className={`${isCapturing ? 'text-amber-500' : 'text-gold'} text-xl`}>1</span> :
+                           group.rank === 2 ? <span className={`${isCapturing ? 'text-slate-400' : 'text-accent'} text-lg`}>2</span> :
+                           group.rank === 3 ? <span className={`${isCapturing ? 'text-amber-700' : 'text-primary'} text-base`}>3</span> :
                            <span className="text-muted text-sm">{group.rank}</span>}
                         </div>
                         
@@ -707,11 +717,11 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                             const isEditing = editingRemark?.charId === char.id && editingRemark?.valueStr === char.value;
 
                             return (
-                              <div key={`${char.id}-${idx}`} className={`flex flex-col items-center gap-1 group relative ${isFullScreen ? 'w-28' : 'w-20'}`}>
+                              <div key={`${char.id}-${idx}`} className={`flex flex-col items-center gap-1 group relative ${isFullScreen || isCapturing ? 'w-28' : 'w-20'}`}>
                                 <div 
-                                  className={`aspect-square w-full cyber-border overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isAdmin ? 'hover:ring-1 hover:ring-accent' : ''}`}
+                                  className={`aspect-square w-full cyber-border overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isCapturing ? 'border-slate-200' : (isAdmin ? 'hover:ring-1 hover:ring-accent' : '')}`}
                                   onClick={() => {
-                                    if (isAdmin) {
+                                    if (isAdmin && !isCapturing) {
                                       setEditingRemark({ 
                                         charId: char.id, 
                                         traitLabel: traitLabel,
@@ -741,11 +751,11 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                                     </div>
                                   ) : (
                                     <div className="flex flex-col overflow-hidden leading-tight">
-                                      <div className={`${isFullScreen ? 'text-xs' : 'text-[10px]'} font-bold text-accent group-hover:text-primary transition-colors truncate w-full tracking-tighter uppercase rank-character-title`}>
+                                      <div className={`${isFullScreen || isCapturing ? 'text-xs' : 'text-[10px]'} font-bold ${isCapturing ? 'text-slate-900' : 'text-accent group-hover:text-primary'} transition-colors truncate w-full tracking-tighter uppercase rank-character-title`}>
                                         {char.title}
                                       </div>
                                       {remark && (
-                                        <div className={`${isFullScreen ? 'text-[10px]' : 'text-[8px]'} text-primary font-mono opacity-80 truncate w-full tracking-tighter rank-character-remark`}>
+                                        <div className={`${isFullScreen || isCapturing ? 'text-[10px]' : 'text-[8px]'} ${isCapturing ? 'text-blue-500' : 'text-primary'} font-mono opacity-80 truncate w-full tracking-tighter rank-character-remark`}>
                                           [{remark}]
                                         </div>
                                       )}
@@ -759,7 +769,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
 
                         {/* Value */}
                         <div className="text-right flex-shrink-0 min-w-[80px]">
-                          <div className="text-lg font-mono font-bold text-accent leading-none">
+                          <div className={`text-lg font-mono font-bold leading-none ${isCapturing ? 'text-slate-900' : 'text-accent'}`}>
                             {group.value.split(/[（(]/)[0].trim()}
                           </div>
                           {group.value && (group.value.includes('(') || group.value.includes('（')) && (
@@ -767,7 +777,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                               {group.value.substring(group.value.search(/[（(]/))}
                             </div>
                           )}
-                          {group.rank === 1 && <div className="text-[8px] text-gold font-bold uppercase tracking-widest mt-1">TOP RANK</div>}
+                          {group.rank === 1 && <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${isCapturing ? 'text-amber-500' : 'text-gold'}`}>TOP RANK</div>}
                         </div>
                       </div>
                     ))}
