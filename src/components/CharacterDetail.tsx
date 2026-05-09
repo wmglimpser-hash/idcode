@@ -336,7 +336,7 @@ export const CharacterDetail = ({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Left: Image and Basic Info */}
       <div className="lg:col-span-4 space-y-6">
-        <div className="relative group overflow-hidden cyber-border bg-bg/30 flex items-center justify-center">
+        <div className="relative group overflow-hidden rounded-2xl shadow-sm bg-bg/30 flex items-center justify-center">
           <img 
             src={character.imageUrl} 
             alt={character.name} 
@@ -345,12 +345,12 @@ export const CharacterDetail = ({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-80" />
           <div className="absolute bottom-6 left-6 right-6">
-            <h1 className="text-4xl font-serif font-bold text-accent mb-1">
+            <h1 className="text-4xl font-sans font-bold tracking-tight font-bold text-slate-800 dark:text-slate-100 mb-1">
               {character.title}
             </h1>
-            <p className="text-xl text-text font-mono italic opacity-70 tracking-tighter">{character.name}</p>
+            <p className="text-xl text-text font-medium italic opacity-70 tracking-tighter">{character.name}</p>
           </div>
-          <div className="absolute top-4 right-4 bg-primary px-2 py-1 text-xs font-mono text-white">
+          <div className="absolute top-4 right-4 bg-primary px-2 py-1 text-xs font-medium text-white">
             ID: {String(character.order !== undefined ? character.order : character.id).padStart(4, '0')}
           </div>
           
@@ -358,14 +358,14 @@ export const CharacterDetail = ({
             <div className="absolute top-4 left-4 flex flex-col gap-2 z-30">
               <button 
                 onClick={() => onEdit(character)}
-                className="px-3 py-1.5 bg-accent text-bg hover:bg-primary hover:text-white transition-all shadow-lg flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-widest"
+                className="px-3 py-1.5 bg-slate-800 dark:bg-slate-200 text-bg hover:bg-primary hover:text-white transition-all shadow-lg flex items-center gap-2 font-medium text-xs font-bold uppercase tracking-widest"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 编辑档案_EDIT
               </button>
               <button 
                 onClick={() => setShowExportModal(true)}
-                className="px-3 py-1.5 bg-card border border-border text-accent hover:border-accent transition-all shadow-lg flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-widest"
+                className="px-3 py-1.5 bg-card border border-border text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all shadow-lg flex items-center gap-2 font-medium text-xs font-bold uppercase tracking-widest"
               >
                 <Download className="w-3.5 h-3.5" />
                 导出档案_EXPORT
@@ -373,7 +373,7 @@ export const CharacterDetail = ({
               {onDelete && (
                 <button 
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-3 py-1.5 bg-primary/20 text-primary border border-primary/50 hover:bg-primary hover:text-white transition-all shadow-lg flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-widest"
+                  className="px-3 py-1.5 bg-primary/20 text-primary border border-primary/50 hover:bg-primary hover:text-white transition-all shadow-lg flex items-center gap-2 font-medium text-xs font-bold uppercase tracking-widest"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   删除档案_DELETE
@@ -385,17 +385,17 @@ export const CharacterDetail = ({
 
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6">
-            <div className="bg-card border border-primary p-8 max-w-md w-full cyber-border animate-in zoom-in-95 duration-300">
-              <h3 className="text-xl font-serif text-primary mb-4 flex items-center gap-3">
+            <div className="bg-card border border-primary p-8 max-w-md w-full rounded-2xl shadow-sm animate-in zoom-in-95 duration-300">
+              <h3 className="text-xl font-sans font-bold tracking-tight text-primary mb-4 flex items-center gap-3">
                 <Trash2 className="w-6 h-6" /> 确认删除档案？
               </h3>
-              <p className="text-muted text-sm font-mono mb-8 leading-relaxed">
-                您正在尝试删除角色 <span className="text-accent font-bold">{character.title} ({character.name})</span> 的档案。此操作不可逆，所有关联数据将被永久移除。
+              <p className="text-muted text-sm font-medium mb-8 leading-relaxed">
+                您正在尝试删除角色 <span className="text-slate-800 dark:text-slate-100 font-bold">{character.title} ({character.name})</span> 的档案。此操作不可逆，所有关联数据将被永久移除。
               </p>
               <div className="flex gap-4">
                 <button 
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 py-3 border border-border text-muted hover:text-text hover:border-text transition-all font-mono text-xs tracking-widest"
+                  className="flex-1 py-3 border border-border text-muted hover:text-text hover:border-text transition-all font-medium text-xs tracking-widest"
                 >
                   取消_CANCEL
                 </button>
@@ -404,7 +404,7 @@ export const CharacterDetail = ({
                     onDelete?.(character);
                     setShowDeleteConfirm(false);
                   }}
-                  className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-xs tracking-widest"
+                  className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-medium text-xs tracking-widest"
                 >
                   确认删除_CONFIRM
                 </button>
@@ -415,22 +415,22 @@ export const CharacterDetail = ({
 
         {showExportModal && (
           <div className="fixed inset-0 bg-bg/95 z-[100] flex items-start justify-center p-6 overflow-y-auto custom-scrollbar">
-            <div className="bg-card border border-accent p-8 max-w-5xl w-full my-8 flex flex-col cyber-border animate-in zoom-in-95 duration-300">
+            <div className="bg-card border border-slate-800 dark:border-slate-200 p-8 max-w-5xl w-full my-8 flex flex-col rounded-2xl shadow-sm animate-in zoom-in-95 duration-300">
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-6">
-                  <h3 className="text-2xl font-serif text-accent flex items-center gap-3">
+                  <h3 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-3">
                     <Download className="w-6 h-6" /> 角色档案导出_EXPORT_DOSSIER
                   </h3>
                   <div className="flex bg-bg/50 p-1 border border-border">
                     <button 
                       onClick={() => setExportMode('visual')}
-                      className={`px-3 py-1 text-[10px] font-mono transition-all ${exportMode === 'visual' ? 'bg-accent text-bg' : 'text-muted hover:text-text'}`}
+                      className={`px-3 py-1 text-[10px] font-medium transition-all ${exportMode === 'visual' ? 'bg-slate-800 dark:bg-slate-200 text-bg' : 'text-muted hover:text-text'}`}
                     >
                       视觉模式_VISUAL
                     </button>
                     <button 
                       onClick={() => setExportMode('text')}
-                      className={`px-3 py-1 text-[10px] font-mono transition-all ${exportMode === 'text' ? 'bg-accent text-bg' : 'text-muted hover:text-text'}`}
+                      className={`px-3 py-1 text-[10px] font-medium transition-all ${exportMode === 'text' ? 'bg-slate-800 dark:bg-slate-200 text-bg' : 'text-muted hover:text-text'}`}
                     >
                       文本模式_TEXT
                     </button>
@@ -438,18 +438,18 @@ export const CharacterDetail = ({
                 </div>
                 <button 
                   onClick={() => setShowExportModal(false)}
-                  className="text-muted hover:text-accent transition-colors"
+                  className="text-muted hover:text-slate-800 dark:text-slate-100 transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="space-y-8 font-mono text-sm">
+              <div className="space-y-8 font-medium text-sm">
                 {exportMode === 'visual' ? (
                   <>
                     {/* Basic Info */}
                     <div className="space-y-2">
-                      <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">基础信息_BASIC_INFO</div>
+                      <div className="text-slate-800 dark:text-slate-100 border-b border-slate-800 dark:border-slate-200/30 pb-1 mb-2 uppercase tracking-widest text-xs">基础信息_BASIC_INFO</div>
                       <div className="grid grid-cols-2 gap-4">
                         <div><span className="text-muted">称号:</span> {character.title}</div>
                         <div><span className="text-muted">姓名:</span> {character.name}</div>
@@ -465,7 +465,7 @@ export const CharacterDetail = ({
 
                     {/* Traits */}
                     <div className="space-y-4">
-                      <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">核心属性_CORE_TRAITS</div>
+                      <div className="text-slate-800 dark:text-slate-100 border-b border-slate-800 dark:border-slate-200/30 pb-1 mb-2 uppercase tracking-widest text-xs">核心属性_CORE_TRAITS</div>
                       {character.traits?.map((cat, idx) => (
                         <div key={idx} className="space-y-1">
                           <div className="text-primary text-xs font-bold">{cat.category}</div>
@@ -483,11 +483,11 @@ export const CharacterDetail = ({
 
                     {/* Skills */}
                     <div className="space-y-4">
-                      <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">外在特质_EXTERNAL_TRAITS</div>
+                      <div className="text-slate-800 dark:text-slate-100 border-b border-slate-800 dark:border-slate-200/30 pb-1 mb-2 uppercase tracking-widest text-xs">外在特质_EXTERNAL_TRAITS</div>
                       {character.skills?.map((skill, idx) => (
-                        <div key={idx} className="p-3 bg-accent/5 border border-accent/20 space-y-2">
+                        <div key={idx} className="p-3 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/20 space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-accent font-bold">{skill.name}</span>
+                            <span className="text-slate-800 dark:text-slate-100 font-bold">{skill.name}</span>
                             <div className="flex gap-2">
                               {skill.cooldown && <span className="text-[10px] bg-bg px-1 border border-border">CD: {skill.cooldown}</span>}
                               {skill.cost && <span className="text-[10px] bg-bg px-1 border border-border">消耗: {skill.cost}</span>}
@@ -508,7 +508,7 @@ export const CharacterDetail = ({
                     {/* Presence (Hunter Only) */}
                     {character.role === 'Hunter' && character.presence && (
                       <div className="space-y-4">
-                        <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">存在感阶级_PRESENCE</div>
+                        <div className="text-slate-800 dark:text-slate-100 border-b border-slate-800 dark:border-slate-200/30 pb-1 mb-2 uppercase tracking-widest text-xs">存在感阶级_PRESENCE</div>
                         {character.presence.map((p, idx) => (
                           <div key={idx} className="p-3 bg-primary/5 border border-primary/20 space-y-2">
                             <div className="flex justify-between items-center">
@@ -531,10 +531,10 @@ export const CharacterDetail = ({
                     {/* Mechanics (Survivor Only) */}
                     {character.role === 'Survivor' && character.mechanics && (
                       <div className="space-y-4">
-                        <div className="text-accent border-b border-accent/30 pb-1 mb-2 uppercase tracking-widest text-xs">核心机制_MECHANICS</div>
+                        <div className="text-slate-800 dark:text-slate-100 border-b border-slate-800 dark:border-slate-200/30 pb-1 mb-2 uppercase tracking-widest text-xs">核心机制_MECHANICS</div>
                         {character.mechanics.map((mech, idx) => (
-                          <div key={idx} className="p-3 bg-accent/5 border border-accent/20 space-y-2">
-                            <div className="text-accent font-bold">{mech.title}</div>
+                          <div key={idx} className="p-3 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/20 space-y-2">
+                            <div className="text-slate-800 dark:text-slate-100 font-bold">{mech.title}</div>
                             <p className="text-xs text-text/80 leading-relaxed whitespace-pre-wrap">{mech.content}</p>
                           </div>
                         ))}
@@ -547,11 +547,11 @@ export const CharacterDetail = ({
                       onClick={() => {
                         navigator.clipboard.writeText(generatePlainText());
                       }}
-                      className="absolute top-4 right-4 p-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all flex items-center gap-2 text-[10px] font-mono"
+                      className="absolute top-4 right-4 p-2 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all flex items-center gap-2 text-[10px] font-medium"
                     >
                       <Copy className="w-3 h-3" /> 复制文本_COPY
                     </button>
-                    <pre className="text-xs text-text/80 whitespace-pre-wrap font-mono leading-relaxed">
+                    <pre className="text-xs text-text/80 whitespace-pre-wrap font-medium leading-relaxed">
                       {generatePlainText()}
                     </pre>
                   </div>
@@ -565,7 +565,7 @@ export const CharacterDetail = ({
                       const fileName = exportCharacterCardToMarkdown(character, availableTags);
                       alert(`角色资料卡导出成功！\n- 角色: ${character.title} ${character.name}\n- 文件名: ${fileName}`);
                     }}
-                    className="flex-1 py-3 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-slate-800 dark:bg-slate-200 text-bg hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-xs font-bold tracking-widest flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" /> 导出为 Markdown_MD
                   </button>
@@ -583,13 +583,13 @@ export const CharacterDetail = ({
                       URL.revokeObjectURL(url);
                       alert(`角色 JSON 导出成功！\n- 角色: ${character.title} ${character.name}\n- 文件名: ${safeName}`);
                     }}
-                    className="flex-1 py-3 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-slate-800 dark:bg-slate-200 text-bg hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-xs font-bold tracking-widest flex items-center justify-center gap-2"
                   >
                     <FileText className="w-4 h-4" /> 导出为 JSON_JSON
                   </button>
                   <button 
                     onClick={() => window.print()}
-                    className="flex-1 py-3 bg-bg border border-border text-text hover:border-accent transition-all font-mono text-xs font-bold tracking-widest flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-bg border border-border text-text hover:border-slate-800 dark:border-slate-200 transition-all font-medium text-xs font-bold tracking-widest flex items-center justify-center gap-2"
                   >
                     <Download className="w-4 h-4" /> 打印档案_PRINT
                   </button>
@@ -597,7 +597,7 @@ export const CharacterDetail = ({
                 
                 <button 
                   onClick={() => setShowExportModal(false)}
-                  className="px-6 py-3 bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-white transition-all font-mono text-xs font-bold tracking-widest flex items-center gap-2"
+                  className="px-6 py-3 bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-white transition-all font-medium text-xs font-bold tracking-widest flex items-center gap-2"
                 >
                   <LogOut className="w-4 h-4" /> 退出页面_EXIT
                 </button>
@@ -606,27 +606,27 @@ export const CharacterDetail = ({
           </div>
         )}
 
-        <div className="bg-card/50 border border-border p-6 rounded-none cyber-border space-y-4">
+        <div className="bg-card/50 border border-border p-6 rounded-none rounded-2xl shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b border-border/50 pb-2">
-            <span className="text-muted uppercase text-xs font-mono tracking-widest">阵营 FACTION</span>
-            <span className="text-primary font-bold font-mono text-sm">{character.role === 'Survivor' ? '求生者' : '监管者'}</span>
+            <span className="text-muted uppercase text-xs font-medium tracking-widest">阵营 FACTION</span>
+            <span className="text-primary font-bold font-medium text-sm">{character.role === 'Survivor' ? '求生者' : '监管者'}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-muted uppercase text-xs font-mono tracking-widest">定位 TYPE</span>
-            <span className="text-text font-mono text-sm">{character.type}</span>
+            <span className="text-muted uppercase text-xs font-medium tracking-widest">定位 TYPE</span>
+            <span className="text-text font-medium text-sm">{character.type}</span>
           </div>
           
           <div className="pt-4 border-t border-border/50 flex flex-col gap-2">
             <button 
               onClick={() => onViewTalent?.(character)}
-              className="w-full py-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-colors font-mono text-sm font-bold flex items-center justify-center gap-2"
+              className="w-full py-2 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-colors font-medium text-sm font-bold flex items-center justify-center gap-2"
             >
               <Activity className="w-4 h-4" /> 天赋页面_TALENT
             </button>
             {character.role === 'Hunter' && (
               <button 
                 onClick={() => onViewAuxiliaryTrait?.(character)}
-                className="w-full py-2 bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-white transition-colors font-mono text-sm font-bold flex items-center justify-center gap-2"
+                className="w-full py-2 bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-white transition-colors font-medium text-sm font-bold flex items-center justify-center gap-2"
               >
                 <Zap className="w-4 h-4" /> 辅助特质_AUXILIARY
               </button>
@@ -645,14 +645,14 @@ export const CharacterDetail = ({
               onClick={() => setActiveTab(tab.id as DetailTab)}
               className={`flex-1 min-w-[100px] py-3 px-4 flex items-center justify-center gap-2 transition-all duration-300 relative group overflow-hidden ${
                 activeTab === tab.id 
-                  ? 'text-accent' 
+                  ? 'text-slate-800 dark:text-slate-100' 
                   : 'text-muted hover:text-text'
               }`}
             >
               {activeTab === tab.id && (
-                <div className="absolute inset-0 bg-accent/10 border-b-2 border-accent" />
+                <div className="absolute inset-0 bg-slate-800/10 dark:bg-slate-200/10 border-b-2 border-slate-800 dark:border-slate-200" />
               )}
-              <div className={`${activeTab === tab.id ? 'text-accent' : 'text-muted group-hover:text-primary'} transition-colors`}>
+              <div className={`${activeTab === tab.id ? 'text-slate-800 dark:text-slate-100' : 'text-muted group-hover:text-primary'} transition-colors`}>
                 {tab.icon}
               </div>
               <span className="text-xs font-bold tracking-widest uppercase">{tab.label}</span>
@@ -663,10 +663,10 @@ export const CharacterDetail = ({
         {/* Tab Content */}
         <div className="space-y-8 animate-in fade-in duration-500">
           {activeTab === 'traits' && (
-            <section className="bg-card/40 border border-border p-8 rounded-none cyber-border relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-2 text-[10px] font-mono text-muted opacity-20">系统分析_V2.0</div>
+            <section className="bg-card/40 border border-border p-8 rounded-none rounded-2xl shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 text-[10px] font-medium text-muted opacity-20">系统分析_V2.0</div>
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
+                <h2 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-3">
                   <Activity className="w-6 h-6" /> 核心特质分析
                 </h2>
                 {canEdit && (
@@ -675,14 +675,14 @@ export const CharacterDetail = ({
                       <>
                         <button 
                           onClick={() => setEditingSection(null)}
-                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
+                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-medium text-[10px] flex items-center gap-1"
                         >
                           <X className="w-3 h-3" /> 取消_CANCEL
                         </button>
                         <button 
                           onClick={handleSaveSection}
                           disabled={saving}
-                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-[10px] flex items-center gap-1 disabled:opacity-50"
+                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-medium text-[10px] flex items-center gap-1 disabled:opacity-50"
                         >
                           <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存_SAVE'}
                         </button>
@@ -690,7 +690,7 @@ export const CharacterDetail = ({
                     ) : (
                       <button 
                         onClick={() => startEditing('traits')}
-                        className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                        className="px-3 py-1 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-[10px] flex items-center gap-1"
                       >
                         <Edit3 className="w-3 h-3" /> 单独编辑_EDIT
                       </button>
@@ -712,7 +712,7 @@ export const CharacterDetail = ({
                             newTraits[catIdx].category = e.target.value;
                             setEditTraits(newTraits);
                           }}
-                          className="bg-transparent border-b border-border text-accent font-bold outline-none focus:border-accent py-1 font-mono text-sm flex-1 mr-4"
+                          className="bg-transparent border-b border-border text-slate-800 dark:text-slate-100 font-bold outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-sm flex-1 mr-4"
                         />
                         <button 
                           onClick={() => {
@@ -720,7 +720,7 @@ export const CharacterDetail = ({
                             newTraits[catIdx].items.push({ label: '', value: '' });
                             setEditTraits(newTraits);
                           }}
-                          className="text-[10px] text-accent hover:text-white flex items-center gap-1 font-mono"
+                          className="text-[10px] text-slate-800 dark:text-slate-100 hover:text-white flex items-center gap-1 font-medium"
                         >
                           <Plus className="w-3 h-3" /> 添加属性
                         </button>
@@ -753,7 +753,7 @@ export const CharacterDetail = ({
                                 newTraits[catIdx].items[item.originalIdx].value = e.target.value;
                                 setEditTraits(newTraits);
                               }}
-                              className="flex-1 bg-transparent text-xs text-accent outline-none"
+                              className="flex-1 bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none"
                               placeholder="数值"
                             />
                             <button 
@@ -773,13 +773,13 @@ export const CharacterDetail = ({
                   ))}
                   <button 
                     onClick={() => setEditTraits([...editTraits, { category: '新分类', items: [] }])}
-                    className="w-full py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                    className="w-full py-2 border border-dashed border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all font-medium text-xs flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" /> 添加新分类_ADD_CATEGORY
                   </button>
                 </div>
               ) : character.traits && character.traits.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-mono text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-medium text-sm">
                   {character.traits.filter(cat => cat.items.length > 0).map((cat, i) => (
                     <div key={i} className="space-y-4">
                       <h3 className="text-primary font-bold mb-2 border-b border-primary/30 pb-1 flex justify-between items-center">
@@ -787,7 +787,7 @@ export const CharacterDetail = ({
                         {onViewFactors && (
                           <button 
                             onClick={() => onViewFactors(cat.category)}
-                            className="text-[10px] text-accent hover:text-white transition-colors flex items-center gap-1 font-mono uppercase tracking-tighter"
+                            className="text-[10px] text-slate-800 dark:text-slate-100 hover:text-white transition-colors flex items-center gap-1 font-medium uppercase tracking-tighter"
                           >
                             影响因素_FACTORS <Search className="w-3 h-3" />
                           </button>
@@ -823,11 +823,11 @@ export const CharacterDetail = ({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <p className="text-text/80 leading-relaxed font-mono text-sm border-l-2 border-primary pl-4 py-2 bg-primary/5">
+                  <p className="text-text/80 leading-relaxed font-medium text-sm border-l-2 border-primary pl-4 py-2 bg-primary/5">
                     {character.description}
                   </p>
                   <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border text-muted">
-                    <p className="text-sm font-mono uppercase tracking-widest">暂无详细特质数据</p>
+                    <p className="text-sm font-medium uppercase tracking-widest">暂无详细特质数据</p>
                     <p className="text-xs mt-2">请在录入页面完善该角色的特质信息</p>
                   </div>
                 </div>
@@ -836,9 +836,9 @@ export const CharacterDetail = ({
           )}
 
           {activeTab === 'external' && (
-            <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
+            <section className="bg-card/40 border border-border p-8 rounded-none rounded-2xl shadow-sm">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
+                <h2 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-3">
                   <Target className="w-6 h-6" /> 核心能力模块
                 </h2>
                 {canEdit && (
@@ -847,8 +847,8 @@ export const CharacterDetail = ({
                       <>
                         <button 
                           onClick={() => setSkillsImportMode(!skillsImportMode)}
-                          className={`px-3 py-1 border transition-all font-mono text-[10px] flex items-center gap-1 ${
-                            skillsImportMode ? 'bg-accent text-bg border-accent' : 'bg-bg border-border text-accent hover:border-accent'
+                          className={`px-3 py-1 border transition-all font-medium text-[10px] flex items-center gap-1 ${
+                            skillsImportMode ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'bg-bg border-border text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200'
                           }`}
                         >
                           <Zap className="w-3 h-3" /> 智能识别_SMART
@@ -858,14 +858,14 @@ export const CharacterDetail = ({
                             setEditingSection(null);
                             setSkillsImportMode(false);
                           }}
-                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
+                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-medium text-[10px] flex items-center gap-1"
                         >
                           <X className="w-3 h-3" /> 取消_CANCEL
                         </button>
                         <button 
                           onClick={handleSaveSection}
                           disabled={saving}
-                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-[10px] flex items-center gap-1 disabled:opacity-50"
+                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-medium text-[10px] flex items-center gap-1 disabled:opacity-50"
                         >
                           <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存_SAVE'}
                         </button>
@@ -873,7 +873,7 @@ export const CharacterDetail = ({
                     ) : (
                       <button 
                         onClick={() => startEditing('external')}
-                        className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                        className="px-3 py-1 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-[10px] flex items-center gap-1"
                       >
                         <Edit3 className="w-3 h-3" /> 单独编辑_EDIT
                       </button>
@@ -883,17 +883,17 @@ export const CharacterDetail = ({
               </div>
 
               {editingSection === 'external' && skillsImportMode && (
-                <div className="mb-6 p-4 bg-accent/5 border border-accent/30 animate-in slide-in-from-top-2 duration-300">
+                <div className="mb-6 p-4 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/30 animate-in slide-in-from-top-2 duration-300">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-mono text-accent uppercase tracking-widest">智能识别导入 (SMART_IMPORT)</span>
-                    <span className="text-[9px] text-muted font-mono">格式: [图标URL] 名称: 描述 #标签</span>
+                    <span className="text-[10px] font-medium text-slate-800 dark:text-slate-100 uppercase tracking-widest">智能识别导入 (SMART_IMPORT)</span>
+                    <span className="text-[9px] text-muted font-medium">格式: [图标URL] 名称: 描述 #标签</span>
                   </div>
                   <textarea 
                     rows={4}
                     value={skillsImportText}
                     onChange={(e) => setSkillsImportText(e.target.value)}
                     placeholder="粘贴特质文本，例如：&#10;[https://example.com/icon.png] 羸弱: 身体虚弱，板窗交互速度降低 #负面 #交互"
-                    className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-mono outline-none focus:border-accent resize-none mb-3"
+                    className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-medium outline-none focus:border-slate-800 dark:border-slate-200 resize-none mb-3"
                   />
                   <div className="flex justify-end gap-3">
                     <button 
@@ -901,13 +901,13 @@ export const CharacterDetail = ({
                         setSkillsImportText('');
                         setSkillsImportMode(false);
                       }}
-                      className="text-[10px] font-mono text-muted hover:text-text"
+                      className="text-[10px] font-medium text-muted hover:text-text"
                     >
                       取消_CANCEL
                     </button>
                     <button 
                       onClick={handleSkillsSmartImport}
-                      className="px-4 py-1 bg-accent text-bg text-[10px] font-mono font-bold hover:bg-accent/80 transition-all"
+                      className="px-4 py-1 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-medium font-bold hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all"
                     >
                       识别并添加_IMPORT
                     </button>
@@ -941,7 +941,7 @@ export const CharacterDetail = ({
                               setEditSkills(newSkills);
                             }}
                             placeholder="图标URL"
-                            className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                            className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-medium p-1 outline-none transition-opacity"
                           />
                         </div>
                         <div className="flex-1 space-y-3">
@@ -954,11 +954,11 @@ export const CharacterDetail = ({
                               setEditSkills(newSkills);
                             }}
                             placeholder="特质名称"
-                            className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
+                            className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium"
                           />
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                              <span className="text-[10px] text-muted font-medium uppercase">冷却:</span>
                               <input 
                                 type="text"
                                 value={skill.cooldown || ''}
@@ -968,11 +968,11 @@ export const CharacterDetail = ({
                                   setEditSkills(newSkills);
                                 }}
                                 placeholder="如: 120s"
-                                className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                                className="flex-1 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-xs"
                               />
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-muted font-mono uppercase">消耗:</span>
+                              <span className="text-[10px] text-muted font-medium uppercase">消耗:</span>
                               <input 
                                 type="text"
                                 value={skill.cost || ''}
@@ -982,7 +982,7 @@ export const CharacterDetail = ({
                                   setEditSkills(newSkills);
                                 }}
                                 placeholder="如: 1层"
-                                className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                                className="flex-1 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-xs"
                               />
                             </div>
                           </div>
@@ -995,7 +995,7 @@ export const CharacterDetail = ({
                               setEditSkills(newSkills);
                             }}
                             placeholder="特质描述..."
-                            className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                            className="w-full bg-transparent text-xs text-muted outline-none resize-none font-medium"
                           />
                           
                           {/* Tag Selection */}
@@ -1016,10 +1016,10 @@ export const CharacterDetail = ({
                                     }
                                     setEditSkills(newSkills);
                                   }}
-                                  className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                                  className={`px-2 py-0.5 text-[10px] font-medium border transition-all flex items-center gap-1 ${
                                     isSelected 
-                                      ? 'bg-accent/20 border-accent text-accent' 
-                                      : 'bg-bg border-border text-muted hover:border-accent/50'
+                                      ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
+                                      : 'bg-bg border-border text-muted hover:border-slate-800 dark:border-slate-200/50'
                                   }`}
                                   style={tag.color ? { 
                                     borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
@@ -1039,7 +1039,7 @@ export const CharacterDetail = ({
                   ))}
                   <button 
                     onClick={() => setEditSkills([...editSkills, { name: '新特质', description: '' }])}
-                    className="w-full py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                    className="w-full py-2 border border-dashed border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all font-medium text-xs flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" /> 添加新特质_ADD_TRAIT
                   </button>
@@ -1055,22 +1055,22 @@ export const CharacterDetail = ({
                         </div>
                       )}
                       <div>
-                        <h3 className="text-lg font-mono font-bold text-text group-hover:text-primary transition-colors flex items-center gap-2">
+                        <h3 className="text-lg font-medium font-bold text-text group-hover:text-primary transition-colors flex items-center gap-2">
                           <span className="text-primary opacity-50 text-sm">0{index + 1}</span> {skill.name}
                         </h3>
                         <div className="flex flex-wrap gap-3 mt-1 mb-2">
                           {skill.cooldown && (
-                            <span className="text-[10px] font-mono text-accent flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1">
                               <Clock className="w-3 h-3" /> CD: {skill.cooldown}
                             </span>
                           )}
                           {skill.cost && (
-                            <span className="text-[10px] font-mono text-gold flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-gold flex items-center gap-1">
                               <Zap className="w-3 h-3" /> COST: {skill.cost}
                             </span>
                           )}
                         </div>
-                        <p className="text-muted text-sm mt-2 leading-relaxed font-mono">
+                        <p className="text-muted text-sm mt-2 leading-relaxed font-medium">
                           {skill.description}
                         </p>
                         {skill.tags && skill.tags.length > 0 && (
@@ -1080,7 +1080,7 @@ export const CharacterDetail = ({
                               return (
                                 <span 
                                   key={tIdx}
-                                  className="px-2 py-0.5 text-[10px] font-mono border border-accent/30 text-accent bg-accent/5 flex items-center gap-1"
+                                  className="px-2 py-0.5 text-[10px] font-medium border border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 bg-slate-800/5 dark:bg-slate-200/5 flex items-center gap-1"
                                   style={tag?.color ? { borderColor: `${tag.color}40`, color: tag.color, backgroundColor: `${tag.color}10` } : {}}
                                 >
                                   <TagIcon className="w-2.5 h-2.5" />
@@ -1099,9 +1099,9 @@ export const CharacterDetail = ({
           )}
 
           {activeTab === 'mechanics' && (
-            <section className="bg-card/40 border border-border p-8 rounded-none cyber-border">
+            <section className="bg-card/40 border border-border p-8 rounded-none rounded-2xl shadow-sm">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-serif text-accent flex items-center gap-3">
+                <h2 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-3">
                   <Cpu className="w-6 h-6" /> {character.role === 'Hunter' ? '存在感阶级解析' : '专属机制解析'}
                 </h2>
                 {canEdit && (
@@ -1111,8 +1111,8 @@ export const CharacterDetail = ({
                         {character.role === 'Hunter' && (
                           <button 
                             onClick={() => setPresenceImportMode(!presenceImportMode)}
-                            className={`px-3 py-1 border transition-all font-mono text-[10px] flex items-center gap-1 ${
-                              presenceImportMode ? 'bg-accent text-bg border-accent' : 'bg-bg border-border text-accent hover:border-accent'
+                            className={`px-3 py-1 border transition-all font-medium text-[10px] flex items-center gap-1 ${
+                              presenceImportMode ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'bg-bg border-border text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200'
                             }`}
                           >
                             <Zap className="w-3 h-3" /> 智能识别_SMART
@@ -1123,14 +1123,14 @@ export const CharacterDetail = ({
                             setEditingSection(null);
                             setPresenceImportMode(false);
                           }}
-                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-mono text-[10px] flex items-center gap-1"
+                          className="px-3 py-1 bg-bg border border-border text-muted hover:text-text transition-all font-medium text-[10px] flex items-center gap-1"
                         >
                           <X className="w-3 h-3" /> 取消_CANCEL
                         </button>
                         <button 
                           onClick={handleSaveSection}
                           disabled={saving}
-                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-[10px] flex items-center gap-1 disabled:opacity-50"
+                          className="px-3 py-1 bg-primary text-white hover:bg-primary/80 transition-all font-medium text-[10px] flex items-center gap-1 disabled:opacity-50"
                         >
                           <Save className="w-3 h-3" /> {saving ? '保存中...' : '保存_SAVE'}
                         </button>
@@ -1138,7 +1138,7 @@ export const CharacterDetail = ({
                     ) : (
                       <button 
                         onClick={() => startEditing('mechanics')}
-                        className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                        className="px-3 py-1 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-[10px] flex items-center gap-1"
                       >
                         <Edit3 className="w-3 h-3" /> 单独编辑_EDIT
                       </button>
@@ -1150,19 +1150,19 @@ export const CharacterDetail = ({
               {editingSection === 'mechanics' ? (
                 <div className="space-y-8">
                   {presenceImportMode && character.role === 'Hunter' && (
-                    <div className="p-4 bg-accent/5 border border-accent/30 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="p-4 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/30 space-y-4 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-mono text-accent uppercase tracking-widest flex items-center gap-2">
+                        <label className="text-[10px] font-medium text-slate-800 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                           <Zap className="w-3 h-3" /> 存在感识别导入_PRESENCE_IMPORT
                         </label>
-                        <span className="text-[9px] text-muted font-mono">格式: 0阶: [图标URL] 技能名: 描述 | 冷却: 10s #标签</span>
+                        <span className="text-[9px] text-muted font-medium">格式: 0阶: [图标URL] 技能名: 描述 | 冷却: 10s #标签</span>
                       </div>
                       <textarea 
                         rows={4}
                         value={presenceImportText}
                         onChange={(e) => setPresenceImportText(e.target.value)}
                         placeholder="在此粘贴存在感描述文本，例如：&#10;0阶：[https://example.com/icon.png] 传火：描述内容 | 冷却：未知"
-                        className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-mono outline-none focus:border-accent transition-colors"
+                        className="w-full bg-bg/50 border border-border p-3 text-xs text-text font-medium outline-none focus:border-slate-800 dark:border-slate-200 transition-colors"
                       />
                       <div className="flex justify-end gap-2">
                         <button 
@@ -1170,13 +1170,13 @@ export const CharacterDetail = ({
                             setPresenceImportText('');
                             setPresenceImportMode(false);
                           }}
-                          className="px-3 py-1 text-[10px] font-mono text-muted hover:text-text"
+                          className="px-3 py-1 text-[10px] font-medium text-muted hover:text-text"
                         >
                           取消_CANCEL
                         </button>
                         <button 
                           onClick={handlePresenceSmartImport}
-                          className="px-4 py-1 bg-accent text-bg text-[10px] font-mono font-bold hover:bg-accent/80 transition-all"
+                          className="px-4 py-1 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-medium font-bold hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all"
                         >
                           确认识别_CONFIRM
                         </button>
@@ -1190,7 +1190,7 @@ export const CharacterDetail = ({
                           onClick={() => {
                             setEditPresence([...editPresence, { tier: 0, name: '', description: '', tags: [] }]);
                           }}
-                          className="px-3 py-1 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-[10px] flex items-center gap-1"
+                          className="px-3 py-1 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-[10px] flex items-center gap-1"
                         >
                           <Plus className="w-3 h-3" /> 添加存在感项目_ADD_ITEM
                         </button>
@@ -1207,7 +1207,7 @@ export const CharacterDetail = ({
                             <Trash2 className="w-3 h-3" />
                           </button>
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-mono relative group/icon">
+                            <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-medium relative group/icon">
                               {p.icon ? (
                                 <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                               ) : (
@@ -1238,13 +1238,13 @@ export const CharacterDetail = ({
                                     setEditPresence(newP);
                                   }}
                                   placeholder="图标URL"
-                                  className="w-full bg-transparent text-[8px] text-accent outline-none text-center"
+                                  className="w-full bg-transparent text-[8px] text-slate-800 dark:text-slate-100 outline-none text-center"
                                 />
                               </div>
                             </div>
                             <div className="flex-1 flex flex-col gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted font-mono uppercase">阶段:</span>
+                                <span className="text-[10px] text-muted font-medium uppercase">阶段:</span>
                                 <select 
                                   value={p.tier}
                                   onChange={(e) => {
@@ -1252,7 +1252,7 @@ export const CharacterDetail = ({
                                     newP[idx].tier = parseInt(e.target.value);
                                     setEditPresence(newP);
                                   }}
-                                  className="bg-bg border border-border text-primary px-2 py-0.5 text-[10px] font-mono outline-none focus:border-primary"
+                                  className="bg-bg border border-border text-primary px-2 py-0.5 text-[10px] font-medium outline-none focus:border-primary"
                                 >
                                   <option value={0}>0阶</option>
                                   <option value={1}>1阶</option>
@@ -1267,12 +1267,12 @@ export const CharacterDetail = ({
                                     setEditPresence(newP);
                                   }}
                                   placeholder="阶级名称"
-                                  className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
+                                  className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium"
                                 />
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                              <span className="text-[10px] text-muted font-medium uppercase">冷却:</span>
                               <input 
                                 type="text"
                                 value={p.cooldown || ''}
@@ -1282,7 +1282,7 @@ export const CharacterDetail = ({
                                   setEditPresence(newP);
                                 }}
                                 placeholder="如: 15s"
-                                className="w-20 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                                className="w-20 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-xs"
                               />
                             </div>
                           </div>
@@ -1295,7 +1295,7 @@ export const CharacterDetail = ({
                               setEditPresence(newP);
                             }}
                             placeholder="阶级能力描述..."
-                            className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                            className="w-full bg-transparent text-xs text-muted outline-none resize-none font-medium"
                           />
                           
                           {/* Tag Selection */}
@@ -1316,10 +1316,10 @@ export const CharacterDetail = ({
                                     }
                                     setEditPresence(newP);
                                   }}
-                                  className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                                  className={`px-2 py-0.5 text-[10px] font-medium border transition-all flex items-center gap-1 ${
                                     isSelected 
-                                      ? 'bg-accent/20 border-accent text-accent' 
-                                      : 'bg-bg border-border text-muted hover:border-accent/50'
+                                      ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
+                                      : 'bg-bg border-border text-muted hover:border-slate-800 dark:border-slate-200/50'
                                   }`}
                                   style={tag.color ? { 
                                     borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
@@ -1338,7 +1338,7 @@ export const CharacterDetail = ({
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <h3 className="text-sm font-bold text-text font-mono uppercase tracking-widest border-l-2 border-primary pl-3">
+                      <h3 className="text-sm font-bold text-text font-medium uppercase tracking-widest border-l-2 border-primary pl-3">
                         核心机制_CORE_MECHANICS
                       </h3>
                       {editMechanics.map((mech, idx) => (
@@ -1365,7 +1365,7 @@ export const CharacterDetail = ({
                                   setEditMechanics(newMechs);
                                 }}
                                 placeholder="图标URL"
-                                className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                                className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-medium p-1 outline-none transition-opacity"
                               />
                             </div>
                             <div className="flex-1">
@@ -1378,7 +1378,7 @@ export const CharacterDetail = ({
                                   setEditMechanics(newMechs);
                                 }}
                                 placeholder="机制标题"
-                                className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1 font-mono"
+                                className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium"
                               />
                               <textarea 
                                 rows={4}
@@ -1389,7 +1389,7 @@ export const CharacterDetail = ({
                                   setEditMechanics(newMechs);
                                 }}
                                 placeholder="机制详细解析..."
-                                className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                                className="w-full bg-transparent text-xs text-muted outline-none resize-none font-medium"
                               />
                             </div>
                           </div>
@@ -1398,14 +1398,14 @@ export const CharacterDetail = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button 
                           onClick={() => setEditMechanics([...editMechanics, { title: '新机制', content: '' }])}
-                          className="py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                          className="py-2 border border-dashed border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all font-medium text-xs flex items-center justify-center gap-2"
                         >
                           <Plus className="w-4 h-4" /> 添加新机制_ADD_MECHANIC
                         </button>
                         {character.skills.length > 0 && (
                           <div className="relative group/import">
                             <button 
-                              className="w-full py-2 border border-dashed border-primary/50 text-primary/70 hover:text-primary hover:border-primary transition-all font-mono text-xs flex items-center justify-center gap-2"
+                              className="w-full py-2 border border-dashed border-primary/50 text-primary/70 hover:text-primary hover:border-primary transition-all font-medium text-xs flex items-center justify-center gap-2"
                             >
                               <Target className="w-4 h-4" /> 从外在特质导入_IMPORT
                             </button>
@@ -1414,7 +1414,7 @@ export const CharacterDetail = ({
                                 <button
                                   key={sIdx}
                                   onClick={() => setEditMechanics([...editMechanics, { title: skill.name, content: skill.description, icon: skill.icon }])}
-                                  className="w-full p-2 text-left text-[10px] font-mono hover:bg-primary/10 border-b border-border/50 last:border-0 flex items-center gap-2"
+                                  className="w-full p-2 text-left text-[10px] font-medium hover:bg-primary/10 border-b border-border/50 last:border-0 flex items-center gap-2"
                                 >
                                   {skill.icon && <img src={skill.icon} className="w-4 h-4 object-contain" referrerPolicy="no-referrer" />}
                                   <span className="truncate">{skill.name}</span>
@@ -1428,7 +1428,7 @@ export const CharacterDetail = ({
                   )}
 
                   <div className="space-y-6 pt-6 border-t border-border/50">
-                    <h3 className="text-sm font-bold text-accent font-mono uppercase tracking-widest border-l-2 border-accent pl-3">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 font-medium uppercase tracking-widest border-l-2 border-slate-800 dark:border-slate-200 pl-3">
                       关联机制_LINKED_MECHANICS
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1445,7 +1445,7 @@ export const CharacterDetail = ({
                                   newLinks[idx].mechanicIndex = 0;
                                   setEditLinkedMechanics(newLinks);
                                 }}
-                                className="w-full bg-bg border border-border text-xs text-text p-1 outline-none focus:border-accent mb-2"
+                                className="w-full bg-bg border border-border text-xs text-text p-1 outline-none focus:border-slate-800 dark:border-slate-200 mb-2"
                               >
                                 <option value="">选择角色...</option>
                                 {allCharacters?.filter(c => !c.id.startsWith('base_')).map(c => (
@@ -1460,7 +1460,7 @@ export const CharacterDetail = ({
                                     newLinks[idx].mechanicIndex = parseInt(e.target.value);
                                     setEditLinkedMechanics(newLinks);
                                   }}
-                                  className="w-full bg-bg border border-border text-xs text-accent p-1 outline-none focus:border-accent"
+                                  className="w-full bg-bg border border-border text-xs text-slate-800 dark:text-slate-100 p-1 outline-none focus:border-slate-800 dark:border-slate-200"
                                 >
                                   {linkedChar.mechanics.map((m, i) => (
                                     <option key={i} value={i}>{m.title}</option>
@@ -1480,7 +1480,7 @@ export const CharacterDetail = ({
                     </div>
                     <button 
                       onClick={() => setEditLinkedMechanics([...editLinkedMechanics, { characterId: '', mechanicIndex: 0 }])}
-                      className="w-full py-2 border border-dashed border-border text-muted hover:text-accent hover:border-accent transition-all font-mono text-xs flex items-center justify-center gap-2"
+                      className="w-full py-2 border border-dashed border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all font-medium text-xs flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" /> 添加关联机制_ADD_LINK
                     </button>
@@ -1493,7 +1493,7 @@ export const CharacterDetail = ({
                       {character.presence && character.presence.length > 0 ? (
                         character.presence.map((p, index) => (
                           <div key={index} className="flex gap-6 p-6 bg-bg/20 border border-border group hover:border-primary/50 transition-all duration-300">
-                            <div className="w-20 h-20 flex-shrink-0 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono text-2xl group-hover:scale-110 transition-transform overflow-hidden">
+                            <div className="w-20 h-20 flex-shrink-0 bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-medium text-2xl group-hover:scale-110 transition-transform overflow-hidden">
                               {p.icon ? (
                                 <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                               ) : (
@@ -1502,16 +1502,16 @@ export const CharacterDetail = ({
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between items-center mb-3">
-                                <h4 className="text-lg font-bold text-primary font-mono flex items-center gap-2">
+                                <h4 className="text-lg font-bold text-primary font-medium flex items-center gap-2">
                                   <span className="w-2 h-2 bg-primary rotate-45" /> {p.name}
                                 </h4>
                                 {p.cooldown && (
-                                  <span className="text-xs font-mono text-accent bg-accent/10 px-2 py-1 border border-accent/20">
+                                  <span className="text-xs font-medium text-slate-800 dark:text-slate-100 bg-slate-800/10 dark:bg-slate-200/10 px-2 py-1 border border-slate-800 dark:border-slate-200/20">
                                     CD: {p.cooldown}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-muted font-mono leading-relaxed whitespace-pre-wrap">
+                              <p className="text-sm text-muted font-medium leading-relaxed whitespace-pre-wrap">
                                 {p.description}
                               </p>
                               {p.tags && p.tags.length > 0 && (
@@ -1521,7 +1521,7 @@ export const CharacterDetail = ({
                                     return (
                                       <span 
                                         key={tIdx}
-                                        className="px-2 py-0.5 text-[10px] font-mono border border-accent/30 text-accent bg-accent/5 flex items-center gap-1"
+                                        className="px-2 py-0.5 text-[10px] font-medium border border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 bg-slate-800/5 dark:bg-slate-200/5 flex items-center gap-1"
                                         style={tag?.color ? { borderColor: `${tag.color}40`, color: tag.color, backgroundColor: `${tag.color}10` } : {}}
                                       >
                                         <TagIcon className="w-2.5 h-2.5" />
@@ -1535,7 +1535,7 @@ export const CharacterDetail = ({
                           </div>
                         ))
                       ) : (
-                        <div className="p-12 bg-bg/20 border border-border text-center text-muted font-mono text-xs flex flex-col items-center gap-4">
+                        <div className="p-12 bg-bg/20 border border-border text-center text-muted font-medium text-xs flex flex-col items-center gap-4">
                           <Cpu className="w-12 h-12 opacity-10" />
                           <p className="uppercase tracking-widest">该角色尚未录入存在感数据_NO_PRESENCE_DATA</p>
                         </div>
@@ -1554,17 +1554,17 @@ export const CharacterDetail = ({
                               )}
                             </div>
                             <div className="flex-1">
-                              <h4 className="text-lg font-bold text-primary font-mono mb-3 flex items-center gap-2">
+                              <h4 className="text-lg font-bold text-primary font-medium mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 bg-primary rotate-45" /> {mech.title}
                               </h4>
-                              <p className="text-sm text-muted font-mono leading-relaxed whitespace-pre-wrap">
+                              <p className="text-sm text-muted font-medium leading-relaxed whitespace-pre-wrap">
                                 {mech.content}
                               </p>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="p-12 bg-bg/20 border border-border text-center text-muted font-mono text-xs flex flex-col items-center gap-4">
+                        <div className="p-12 bg-bg/20 border border-border text-center text-muted font-medium text-xs flex flex-col items-center gap-4">
                           <Cpu className="w-12 h-12 opacity-10" />
                           <p className="uppercase tracking-widest">该角色尚未录入详细机制_NO_MECHANICS_DATA</p>
                         </div>
@@ -1574,7 +1574,7 @@ export const CharacterDetail = ({
 
                   {character.linkedMechanics && character.linkedMechanics.length > 0 && (
                     <div className="space-y-6">
-                      <h3 className="text-sm font-bold text-accent font-mono uppercase tracking-widest border-l-2 border-accent pl-3 flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 font-medium uppercase tracking-widest border-l-2 border-slate-800 dark:border-slate-200 pl-3 flex items-center gap-2">
                         <Layers className="w-4 h-4" /> 关联机制矩阵_LINKED_MATRIX
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1584,7 +1584,7 @@ export const CharacterDetail = ({
                           if (!linkedChar || !linkedMech) return null;
 
                           return (
-                            <div key={idx} className="bg-bg/20 border border-border p-4 hover:bg-accent/5 hover:border-accent/50 transition-all group">
+                            <div key={idx} className="bg-bg/20 border border-border p-4 hover:bg-slate-800/5 dark:bg-slate-200/5 hover:border-slate-800 dark:border-slate-200/50 transition-all group">
                               <div className="flex gap-4">
                                 <div className="w-12 h-12 flex-shrink-0 bg-transparent border border-border p-1 group-hover:rotate-12 transition-transform overflow-hidden">
                                   {linkedMech.icon ? (
@@ -1595,10 +1595,10 @@ export const CharacterDetail = ({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex justify-between items-start mb-1">
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 ${linkedChar.role === 'Survivor' ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 ${linkedChar.role === 'Survivor' ? 'bg-slate-800 dark:bg-slate-200/20 text-slate-800 dark:text-slate-100' : 'bg-primary/20 text-primary'}`}>
                                       {linkedChar.role === 'Survivor' ? '求生者' : '监管者'}
                                     </span>
-                                    <span className="text-[10px] text-muted font-mono">{linkedChar.title}</span>
+                                    <span className="text-[10px] text-muted font-medium">{linkedChar.title}</span>
                                   </div>
                                   <h4 className="text-sm font-bold text-text truncate mb-1">{linkedMech.title}</h4>
                                   <p className="text-[11px] text-muted line-clamp-2 leading-relaxed">
@@ -1630,7 +1630,7 @@ const BaseStatItem = ({ label, value, isDifferent, baseValue }: { label: string;
       <div className="flex flex-col items-end">
         <span className={`font-bold text-xs ${isDifferent ? 'text-primary' : 'text-text'}`}>{value}</span>
         {isDifferent && baseValue && (
-          <span className="text-[9px] text-muted font-mono line-through opacity-50">标准: {baseValue}</span>
+          <span className="text-[9px] text-muted font-medium line-through opacity-50">标准: {baseValue}</span>
         )}
       </div>
     </div>

@@ -146,21 +146,21 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-card/50 cyber-border p-8 shadow-2xl animate-in zoom-in-95 duration-500">
+    <div className="max-w-4xl mx-auto bg-card/50 rounded-2xl shadow-sm p-8 shadow-2xl animate-in zoom-in-95 duration-500">
       <div className="flex justify-between items-center mb-8 border-b border-border pb-4">
-        <h2 className="text-3xl font-serif text-accent">
+        <h2 className="text-3xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">
           {entry ? '编辑词条' : '创建新词条'}
         </h2>
         <div className="flex gap-4">
           <button 
             onClick={() => setContentMode('text')}
-            className={`flex items-center gap-2 px-4 py-1 text-[10px] font-mono border ${contentMode === 'text' ? 'bg-accent text-bg border-accent' : 'border-border text-muted'}`}
+            className={`flex items-center gap-2 px-4 py-1 text-[10px] font-medium border ${contentMode === 'text' ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'border-border text-muted'}`}
           >
             <FileText className="w-3 h-3" /> 文本模式
           </button>
           <button 
             onClick={() => setContentMode('template')}
-            className={`flex items-center gap-2 px-4 py-1 text-[10px] font-mono border ${contentMode === 'template' ? 'bg-accent text-bg border-accent' : 'border-border text-muted'}`}
+            className={`flex items-center gap-2 px-4 py-1 text-[10px] font-medium border ${contentMode === 'template' ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'border-border text-muted'}`}
           >
             <Layout className="w-3 h-3" /> 模板模式
           </button>
@@ -168,7 +168,7 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-primary/10 border border-primary/50 text-primary text-xs flex items-center gap-3 font-mono">
+        <div className="mb-6 p-4 bg-primary/10 border border-primary/50 text-primary text-xs flex items-center gap-3 font-medium">
           <AlertTriangle className="w-4 h-4" /> {error}
         </div>
       )}
@@ -176,22 +176,22 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase tracking-widest font-mono">词条标题</label>
+            <label className="text-[10px] text-muted uppercase tracking-widest font-medium">词条标题</label>
             <input 
               type="text" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={!!entry}
-              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono disabled:opacity-50"
+              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium disabled:opacity-50"
               placeholder="例如：调香师 技巧指南"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase tracking-widest font-mono">词条分类</label>
+            <label className="text-[10px] text-muted uppercase tracking-widest font-medium">词条分类</label>
             <select 
               value={type}
               onChange={(e) => setType(e.target.value as any)}
-              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
             >
               <option value="character">求生者/监管者</option>
               <option value="map">地图</option>
@@ -204,11 +204,11 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
 
         {type === 'talent' && (
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase tracking-widest font-mono">关联天赋节点</label>
+            <label className="text-[10px] text-muted uppercase tracking-widest font-medium">关联天赋节点</label>
             <select 
               value={talentId}
               onChange={(e) => setTalentId(e.target.value)}
-              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+              className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
             >
               <option value="">-- 请选择天赋 --</option>
               <optgroup label="求生者天赋">
@@ -228,8 +228,8 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
         {contentMode === 'text' ? (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] text-muted uppercase tracking-widest font-mono">Markdown 内容</label>
-              <label className="cursor-pointer flex items-center gap-2 text-[10px] font-mono text-accent hover:text-primary transition-colors">
+              <label className="text-[10px] text-muted uppercase tracking-widest font-medium">Markdown 内容</label>
+              <label className="cursor-pointer flex items-center gap-2 text-[10px] font-medium text-slate-800 dark:text-slate-100 hover:text-primary transition-colors">
                 <Upload className="w-3 h-3" /> {uploading ? '上传中...' : '上传图片_IMAGE'}
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
               </label>
@@ -238,12 +238,12 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
               rows={15}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors resize-none font-mono text-sm leading-relaxed"
+              className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors resize-none font-medium text-sm leading-relaxed"
               placeholder="# 标题&#10;&#10;在此输入词条内容，支持 Markdown 语法..."
             />
           </div>
         ) : (
-          <div className="py-12 text-center border border-dashed border-border text-muted font-mono text-xs">
+          <div className="py-12 text-center border border-dashed border-border text-muted font-medium text-xs">
             模板模式编辑器正在开发中... 请先使用文本模式。
           </div>
         )}
@@ -252,14 +252,14 @@ export const WikiEditor = ({ entry, onSave, onCancel }: Props) => {
           <button 
             type="button"
             onClick={onCancel}
-            className="px-8 py-2 text-muted hover:text-text transition-colors font-mono text-xs tracking-widest"
+            className="px-8 py-2 text-muted hover:text-text transition-colors font-medium text-xs tracking-widest"
           >
             取消_CANCEL
           </button>
           <button 
             type="submit"
             disabled={loading}
-            className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 font-mono text-xs tracking-widest disabled:opacity-50"
+            className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 font-medium text-xs tracking-widest disabled:opacity-50"
           >
             <Save className="w-4 h-4" /> {loading ? '正在同步...' : '提交词条_SUBMIT'}
           </button>

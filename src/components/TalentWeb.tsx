@@ -396,8 +396,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
       <div className="flex-1 flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
-            {editForm.selectedTalentId && <div className="text-[10px] text-muted font-mono mb-1 uppercase tracking-widest">TALENT_ID: {editForm.selectedTalentId}</div>}
-            {selectedNodeId && <div className="text-[10px] text-muted font-mono uppercase tracking-widest">NODE_ID: {selectedNodeId}</div>}
+            {editForm.selectedTalentId && <div className="text-[10px] text-muted font-medium mb-1 uppercase tracking-widest">TALENT_ID: {editForm.selectedTalentId}</div>}
+            {selectedNodeId && <div className="text-[10px] text-muted font-medium uppercase tracking-widest">NODE_ID: {selectedNodeId}</div>}
             
             {editForm.tags && editForm.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
@@ -406,7 +406,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   return (
                     <span 
                       key={tag} 
-                      className="px-2 py-0.5 text-[9px] font-mono uppercase border"
+                      className="px-2 py-0.5 text-[9px] font-medium uppercase border"
                       style={{ 
                         backgroundColor: tagColor + '10',
                         borderColor: tagColor + '30',
@@ -423,10 +423,10 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           {isContributor && (
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className={`text-xs font-mono uppercase tracking-widest px-4 py-1.5 border transition-all flex items-center gap-2 ${
+              className={`text-xs font-medium uppercase tracking-widest px-4 py-1.5 border transition-all flex items-center gap-2 ${
                 isEditing 
                   ? 'bg-primary text-white border-primary' 
-                  : 'text-muted hover:text-accent border-border hover:border-accent'
+                  : 'text-muted hover:text-slate-800 dark:text-slate-100 border-border hover:border-slate-800 dark:border-slate-200'
               }`}
             >
               {isEditing ? (
@@ -442,7 +442,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
             <div>
               <div className="space-y-2 mb-4">
-                <label className="text-[10px] text-accent uppercase font-mono tracking-widest">选择列表天赋 SELECT_TALENT</label>
+                <label className="text-[10px] text-slate-800 dark:text-slate-100 uppercase font-medium tracking-widest">选择列表天赋 SELECT_TALENT</label>
                 <select
                   value={editForm.selectedTalentId || ''}
                   onChange={e => {
@@ -472,7 +472,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                       });
                     }
                   }}
-                  className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                  className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                 >
                   <option value="">-- 新建天赋 --</option>
                   {talents.filter(t => t.role === role).map(t => (
@@ -482,44 +482,44 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               </div>
               
               <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase font-mono tracking-widest">天赋名称 NAME</label>
+                <label className="text-[10px] text-muted uppercase font-medium tracking-widest">天赋名称 NAME</label>
                 <input
                   type="text"
                   value={editForm.name || ''}
                   onChange={e => setEditForm({...editForm, name: e.target.value})}
-                  className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                  className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                   placeholder="例如：破窗理论"
                 />
               </div>
               <div className="space-y-2 mt-4">
-                <label className="text-[10px] text-muted uppercase font-mono tracking-widest">天赋描述 DESCRIPTION</label>
+                <label className="text-[10px] text-muted uppercase font-medium tracking-widest">天赋描述 DESCRIPTION</label>
                 <textarea
                   value={editForm.description || ''}
                   onChange={e => setEditForm({...editForm, description: e.target.value})}
-                  className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none min-h-[100px]"
+                  className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none min-h-[100px]"
                   placeholder="详细的天赋效果说明..."
                 />
               </div>
 
               {/* Sync to Trait Influence Factors (Optional) */}
               <div className="mt-8 pt-6 border-t border-border/50">
-                <h4 className="text-[10px] text-accent uppercase font-mono tracking-widest mb-4 flex items-center gap-2">
+                <h4 className="text-[10px] text-slate-800 dark:text-slate-100 uppercase font-medium tracking-widest mb-4 flex items-center gap-2">
                   <Wand2 size={10} /> 同步至特质影响因素 (可选)
                 </h4>
                 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase font-mono tracking-widest">影响角色 TARGET_ROLE</label>
+                    <label className="text-[10px] text-muted uppercase font-medium tracking-widest">影响角色 TARGET_ROLE</label>
                     <div className="flex gap-2">
                       {(['Survivor', 'Hunter', 'Both'] as const).map(r => (
                         <button
                           key={r}
                           type="button"
                           onClick={() => setEditForm({...editForm, targetRole: r})}
-                          className={`flex-1 py-2 text-[10px] font-mono uppercase tracking-widest border transition-all ${
+                          className={`flex-1 py-2 text-[10px] font-medium uppercase tracking-widest border transition-all ${
                             editForm.targetRole === r 
-                              ? 'bg-accent border-accent text-bg' 
-                              : 'bg-bg/50 border-border text-muted hover:border-accent/50'
+                              ? 'bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-bg' 
+                              : 'bg-bg/50 border-border text-muted hover:border-slate-800 dark:border-slate-200/50'
                           }`}
                         >
                           {r === 'Survivor' ? '求生者' : r === 'Hunter' ? '监管者' : '全部'}
@@ -528,19 +528,19 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase font-mono tracking-widest">目标属性 TARGET_STATS (逗号分隔)</label>
+                    <label className="text-[10px] text-muted uppercase font-medium tracking-widest">目标属性 TARGET_STATS (逗号分隔)</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={editForm.targetStats?.join(', ') || ''}
                         onChange={e => setEditForm({...editForm, targetStats: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
-                        className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                         placeholder="例如：跑动速度, 走路速度"
                       />
                       <button
                         type="button"
                         onClick={() => setShowStatSelector(true)}
-                        className="px-3 py-2 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg transition-all flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest"
+                        className="px-3 py-2 bg-slate-800/10 dark:bg-slate-200/10 border border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest"
                         title="从模板选择"
                       >
                         <Plus size={14} />
@@ -550,45 +550,45 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-muted uppercase font-mono tracking-widest">修正值 MODIFIER</label>
+                      <label className="text-[10px] text-muted uppercase font-medium tracking-widest">修正值 MODIFIER</label>
                       <input
                         type="text"
                         value={editForm.modifier || ''}
                         onChange={e => setEditForm({...editForm, modifier: e.target.value})}
-                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                         placeholder="例如：+10% 或 -2"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-muted uppercase font-mono tracking-widest">具体效果 EFFECT</label>
+                      <label className="text-[10px] text-muted uppercase font-medium tracking-widest">具体效果 EFFECT</label>
                       <input
                         type="text"
                         value={editForm.effect || ''}
                         onChange={e => setEditForm({...editForm, effect: e.target.value})}
-                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                         placeholder="例如：翻窗后加速"
                       />
                     </div>
                   </div>
-                  <p className="text-[9px] text-muted font-mono leading-relaxed">
+                  <p className="text-[9px] text-muted font-medium leading-relaxed">
                     * 填写此部分后，该天赋将自动同步至角色详情页的“影响因素”分析中。
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2 mt-4">
-                <label className="text-[10px] text-muted uppercase font-mono tracking-widest flex items-center gap-2">
+                <label className="text-[10px] text-muted uppercase font-medium tracking-widest flex items-center gap-2">
                   <Tag size={10} /> 标签选择 TAGS
                 </label>
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap gap-2 items-center">
                     <div className="flex items-center justify-between w-full mb-1">
-                      <span className="text-[9px] text-muted font-mono uppercase">选择全局标签:</span>
+                      <span className="text-[9px] text-muted font-medium uppercase">选择全局标签:</span>
                       {editForm.tags && editForm.tags.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setEditForm({ ...editForm, tags: [], tagColors: {} })}
-                          className="text-[9px] text-primary hover:underline font-mono uppercase"
+                          className="text-[9px] text-primary hover:underline font-medium uppercase"
                         >
                           清空所有_CLEAR_ALL
                         </button>
@@ -616,10 +616,10 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                             });
                           }
                         }}
-                        className={`px-2 py-0.5 text-[9px] font-mono uppercase border transition-all ${
+                        className={`px-2 py-0.5 text-[9px] font-medium uppercase border transition-all ${
                           editForm.tags?.includes(tag.name)
-                            ? 'bg-accent/20 border-accent text-accent'
-                            : 'bg-bg/50 border-border text-muted hover:border-accent/30'
+                            ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100'
+                            : 'bg-bg/50 border-border text-muted hover:border-slate-800 dark:border-slate-200/30'
                         }`}
                         style={editForm.tags?.includes(tag.name) ? { borderColor: tag.color, color: tag.color, backgroundColor: tag.color + '20' } : {}}
                       >
@@ -653,7 +653,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                           tagColors: newTagColors
                         });
                       }}
-                      className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest flex items-center gap-2"
+                      className="bg-bg border border-border px-3 py-2 text-[10px] font-medium hover:text-slate-800 dark:text-slate-100 transition-colors uppercase tracking-widest flex items-center gap-2"
                       title="根据名称和描述自动识别标签"
                     >
                       <Wand2 size={12} /> 自动识别标签_AUTO_TAG
@@ -665,7 +665,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                       {Array.from(new Set(editForm.tags || [])).map((tag: string) => (
                         <div key={tag} className="flex items-center group">
                           <span 
-                            className="px-2 py-0.5 text-[9px] font-mono uppercase border"
+                            className="px-2 py-0.5 text-[9px] font-medium uppercase border"
                             style={{ 
                               backgroundColor: (editForm.tagColors?.[tag] || '#00f3ff') + '10',
                               borderColor: (editForm.tagColors?.[tag] || '#00f3ff') + '30',
@@ -699,17 +699,17 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               {selectedNodeId && (
                 <div className="space-y-4 mt-4 pt-4 border-t border-border/50">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase font-mono tracking-widest">节点编号 NODE_ID</label>
+                    <label className="text-[10px] text-muted uppercase font-medium tracking-widest">节点编号 NODE_ID</label>
                     <input
                       type="text"
                       value={editForm.newId || ''}
                       onChange={e => setEditForm({...editForm, newId: e.target.value})}
-                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                       placeholder="例如：1, 2, 23..."
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase font-mono tracking-widest">需要消耗的层数 MAX_LEVEL</label>
+                    <label className="text-[10px] text-muted uppercase font-medium tracking-widest">需要消耗的层数 MAX_LEVEL</label>
                     <div className="flex gap-2">
                       <input
                         type="number"
@@ -717,13 +717,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         max="5"
                         value={editForm.maxLevel || 3}
                         onChange={e => setEditForm({...editForm, maxLevel: parseInt(e.target.value) || 3})}
-                        className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        className="flex-1 bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                         placeholder="例如：3"
                       />
                       <button
                         onClick={handleSaveNodeOnly}
                         disabled={saving}
-                        className="bg-bg border border-border px-3 py-2 text-[10px] font-mono hover:text-accent transition-colors uppercase tracking-widest"
+                        className="bg-bg border border-border px-3 py-2 text-[10px] font-medium hover:text-slate-800 dark:text-slate-100 transition-colors uppercase tracking-widest"
                         title="单独保存节点层数与布局配置"
                       >
                         保存层数_SAVE
@@ -732,33 +732,33 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-muted uppercase font-mono tracking-widest">坐标 X_COORD</label>
+                      <label className="text-[10px] text-muted uppercase font-medium tracking-widest">坐标 X_COORD</label>
                       <input
                         type="number"
                         step="0.01"
                         value={editForm.x ?? 0}
                         onChange={e => setEditForm({...editForm, x: parseFloat(e.target.value) || 0})}
-                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-muted uppercase font-mono tracking-widest">坐标 Y_COORD</label>
+                      <label className="text-[10px] text-muted uppercase font-medium tracking-widest">坐标 Y_COORD</label>
                       <input
                         type="number"
                         step="0.01"
                         value={editForm.y ?? 0}
                         onChange={e => setEditForm({...editForm, y: parseFloat(e.target.value) || 0})}
-                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                        className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase font-mono tracking-widest">连线节点 CONNECTIONS</label>
+                    <label className="text-[10px] text-muted uppercase font-medium tracking-widest">连线节点 CONNECTIONS</label>
                     <input
                       type="text"
                       value={editForm.connections || ''}
                       onChange={e => setEditForm({...editForm, connections: e.target.value})}
-                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                       placeholder="逗号分隔的节点编号，例如：1, 2, 3"
                     />
                     <p className="text-[10px] text-muted opacity-70">输入其他节点的编号以建立连线，使用逗号分隔。</p>
@@ -771,7 +771,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full bg-accent text-bg px-4 py-2 text-sm font-bold flex items-center justify-center gap-2 hover:bg-accent/80 disabled:opacity-50 transition-colors"
+                className="w-full bg-slate-800 dark:bg-slate-200 text-bg px-4 py-2 text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 disabled:opacity-50 transition-colors"
               >
                 <Save className="w-4 h-4" /> 保存_SAVE
               </button>
@@ -800,33 +800,33 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 {/* Sync to Trait Influence Factors (Optional) */}
                 {selectedTalent.targetStats && selectedTalent.targetStats.length > 0 && (
                   <div className="pt-6 border-t border-border/50">
-                    <h4 className="text-[10px] text-accent uppercase font-mono tracking-widest mb-4 flex items-center gap-2">
+                    <h4 className="text-[10px] text-slate-800 dark:text-slate-100 uppercase font-medium tracking-widest mb-4 flex items-center gap-2">
                       <Wand2 size={10} /> 同步至特质影响因素
                     </h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted font-mono uppercase">影响角色:</span>
-                        <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-mono border border-primary/20">
+                        <span className="text-[10px] text-muted font-medium uppercase">影响角色:</span>
+                        <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
                           {selectedTalent.targetRole === 'Survivor' ? '求生者' : selectedTalent.targetRole === 'Hunter' ? '监管者' : '全部'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted font-mono uppercase">目标属性:</span>
+                        <span className="text-[10px] text-muted font-medium uppercase">目标属性:</span>
                         <div className="flex flex-wrap gap-1">
                           {selectedTalent.targetStats.map(stat => (
-                            <span key={stat} className="px-1.5 py-0.5 bg-accent/10 text-accent text-[10px] font-mono border border-accent/20">
+                            <span key={stat} className="px-1.5 py-0.5 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 text-[10px] font-medium border border-slate-800 dark:border-slate-200/20">
                               {stat}
                             </span>
                           ))}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted font-mono uppercase">修正值:</span>
-                        <span className="text-sm font-mono text-text">{selectedTalent.modifier}</span>
+                        <span className="text-[10px] text-muted font-medium uppercase">修正值:</span>
+                        <span className="text-sm font-medium text-text">{selectedTalent.modifier}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted font-mono uppercase">具体效果:</span>
-                        <span className="text-sm font-mono text-text">{selectedTalent.effect}</span>
+                        <span className="text-[10px] text-muted font-medium uppercase">具体效果:</span>
+                        <span className="text-sm font-medium text-text">{selectedTalent.effect}</span>
                       </div>
                     </div>
                   </div>
@@ -844,18 +844,18 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
         {/* Saved Builds List */}
         {user && savedBuilds.length > 0 && !selectedNodeId && (
           <div className="mt-8 pt-8 border-t border-border/50">
-            <h4 className="text-[10px] text-accent font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
+            <h4 className="text-[10px] text-slate-800 dark:text-slate-100 font-medium uppercase tracking-widest mb-4 flex items-center gap-2">
               <FileText className="w-3 h-3" /> 已保存方案_SAVED_BUILDS
             </h4>
             <div className="space-y-2">
               {savedBuilds.map(build => (
-                <div key={build.id} className="group flex items-center justify-between p-3 bg-bg/50 border border-border hover:border-accent/50 transition-all">
+                <div key={build.id} className="group flex items-center justify-between p-3 bg-bg/50 border border-border hover:border-slate-800 dark:border-slate-200/50 transition-all">
                   <button
                     onClick={() => setAllocatedPoints(build.points)}
                     className="flex-1 text-left"
                   >
-                    <div className="text-sm font-bold text-text group-hover:text-accent transition-colors">{build.name}</div>
-                    <div className="text-[9px] text-muted font-mono uppercase mt-1">
+                    <div className="text-sm font-bold text-text group-hover:text-slate-800 dark:text-slate-100 transition-colors">{build.name}</div>
+                    <div className="text-[9px] text-muted font-medium uppercase mt-1">
                       {build.updatedAt ? new Date(build.updatedAt.toDate()).toLocaleDateString() : '刚刚'}
                     </div>
                   </button>
@@ -977,8 +977,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
           <div className="flex flex-wrap gap-2 pb-2 border-b border-border/50">
             <button
               onClick={() => setSelectedTag(null)}
-              className={`px-3 py-1 text-[10px] font-mono uppercase tracking-widest border transition-all ${
-                !selectedTag ? 'bg-accent text-bg border-accent' : 'bg-transparent text-muted border-border hover:border-accent/50'
+              className={`px-3 py-1 text-[10px] font-medium uppercase tracking-widest border transition-all ${
+                !selectedTag ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'bg-transparent text-muted border-border hover:border-slate-800 dark:border-slate-200/50'
               }`}
             >
               全部_ALL
@@ -987,8 +987,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               <button
                 key={config.name}
                 onClick={() => setSelectedTag(selectedTag === config.name ? null : config.name)}
-                className={`px-3 py-1 text-[10px] font-mono uppercase tracking-widest border transition-all ${
-                  selectedTag === config.name ? 'bg-accent text-bg border-accent' : 'bg-transparent text-muted border-border hover:border-accent/50'
+                className={`px-3 py-1 text-[10px] font-medium uppercase tracking-widest border transition-all ${
+                  selectedTag === config.name ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'bg-transparent text-muted border-border hover:border-slate-800 dark:border-slate-200/50'
                 }`}
               >
                 {config.name}
@@ -998,8 +998,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               <button
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                className={`px-3 py-1 text-[10px] font-mono uppercase tracking-widest border transition-all ${
-                  selectedTag === tag ? 'bg-accent text-bg border-accent' : 'bg-transparent text-muted border-border hover:border-accent/50'
+                className={`px-3 py-1 text-[10px] font-medium uppercase tracking-widest border transition-all ${
+                  selectedTag === tag ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' : 'bg-transparent text-muted border-border hover:border-slate-800 dark:border-slate-200/50'
                 }`}
               >
                 {tag}
@@ -1011,16 +1011,16 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             <div className="flex flex-col gap-4">
               {viewMode === 'tags' && (
                 <div className="bg-card/30 p-4 border border-border space-y-4">
-                  <h4 className="text-[10px] font-mono uppercase tracking-widest text-accent flex items-center gap-2">
+                  <h4 className="text-[10px] font-medium uppercase tracking-widest text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <Tag className="w-3 h-3" /> 标签全局管理 GLOBAL_TAG_MANAGEMENT
                   </h4>
                   <div className="flex flex-wrap gap-3">
                     {allAvailableTags.map(tag => (
                       <div key={tag} className="flex items-center gap-1 bg-bg/50 border border-border p-1 group">
-                        <span className="text-[10px] font-mono px-2">{tag}</span>
+                        <span className="text-[10px] font-medium px-2">{tag}</span>
                         <button
                           onClick={() => { setTagToRename(tag); setNewTagName(tag); }}
-                          className="p-1 text-muted hover:text-accent transition-colors"
+                          className="p-1 text-muted hover:text-slate-800 dark:text-slate-100 transition-colors"
                           title="重命名"
                         >
                           <Edit3 size={10} />
@@ -1037,23 +1037,23 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   </div>
                   
                   {tagToRename && (
-                    <div className="flex items-center gap-2 p-3 bg-accent/5 border border-accent/20 rounded-sm">
-                      <span className="text-[10px] font-mono text-muted uppercase">重命名 "{tagToRename}" 为:</span>
+                    <div className="flex items-center gap-2 p-3 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/20 rounded-sm">
+                      <span className="text-[10px] font-medium text-muted uppercase">重命名 "{tagToRename}" 为:</span>
                       <input
                         type="text"
                         value={newTagName}
                         onChange={(e) => setNewTagName(e.target.value)}
-                        className="bg-bg border border-border px-2 py-1 text-xs font-mono outline-none focus:border-accent"
+                        className="bg-bg border border-border px-2 py-1 text-xs font-medium outline-none focus:border-slate-800 dark:border-slate-200"
                       />
                       <button
                         onClick={() => { handleRenameTag(tagToRename, newTagName); setTagToRename(null); }}
-                        className="px-3 py-1 bg-accent text-bg text-[10px] font-mono uppercase tracking-widest"
+                        className="px-3 py-1 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-medium uppercase tracking-widest"
                       >
                         确认_CONFIRM
                       </button>
                       <button
                         onClick={() => setTagToRename(null)}
-                        className="px-3 py-1 bg-bg border border-border text-muted text-[10px] font-mono uppercase tracking-widest"
+                        className="px-3 py-1 bg-bg border border-border text-muted text-[10px] font-medium uppercase tracking-widest"
                       >
                         取消_CANCEL
                       </button>
@@ -1076,17 +1076,17 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                       }}
                       className={`w-4 h-4 border flex items-center justify-center transition-colors ${
                         selectedTalentIds.length > 0 && selectedTalentIds.length === filteredTalents.length 
-                          ? 'bg-accent border-accent' 
-                          : 'border-muted group-hover:border-accent'
+                          ? 'bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200' 
+                          : 'border-muted group-hover:border-slate-800 dark:border-slate-200'
                       }`}
                     >
                       {selectedTalentIds.length > 0 && selectedTalentIds.length === filteredTalents.length && (
                         <div className="w-2 h-2 bg-bg" />
                       )}
                     </div>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-muted">全选_SELECT_ALL</span>
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-muted">全选_SELECT_ALL</span>
                   </label>
-                  <span className="text-[10px] font-mono text-muted">已选择: {selectedTalentIds.length}</span>
+                  <span className="text-[10px] font-medium text-muted">已选择: {selectedTalentIds.length}</span>
                 </div>
                 {selectedTalentIds.length > 0 && (
                   <div className="flex flex-col gap-3 bg-bg/50 p-3 border border-border">
@@ -1096,13 +1096,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         value={bulkTagInput}
                         onChange={(e) => setBulkTagInput(e.target.value)}
                         placeholder="输入标签名..."
-                        className="bg-bg border border-border px-2 py-1 text-[10px] font-mono outline-none w-32 focus:border-accent"
+                        className="bg-bg border border-border px-2 py-1 text-[10px] font-medium outline-none w-32 focus:border-slate-800 dark:border-slate-200"
                       />
                       <div className="w-px h-4 bg-border mx-1" />
                       <button
                         onClick={handleBulkTag}
                         disabled={saving || (bulkSelectedTags.length === 0 && !bulkTagInput.trim())}
-                        className="px-3 py-1 bg-accent text-bg hover:bg-accent/80 transition-all text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
+                        className="px-3 py-1 bg-slate-800 dark:bg-slate-200 text-bg hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
                       >
                         应用标签_APPLY
                       </button>
@@ -1117,7 +1117,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                       <button
                         onClick={handleBulkDelete}
                         disabled={saving}
-                        className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-mono uppercase tracking-widest disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-medium uppercase tracking-widest disabled:opacity-50"
                       >
                         <Trash2 size={12} />
                         批量删除天赋_DELETE
@@ -1125,7 +1125,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     </div>
 
                     <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-border/30">
-                      <span className="text-[9px] text-muted font-mono uppercase mr-1">选择全局标签:</span>
+                      <span className="text-[9px] text-muted font-medium uppercase mr-1">选择全局标签:</span>
                       {availableTags.map(tag => (
                         <button
                           key={tag.id}
@@ -1137,10 +1137,10 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                               setBulkSelectedTags([...bulkSelectedTags, tag.name]);
                             }
                           }}
-                          className={`px-2 py-0.5 text-[9px] font-mono uppercase border transition-all ${
+                          className={`px-2 py-0.5 text-[9px] font-medium uppercase border transition-all ${
                             bulkSelectedTags.includes(tag.name)
-                              ? 'bg-accent/20 border-accent text-accent'
-                              : 'bg-bg/50 border-border text-muted hover:border-accent/30'
+                              ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100'
+                              : 'bg-bg/50 border-border text-muted hover:border-slate-800 dark:border-slate-200/30'
                           }`}
                           style={bulkSelectedTags.includes(tag.name) ? { borderColor: tag.color, color: tag.color, backgroundColor: tag.color + '20' } : {}}
                         >
@@ -1190,7 +1190,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 }
               }}
               className={`p-4 border transition-all cursor-pointer group relative overflow-hidden ${
-                (selectedNodeId === talent.nodeId && talent.nodeId) || editForm.selectedTalentId === talent.id ? 'bg-card/80' : 'border-border hover:border-accent/30 bg-card/50'
+                (selectedNodeId === talent.nodeId && talent.nodeId) || editForm.selectedTalentId === talent.id ? 'bg-card/80' : 'border-border hover:border-slate-800 dark:border-slate-200/30 bg-card/50'
               }`}
               style={{ 
                 borderColor: ((selectedNodeId === talent.nodeId && talent.nodeId) || editForm.selectedTalentId === talent.id) ? baseColor : undefined
@@ -1228,11 +1228,11 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   >
                     {talent.name}
                   </h3>
-                  <span className="text-[9px] font-mono text-muted uppercase tracking-tighter">ID: {talent.id}</span>
+                  <span className="text-[9px] font-medium text-muted uppercase tracking-tighter">ID: {talent.id}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {talent.nodeId && (
-                    <div className="text-[10px] font-mono text-muted bg-bg/50 px-1.5 py-0.5 border border-border">
+                    <div className="text-[10px] font-medium text-muted bg-bg/50 px-1.5 py-0.5 border border-border">
                       {talent.level} / {talent.maxLevel}
                     </div>
                   )}
@@ -1250,7 +1250,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     return (
                       <span 
                         key={tag} 
-                        className="px-1.5 py-0.5 text-[8px] font-mono uppercase border"
+                        className="px-1.5 py-0.5 text-[8px] font-medium uppercase border"
                         style={{ 
                           backgroundColor: tagColor + '10',
                           borderColor: tagColor + '30',
@@ -1305,7 +1305,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                       }
                       setIsEditing(true);
                     }}
-                    className="text-[10px] font-mono hover:underline uppercase tracking-widest"
+                    className="text-[10px] font-medium hover:underline uppercase tracking-widest"
                     style={{ color: baseColor }}
                   >
                     编辑_EDIT
@@ -1317,7 +1317,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
         </div>
         {filteredTalents.length === 0 && (
           <div className="text-center py-20 border border-dashed border-border bg-card/20">
-            <p className="text-muted font-mono text-sm uppercase tracking-widest">未找到匹配的天赋_NO_MATCHES</p>
+            <p className="text-muted font-medium text-sm uppercase tracking-widest">未找到匹配的天赋_NO_MATCHES</p>
           </div>
         )}
       </div>
@@ -2213,13 +2213,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             <div className="flex bg-bg border border-border p-1 rounded-sm">
               <button
                 onClick={() => { setRole('Survivor'); setSelectedNodeId(null); }}
-                className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${role === 'Survivor' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-accent'}`}
+                className={`px-3 py-1.5 font-medium text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${role === 'Survivor' ? 'bg-slate-800 dark:bg-slate-200 text-bg font-bold' : 'text-muted hover:text-slate-800 dark:text-slate-100'}`}
               >
                 <ShieldCheck className="w-3 h-3" /> 求生者
               </button>
               <button
                 onClick={() => { setRole('Hunter'); setSelectedNodeId(null); }}
-                className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${role === 'Hunter' ? 'bg-primary text-white font-bold' : 'text-muted hover:text-primary'}`}
+                className={`px-3 py-1.5 font-medium text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${role === 'Hunter' ? 'bg-primary text-white font-bold' : 'text-muted hover:text-primary'}`}
               >
                 <Swords className="w-3 h-3" /> 监管者
               </button>
@@ -2229,19 +2229,19 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             <div className="flex bg-bg border border-border p-1 rounded-sm">
               <button
                 onClick={() => setViewMode('tree')}
-                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all ${viewMode === 'tree' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-accent'}`}
+                className={`px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest transition-all ${viewMode === 'tree' ? 'bg-slate-800 dark:bg-slate-200 text-bg font-bold' : 'text-muted hover:text-slate-800 dark:text-slate-100'}`}
               >
                 树状图
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-accent'}`}
+                className={`px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-slate-800 dark:bg-slate-200 text-bg font-bold' : 'text-muted hover:text-slate-800 dark:text-slate-100'}`}
               >
                 列表
               </button>
               <button
                 onClick={() => setViewMode('tags')}
-                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all ${viewMode === 'tags' ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-accent'}`}
+                className={`px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest transition-all ${viewMode === 'tags' ? 'bg-slate-800 dark:bg-slate-200 text-bg font-bold' : 'text-muted hover:text-slate-800 dark:text-slate-100'}`}
               >
                 标签管理
               </button>
@@ -2249,8 +2249,8 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
 
             {/* Points Display */}
             <div className="flex items-center gap-2 bg-bg/80 border border-border px-3 py-1.5 rounded-sm">
-              <span className="text-[10px] font-mono text-muted uppercase tracking-widest">POINTS:</span>
-              <span className={`text-xs font-mono font-bold ${totalPointsUsed >= MAX_TOTAL_POINTS ? 'text-primary' : 'text-accent'}`}>
+              <span className="text-[10px] font-medium text-muted uppercase tracking-widest">POINTS:</span>
+              <span className={`text-xs font-medium font-bold ${totalPointsUsed >= MAX_TOTAL_POINTS ? 'text-primary' : 'text-slate-800 dark:text-slate-100'}`}>
                 {totalPointsUsed} / {MAX_TOTAL_POINTS}
               </span>
             </div>
@@ -2259,7 +2259,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowEditDropdown(!showEditDropdown)}
-                className="px-4 py-1.5 bg-bg border border-border text-muted hover:text-accent font-mono text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 rounded-sm"
+                className="px-4 py-1.5 bg-bg border border-border text-muted hover:text-slate-800 dark:text-slate-100 font-medium text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 rounded-sm"
               >
                 <Edit3 className="w-3 h-3" /> 编辑 <ChevronDown className={`w-3 h-3 transition-transform ${showEditDropdown ? 'rotate-180' : ''}`} />
               </button>
@@ -2274,14 +2274,14 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   >
                     <button 
                       onClick={() => { setAllocatedPoints({}); setShowEditDropdown(false); }}
-                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-primary hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-primary hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                     >
                       <Trash2 className="w-3 h-3" /> 重置加点
                     </button>
                     {user && (
                       <button 
                         onClick={() => { setShowSaveModal(true); setShowEditDropdown(false); }}
-                        className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                       >
                         <Save className="w-3 h-3" /> 保存方案
                       </button>
@@ -2292,7 +2292,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         <button 
                           onClick={() => { handleSyncLayout(); setShowEditDropdown(false); }}
                           disabled={saving}
-                          className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                         >
                           <Network className="w-3 h-3" /> 同步布局
                         </button>
@@ -2304,13 +2304,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                         <button 
                           onClick={() => { handleResetTree(); setShowEditDropdown(false); }}
                           disabled={saving}
-                          className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-red-500 hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-red-500 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                         >
                           <Trash2 className="w-3 h-3" /> 重置天赋树
                         </button>
                         <button 
                           onClick={() => { setShowBulkImport(true); setShowEditDropdown(false); }}
-                          className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                         >
                           <FileJson className="w-3 h-3" /> 批量导入
                         </button>
@@ -2319,19 +2319,19 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                     <div className="h-px bg-border my-1" />
                     <button 
                       onClick={() => { handleOpenTextView(); setShowEditDropdown(false); }}
-                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                     >
                       <FileText className="w-3 h-3" /> 数据统计查看
                     </button>
                     <button 
                       onClick={() => { handleExportData('txt'); setShowEditDropdown(false); }}
-                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                     >
                       <Download className="w-3 h-3" /> 导出文本_TXT
                     </button>
                     <button 
                       onClick={() => { handleExportData('json'); setShowEditDropdown(false); }}
-                      className="w-full text-left px-4 py-2 text-[10px] font-mono text-muted hover:text-accent hover:bg-accent/5 uppercase tracking-widest transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:bg-slate-800/5 dark:bg-slate-200/5 uppercase tracking-widest transition-colors flex items-center gap-2"
                     >
                       <FileJson className="w-3 h-3" /> 导出数据_JSON
                     </button>
@@ -2350,14 +2350,14 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder="搜索... SEARCH"
-                className="bg-bg border border-border pl-9 pr-4 py-1.5 text-[10px] font-mono focus:border-accent outline-none w-32 transition-all focus:w-48"
+                className="bg-bg border border-border pl-9 pr-4 py-1.5 text-[10px] font-medium focus:border-slate-800 dark:border-slate-200 outline-none w-32 transition-all focus:w-48"
               />
             </div>
 
             {selectedNodeId && (
               <button
                 onClick={() => { setSelectedNodeId(null); setZoom(1); }}
-                className="px-3 py-1.5 bg-bg border border-border text-muted hover:text-accent font-mono text-[10px] uppercase tracking-widest transition-colors rounded-sm"
+                className="px-3 py-1.5 bg-bg border border-border text-muted hover:text-slate-800 dark:text-slate-100 font-medium text-[10px] uppercase tracking-widest transition-colors rounded-sm"
               >
                 重置视图
               </button>
@@ -2366,16 +2366,16 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             <div className="flex bg-bg border border-border p-1 rounded-sm">
               <button
                 onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))}
-                className="px-2 py-1 text-[10px] font-mono text-muted hover:text-accent"
+                className="px-2 py-1 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100"
               >
                 +
               </button>
-              <div className="px-2 py-1 text-[10px] font-mono text-muted border-x border-border">
+              <div className="px-2 py-1 text-[10px] font-medium text-muted border-x border-border">
                 {Math.round(zoom * 100)}%
               </div>
               <button
                 onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.5))}
-                className="px-2 py-1 text-[10px] font-mono text-muted hover:text-accent"
+                className="px-2 py-1 text-[10px] font-medium text-muted hover:text-slate-800 dark:text-slate-100"
               >
                 -
               </button>
@@ -2457,7 +2457,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                                     fontSize="12"
                                     fontWeight="bold"
                                     fill="#fff"
-                                    className="pointer-events-none font-mono"
+                                    className="pointer-events-none font-medium"
                                   >
                                     {allocatedPoints[node.id]}
                                   </text>
@@ -2491,7 +2491,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             className="w-full md:w-96 bg-card/30 border border-border p-6 flex flex-col"
           >
             <div className="flex justify-between items-center border-b border-border pb-4 mb-6">
-              <h3 className="text-sm font-bold text-text font-mono flex items-center gap-2 uppercase tracking-widest">
+              <h3 className="text-sm font-bold text-text font-medium flex items-center gap-2 uppercase tracking-widest">
                 <Info className="w-4 h-4" /> 天赋详情_DETAILS
               </h3>
             </div>
@@ -2499,7 +2499,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             {!selectedNodeId && !editForm.selectedTalentId ? (
               <div className="flex-1 flex flex-col items-center justify-center text-muted opacity-50">
                 <Network className="w-12 h-12 mb-4" />
-                <p className="text-sm font-mono uppercase tracking-widest">请在左侧选择一个天赋节点</p>
+                <p className="text-sm font-medium uppercase tracking-widest">请在左侧选择一个天赋节点</p>
                 <div className="mt-8 text-[10px] text-center space-y-1">
                   <p>左键点击: 增加天赋点</p>
                   <p>右键或 Shift+点击: 减少天赋点</p>
@@ -2521,13 +2521,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 >
                   <button 
                     onClick={() => { setSelectedNodeId(null); setEditForm(prev => ({ ...prev, selectedTalentId: undefined })); }}
-                    className="absolute top-4 right-4 text-muted hover:text-accent transition-colors z-20"
+                    className="absolute top-4 right-4 text-muted hover:text-slate-800 dark:text-slate-100 transition-colors z-20"
                   >
                     <X size={24} />
                   </button>
                   
                   <div className="flex justify-between items-center border-b border-border pb-4 mb-6">
-                    <h3 className="text-sm font-bold text-text font-mono flex items-center gap-2 uppercase tracking-widest">
+                    <h3 className="text-sm font-bold text-text font-medium flex items-center gap-2 uppercase tracking-widest">
                       <Info className="w-4 h-4" /> 天赋详情_DETAILS
                     </h3>
                   </div>
@@ -2562,17 +2562,17 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-card border border-border p-6 w-full max-w-md shadow-2xl"
             >
-              <h3 className="text-lg font-serif text-accent mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
                 <Save className="w-5 h-5" /> 保存加点方案_SAVE_BUILD
               </h3>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase font-mono tracking-widest">方案名称 BUILD_NAME</label>
+                  <label className="text-[10px] text-muted uppercase font-medium tracking-widest">方案名称 BUILD_NAME</label>
                   <input
                     type="text"
                     value={buildName}
                     onChange={e => setBuildName(e.target.value)}
-                    className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                    className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                     placeholder="例如：牵制流、救人流..."
                     autoFocus
                   />
@@ -2580,14 +2580,14 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 px-4 py-2 border border-border text-muted hover:text-text transition-colors text-xs font-mono uppercase tracking-widest"
+                    className="flex-1 px-4 py-2 border border-border text-muted hover:text-text transition-colors text-xs font-medium uppercase tracking-widest"
                   >
                     取消_CANCEL
                   </button>
                   <button
                     onClick={handleSaveBuild}
                     disabled={saving || !buildName.trim()}
-                    className="flex-1 px-4 py-2 bg-accent text-bg font-bold hover:bg-accent/80 disabled:opacity-50 transition-colors text-xs font-mono uppercase tracking-widest"
+                    className="flex-1 px-4 py-2 bg-slate-800 dark:bg-slate-200 text-bg font-bold hover:bg-slate-800/20 dark:hover:bg-slate-200/20 disabled:opacity-50 transition-colors text-xs font-medium uppercase tracking-widest"
                   >
                     {saving ? '保存中...' : '确认保存_CONFIRM'}
                   </button>
@@ -2610,10 +2610,10 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             >
               <div className="p-4 border-b border-border flex justify-between items-center bg-bg/50">
                 <div className="flex flex-col">
-                  <h3 className="text-sm font-mono uppercase tracking-widest text-accent flex items-center gap-2">
+                  <h3 className="text-sm font-medium uppercase tracking-widest text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <Wand2 size={14} /> 选择目标属性_SELECT_TARGET_STATS
                   </h3>
-                  <p className="text-[9px] text-muted font-mono uppercase mt-1">选择受此天赋影响的属性详情</p>
+                  <p className="text-[9px] text-muted font-medium uppercase mt-1">选择受此天赋影响的属性详情</p>
                 </div>
                 <button onClick={() => setShowStatSelector(false)} className="text-muted hover:text-white transition-colors">
                   <X size={20} />
@@ -2625,7 +2625,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-px flex-1 bg-primary/20" />
-                    <h4 className="text-[10px] text-primary uppercase font-mono tracking-widest flex items-center gap-2">
+                    <h4 className="text-[10px] text-primary uppercase font-medium tracking-widest flex items-center gap-2">
                       <ShieldCheck size={12} /> 求生者特质 SURVIVOR_TRAITS
                     </h4>
                     <div className="h-px flex-1 bg-primary/20" />
@@ -2633,15 +2633,15 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                   <div className="space-y-6">
                     {SURVIVOR_TRAITS_MODERN_TEMPLATE.map(category => (
                       <div key={category.category}>
-                        <h5 className="text-[9px] text-muted font-mono uppercase mb-2 tracking-tighter opacity-70">{category.category}</h5>
+                        <h5 className="text-[9px] text-muted font-medium uppercase mb-2 tracking-tighter opacity-70">{category.category}</h5>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {category.items.map(item => (
                             <button
                               key={item.label}
                               onClick={() => toggleStat(item.label)}
-                              className={`text-[10px] font-mono p-2 border text-left transition-all relative group ${
+                              className={`text-[10px] font-medium p-2 border text-left transition-all relative group ${
                                 editForm.targetStats?.includes(item.label)
-                                  ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(255,0,60,0.2)]'
+                                  ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(212,175,55,0.2)]'
                                   : 'bg-bg/50 border-border text-muted hover:border-primary/50 hover:text-primary'
                               }`}
                             >
@@ -2662,25 +2662,25 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 {/* Hunter Traits */}
                 <div>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="h-px flex-1 bg-accent/20" />
-                    <h4 className="text-[10px] text-accent uppercase font-mono tracking-widest flex items-center gap-2">
+                    <div className="h-px flex-1 bg-slate-800 dark:bg-slate-200/20" />
+                    <h4 className="text-[10px] text-slate-800 dark:text-slate-100 uppercase font-medium tracking-widest flex items-center gap-2">
                       <Swords size={12} /> 监管者特质 HUNTER_TRAITS
                     </h4>
-                    <div className="h-px flex-1 bg-accent/20" />
+                    <div className="h-px flex-1 bg-slate-800 dark:bg-slate-200/20" />
                   </div>
                   <div className="space-y-6">
                     {HUNTER_TRAITS_TEMPLATE.map(category => (
                       <div key={category.category}>
-                        <h5 className="text-[9px] text-muted font-mono uppercase mb-2 tracking-tighter opacity-70">{category.category}</h5>
+                        <h5 className="text-[9px] text-muted font-medium uppercase mb-2 tracking-tighter opacity-70">{category.category}</h5>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                           {category.items.map(item => (
                             <button
                               key={item.label}
                               onClick={() => toggleStat(item.label)}
-                              className={`text-[10px] font-mono p-2 border text-left transition-all relative group ${
+                              className={`text-[10px] font-medium p-2 border text-left transition-all relative group ${
                                 editForm.targetStats?.includes(item.label)
-                                  ? 'bg-accent border-accent text-bg shadow-[0_0_10px_rgba(0,243,255,0.2)]'
-                                  : 'bg-bg/50 border-border text-muted hover:border-accent/50 hover:text-accent'
+                                  ? 'bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-bg shadow-[0_0_10px_rgba(212,175,55,0.2)]'
+                                  : 'bg-bg/50 border-border text-muted hover:border-slate-800 dark:border-slate-200/50 hover:text-slate-800 dark:text-slate-100'
                               }`}
                             >
                               {item.label}
@@ -2700,13 +2700,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               
               <div className="p-4 border-t border-border bg-bg/50 flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <div className="text-[10px] font-mono text-muted uppercase tracking-widest">
-                    已选择: <span className="text-accent">{editForm.targetStats?.length || 0}</span>
+                  <div className="text-[10px] font-medium text-muted uppercase tracking-widest">
+                    已选择: <span className="text-slate-800 dark:text-slate-100">{editForm.targetStats?.length || 0}</span>
                   </div>
                   {editForm.targetStats && editForm.targetStats.length > 0 && (
                     <button 
                       onClick={() => setEditForm({...editForm, targetStats: []})}
-                      className="text-[9px] font-mono text-red-500 hover:underline uppercase"
+                      className="text-[9px] font-medium text-red-500 hover:underline uppercase"
                     >
                       清空_CLEAR
                     </button>
@@ -2714,7 +2714,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 </div>
                 <button
                   onClick={() => setShowStatSelector(false)}
-                  className="px-8 py-2 bg-accent text-bg text-[10px] font-mono uppercase tracking-widest hover:bg-white transition-all font-bold"
+                  className="px-8 py-2 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-medium uppercase tracking-widest hover:bg-white transition-all font-bold"
                 >
                   确认_CONFIRM
                 </button>
@@ -2732,14 +2732,14 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-5xl bg-card border border-accent shadow-[0_0_50px_rgba(0,243,255,0.2)] flex flex-col max-h-full overflow-hidden"
+              className="w-full max-w-5xl bg-card border border-slate-800 dark:border-slate-200 shadow-[0_0_50px_rgba(212,175,55,0.2)] flex flex-col max-h-full overflow-hidden"
             >
               <div className="flex justify-between items-center p-6 border-b border-border bg-bg/50">
                 <div className="flex items-center gap-3">
-                  <FileText className="text-accent w-6 h-6" />
+                  <FileText className="text-slate-800 dark:text-slate-100 w-6 h-6" />
                   <div>
-                    <h3 className="text-xl font-serif text-text">天赋系统数据浏览</h3>
-                    <p className="text-[10px] font-mono text-muted uppercase tracking-widest">TEXT VIEW MODE</p>
+                    <h3 className="text-xl font-sans font-bold tracking-tight text-text">天赋系统数据浏览</h3>
+                    <p className="text-[10px] font-medium text-muted uppercase tracking-widest">TEXT VIEW MODE</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -2748,13 +2748,13 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                       navigator.clipboard.writeText(generatedTextContent);
                       showStatus('内容已复制到剪贴板');
                     }}
-                    className="px-4 py-2 bg-accent/10 text-accent border border-accent/30 hover:bg-accent hover:text-bg transition-all font-mono text-xs flex items-center gap-2"
+                    className="px-4 py-2 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/30 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-xs flex items-center gap-2"
                   >
                     复制全文_COPY
                   </button>
                   <button 
                     onClick={() => handleExportData('txt')}
-                    className="px-4 py-2 bg-accent text-bg hover:bg-accent/80 transition-all font-mono text-xs flex items-center gap-2 font-bold"
+                    className="px-4 py-2 bg-slate-800 dark:bg-slate-200 text-bg hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-xs flex items-center gap-2 font-bold"
                   >
                     下载TXT_DOWNLOAD
                   </button>
@@ -2767,12 +2767,12 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-[#050505]">
-                <pre className="text-sm font-mono text-muted leading-relaxed whitespace-pre-wrap selection:bg-accent selection:text-bg">
+                <pre className="text-sm font-medium text-muted leading-relaxed whitespace-pre-wrap selection:bg-slate-800 dark:bg-slate-200 selection:text-bg">
                   {generatedTextContent}
                 </pre>
               </div>
               <div className="p-4 border-t border-border bg-bg/30 text-center">
-                <p className="text-[10px] font-mono text-muted/40 uppercase tracking-widest">
+                <p className="text-[10px] font-medium text-muted/40 uppercase tracking-widest">
                   END OF CONTENT - TOTAL {talents.filter(t => t.role === role).length} TALENTS
                 </p>
               </div>
@@ -2790,7 +2790,7 @@ export const TalentWeb = ({ user, userProfile, onViewWiki }: TalentWebProps) => 
             exit={{ opacity: 0, y: 20 }}
             className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full z-[200] flex items-center gap-3 border ${
               statusMessage.type === 'success' 
-                ? 'bg-bg/90 border-accent text-accent' 
+                ? 'bg-bg/90 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
                 : 'bg-bg/90 border-destructive text-destructive'
             }`}
           >

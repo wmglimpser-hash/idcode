@@ -97,15 +97,15 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
       <div className="flex items-center justify-between border-b border-border pb-4">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-muted hover:text-accent transition-colors font-mono text-sm uppercase tracking-widest"
+          className="flex items-center gap-2 text-muted hover:text-slate-800 dark:text-slate-100 transition-colors font-medium text-sm uppercase tracking-widest"
         >
           <ArrowLeft className="w-4 h-4" /> 返回详情_BACK
         </button>
         <div className="text-right">
-          <h2 className="text-xl font-serif text-accent flex items-center justify-end gap-2">
+          <h2 className="text-xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center justify-end gap-2">
             <Icon className="w-5 h-5" /> {titleText}
           </h2>
-          <p className="text-xs text-muted font-mono uppercase tracking-tighter">
+          <p className="text-xs text-muted font-medium uppercase tracking-tighter">
             {type.toUpperCase()}_FOR_{character.name}
           </p>
         </div>
@@ -113,39 +113,39 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
 
       {/* Add Form */}
       {canEdit && (
-        <section className="bg-card/30 border border-border p-6 cyber-border">
-          <h3 className="text-sm font-bold text-text font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+        <section className="bg-card/30 border border-border p-6 rounded-2xl shadow-sm">
+          <h3 className="text-sm font-bold text-text font-medium mb-6 flex items-center gap-2 uppercase tracking-widest">
             <Plus className="w-4 h-4" /> 录入新{type === 'talent' ? '天赋' : '特质'}_INPUT_NEW
           </h3>
           <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">名称 TITLE</label>
+              <label className="text-[10px] text-muted uppercase font-medium tracking-widest">名称 TITLE</label>
               <input 
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder={type === 'talent' ? "例如：39天赋 (破窗理论+回光返照)" : "例如：闪现"}
-                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
                 required
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">图片链接 IMAGE_URL (可选)</label>
+              <label className="text-[10px] text-muted uppercase font-medium tracking-widest">图片链接 IMAGE_URL (可选)</label>
               <input 
                 type="text"
                 value={newImageUrl}
                 onChange={(e) => setNewImageUrl(e.target.value)}
                 placeholder="输入图片URL..."
-                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">描述说明 DESCRIPTION</label>
+              <label className="text-[10px] text-muted uppercase font-medium tracking-widest">描述说明 DESCRIPTION</label>
               <textarea 
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 placeholder="详细说明适用场景、打法思路等..."
-                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors min-h-[100px] resize-y"
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors min-h-[100px] resize-y"
                 required
               />
             </div>
@@ -153,7 +153,7 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
               <button 
                 type="submit"
                 disabled={adding}
-                className="bg-primary text-white px-8 py-2 hover:bg-primary/80 transition-all disabled:opacity-50 flex items-center gap-2 font-mono text-sm tracking-widest"
+                className="bg-primary text-white px-8 py-2 hover:bg-primary/80 transition-all disabled:opacity-50 flex items-center gap-2 font-medium text-sm tracking-widest"
               >
                 <Plus className="w-4 h-4" /> 确认添加_ADD
               </button>
@@ -165,18 +165,18 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
       {/* Items List */}
       <section className="space-y-6">
         {loading ? (
-          <div className="p-12 text-center text-muted font-mono border border-border bg-card/30">
+          <div className="p-12 text-center text-muted font-medium border border-border bg-card/30">
             正在扫描数据模块... SCANNING_DATA_MODULES
           </div>
         ) : items.length === 0 ? (
-          <div className="p-12 text-center text-muted font-mono border border-border bg-card/30 flex flex-col items-center gap-4">
+          <div className="p-12 text-center text-muted font-medium border border-border bg-card/30 flex flex-col items-center gap-4">
             <Info className="w-8 h-8 opacity-20" />
             <p className="uppercase tracking-widest text-sm">暂无{type === 'talent' ? '天赋' : '特质'}记录_NO_RECORDS_FOUND</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {items.map((item) => (
-              <div key={item.id} className="bg-card/30 border border-border p-6 cyber-border relative group">
+              <div key={item.id} className="bg-card/30 border border-border p-6 rounded-2xl shadow-sm relative group">
                 {canEdit && (
                   <button 
                     onClick={() => handleDelete(item.id)}
@@ -199,8 +199,8 @@ export const CharacterExtensionView = ({ character, type, onBack, canEdit = fals
                     </div>
                   )}
                   <div className="flex-1 space-y-4">
-                    <h3 className="text-xl font-bold text-accent font-mono">{item.title}</h3>
-                    <div className="text-sm text-text/80 font-mono leading-relaxed whitespace-pre-wrap">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 font-medium">{item.title}</h3>
+                    <div className="text-sm text-text/80 font-medium leading-relaxed whitespace-pre-wrap">
                       {item.description}
                     </div>
                   </div>

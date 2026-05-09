@@ -156,23 +156,23 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
         <div>
-          <h2 className="text-3xl font-serif text-accent cyber-glow-text">VS 对比分析</h2>
-          <p className="text-muted font-mono text-xs uppercase tracking-widest">VS COMPARISON_V1.1</p>
+          <h2 className="text-3xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 ">VS 对比分析</h2>
+          <p className="text-muted font-medium text-xs uppercase tracking-widest">VS COMPARISON_V1.1</p>
         </div>
         
         {/* Presets Navigation */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="text-[10px] text-muted font-mono uppercase tracking-widest mr-2 flex items-center gap-1">
+          <div className="text-[10px] text-muted font-medium uppercase tracking-widest mr-2 flex items-center gap-1">
             <Target className="w-3 h-3" /> 场景预设:
           </div>
           {presets.map(preset => (
             <div key={preset.id} className="relative group">
               <button
                 onClick={() => handleApplyPreset(preset)}
-                className={`px-3 py-1 text-[10px] font-mono uppercase tracking-widest border transition-all flex items-center gap-2 ${
+                className={`px-3 py-1 text-[10px] font-medium uppercase tracking-widest border transition-all flex items-center gap-2 ${
                   activePresetId === preset.id 
-                    ? 'bg-accent text-bg border-accent font-bold' 
-                    : 'bg-bg/50 text-muted border-border hover:border-accent/50'
+                    ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200 font-bold' 
+                    : 'bg-bg/50 text-muted border-border hover:border-slate-800 dark:border-slate-200/50'
                 }`}
               >
                 {preset.name}
@@ -189,14 +189,14 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
           ))}
           <button
             onClick={() => setShowAddModal(true)}
-            className="p-1 text-muted hover:text-accent transition-colors border border-dashed border-border hover:border-accent"
+            className="p-1 text-muted hover:text-slate-800 dark:text-slate-100 transition-colors border border-dashed border-border hover:border-slate-800 dark:border-slate-200"
             title="添加预设"
           >
             <Plus className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsEditingPresets(!isEditingPresets)}
-            className={`p-1 transition-colors ${isEditingPresets ? 'text-primary' : 'text-muted hover:text-accent'}`}
+            className={`p-1 transition-colors ${isEditingPresets ? 'text-primary' : 'text-muted hover:text-slate-800 dark:text-slate-100'}`}
             title="管理预设"
           >
             <Settings2 className="w-4 h-4" />
@@ -207,14 +207,14 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Survivor Selection */}
         <div className="bg-card/30 border border-border p-6 space-y-2 relative">
-          <div className="flex items-center gap-2 text-accent font-mono text-xs uppercase tracking-widest mb-2">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-medium text-xs uppercase tracking-widest mb-2">
             <ShieldCheck className="w-4 h-4" /> 选择求生者
           </div>
           
           <select 
             value={selectedSurvivorId}
             onChange={(e) => setSelectedSurvivorId(e.target.value)}
-            className="w-full bg-bg border border-border px-4 py-2 text-sm font-mono focus:border-accent outline-none mb-2"
+            className="w-full bg-bg border border-border px-4 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none mb-2"
           >
             {survivors.map(s => (
               <option key={s.id} value={s.id}>{s.title} - {s.name}</option>
@@ -230,20 +230,20 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
               <div className="bg-bg/50 p-6 border border-border/50 relative">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted font-mono uppercase tracking-wider">{survivorLabel}</span>
+                    <span className="text-xs text-muted font-medium uppercase tracking-wider">{survivorLabel}</span>
                     <button 
                       onClick={() => setRankingOpen(rankingOpen === 'Survivor' ? null : 'Survivor')}
-                      className={`transition-colors ${rankingOpen === 'Survivor' ? 'text-white' : 'text-accent hover:text-white'}`}
+                      className={`transition-colors ${rankingOpen === 'Survivor' ? 'text-white' : 'text-slate-800 dark:text-slate-100 hover:text-white'}`}
                       title="查看排行榜"
                     >
                       <Trophy className="w-4 h-4" />
                     </button>
                   </div>
-                  <span className="text-2xl font-serif text-accent cyber-glow-text">{sStat.value} <span className="text-xs font-mono opacity-60">{sStat.unit}</span></span>
+                  <span className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 ">{sStat.value} <span className="text-xs font-medium opacity-60">{sStat.unit}</span></span>
                 </div>
                 <div className="w-full bg-border h-2 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-accent transition-all duration-1000 shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)]" 
+                    className="h-full bg-slate-800 dark:bg-slate-200 transition-all duration-1000 shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)]" 
                     style={{ width: `${Math.min(100, (sStat.value / (sStat.unit === 'm/s' ? 6 : 3)) * 100)}%` }} 
                   />
                 </div>
@@ -255,10 +255,10 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 right-0 z-20 bg-card border border-accent/30 shadow-2xl mt-1 max-h-[300px] overflow-y-auto custom-scrollbar"
+                      className="absolute top-full left-0 right-0 z-20 bg-card border border-slate-800 dark:border-slate-200/30 shadow-2xl mt-1 max-h-[300px] overflow-y-auto custom-scrollbar"
                     >
-                      <div className="p-2 border-b border-border bg-accent/10 flex justify-between items-center sticky top-0 z-10">
-                        <span className="text-[10px] font-mono text-accent uppercase tracking-widest">{survivorLabel} 排行</span>
+                      <div className="p-2 border-b border-border bg-slate-800/10 dark:bg-slate-200/10 flex justify-between items-center sticky top-0 z-10">
+                        <span className="text-[10px] font-medium text-slate-800 dark:text-slate-100 uppercase tracking-widest">{survivorLabel} 排行</span>
                         <button onClick={() => setRankingOpen(null)}><X className="w-3 h-3 text-muted" /></button>
                       </div>
                       {getRankedList('Survivor', survivorLabel).map((item, idx) => (
@@ -268,19 +268,19 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                             setSelectedSurvivorId(item.char.id);
                             setRankingOpen(null);
                           }}
-                          className={`w-full flex items-center justify-between p-3 hover:bg-accent/10 transition-colors border-b border-border/30 last:border-0 ${
-                            selectedSurvivorId === item.char.id ? 'bg-accent/20' : ''
+                          className={`w-full flex items-center justify-between p-3 hover:bg-slate-800/10 dark:bg-slate-200/10 transition-colors border-b border-border/30 last:border-0 ${
+                            selectedSurvivorId === item.char.id ? 'bg-slate-800 dark:bg-slate-200/20' : ''
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-mono text-muted w-4">{idx + 1}</span>
+                            <span className="text-[10px] font-medium text-muted w-4">{idx + 1}</span>
                             <img src={item.char.imageUrl} className="w-8 h-8 object-cover border border-border" referrerPolicy="no-referrer" />
                             <div className="text-left">
-                              <div className="text-xs font-serif text-text">{item.char.name}</div>
-                              <div className="text-[9px] text-muted font-mono uppercase">{item.char.title}</div>
+                              <div className="text-xs font-sans font-bold tracking-tight text-text">{item.char.name}</div>
+                              <div className="text-[9px] text-muted font-medium uppercase">{item.char.title}</div>
                             </div>
                           </div>
-                          <div className="text-xs font-mono text-accent">{item.stat.value} {item.stat.unit}</div>
+                          <div className="text-xs font-medium text-slate-800 dark:text-slate-100">{item.stat.value} {item.stat.unit}</div>
                         </button>
                       ))}
                     </motion.div>
@@ -296,8 +296,8 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60" />
                 <div className="absolute bottom-4 left-4">
-                  <div className="text-accent font-serif text-xl">{selectedSurvivor.name}</div>
-                  <div className="text-muted text-[10px] font-mono uppercase">{selectedSurvivor.title}</div>
+                  <div className="text-slate-800 dark:text-slate-100 font-sans font-bold tracking-tight text-xl">{selectedSurvivor.name}</div>
+                  <div className="text-muted text-[10px] font-medium uppercase">{selectedSurvivor.title}</div>
                 </div>
               </div>
             </motion.div>
@@ -310,13 +310,13 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 -rotate-45 translate-x-16 -translate-y-16 group-hover:bg-primary/10 transition-all" />
             
             <div className="text-center space-y-6 relative z-10">
-              <div className="text-[10px] text-primary font-mono uppercase tracking-[0.3em] mb-2">
+              <div className="text-[10px] text-primary font-medium uppercase tracking-[0.3em] mb-2">
                 {isSpeedComparison ? '追击效率分析' : '动作时长对比'}
               </div>
               
               {isSpeedComparison && (
                 <div className="flex flex-col items-center gap-4">
-                  <div className="text-muted text-xs font-mono">初始距离 (M)</div>
+                  <div className="text-muted text-xs font-medium">初始距离 (M)</div>
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={() => { setDistance(Math.max(1, distance - 1)); setActivePresetId(null); }}
@@ -328,7 +328,7 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                       type="number" 
                       value={distance}
                       onChange={(e) => { setDistance(Math.max(1, parseInt(e.target.value) || 1)); setActivePresetId(null); }}
-                      className="w-20 bg-transparent border-b border-border text-center text-2xl font-serif text-text focus:border-primary outline-none"
+                      className="w-20 bg-transparent border-b border-border text-center text-2xl font-sans font-bold tracking-tight text-text focus:border-primary outline-none"
                     />
                     <button 
                       onClick={() => { setDistance(distance + 1); setActivePresetId(null); }}
@@ -341,10 +341,10 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
               )}
 
               <div className="py-8 border-y border-border/50">
-                <div className="text-muted text-xs font-mono mb-4">
+                <div className="text-muted text-xs font-medium mb-4">
                   {isSpeedComparison ? '预计击中所需时长' : '监管者动作领先/落后'}
                 </div>
-                <div className="text-5xl font-serif text-primary cyber-glow-text">
+                <div className="text-5xl font-sans font-bold tracking-tight text-primary ">
                   {isSpeedComparison ? (
                     <>
                       {chaseTime === Infinity ? '∞' : chaseTime?.toFixed(2)}
@@ -358,33 +358,33 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                   )}
                 </div>
                 {isSpeedComparison && chaseTime === Infinity && (
-                  <div className="text-[10px] text-primary mt-2 font-mono">监管者速度不足以追上求生者</div>
+                  <div className="text-[10px] text-primary mt-2 font-medium">监管者速度不足以追上求生者</div>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-bg/50 border border-border text-left">
-                  <div className="text-xs text-muted font-mono uppercase mb-2 tracking-wider">
+                  <div className="text-xs text-muted font-medium uppercase mb-2 tracking-wider">
                     {isSpeedComparison ? '速度差' : '求生者数值'}
                   </div>
-                  <div className="text-2xl font-serif text-accent cyber-glow-text">
+                  <div className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 ">
                     {isSpeedComparison 
                       ? `${(hStat.value - sStat.value).toFixed(2)}`
                       : `${sStat.value}`
                     }
-                    <span className="text-xs font-mono ml-1 opacity-60">{sStat.unit}</span>
+                    <span className="text-xs font-medium ml-1 opacity-60">{sStat.unit}</span>
                   </div>
                 </div>
                 <div className="p-4 bg-bg/50 border border-border text-left">
-                  <div className="text-xs text-muted font-mono uppercase mb-2 tracking-wider">
+                  <div className="text-xs text-muted font-medium uppercase mb-2 tracking-wider">
                     {isSpeedComparison ? '追击难度' : '监管者数值'}
                   </div>
-                  <div className={`text-2xl font-serif cyber-glow-text ${isSpeedComparison ? (chaseTime && chaseTime < 15 ? 'text-green-400' : chaseTime && chaseTime < 30 ? 'text-yellow-400' : 'text-primary') : 'text-primary'}`}>
+                  <div className={`text-2xl font-sans font-bold tracking-tight  ${isSpeedComparison ? (chaseTime && chaseTime < 15 ? 'text-green-400' : chaseTime && chaseTime < 30 ? 'text-yellow-400' : 'text-primary') : 'text-primary'}`}>
                     {isSpeedComparison 
                       ? (chaseTime && chaseTime < 15 ? '容易' : chaseTime && chaseTime < 30 ? '中等' : '困难')
                       : `${hStat.value}`
                     }
-                    {!isSpeedComparison && <span className="text-xs font-mono ml-1 opacity-60">{hStat.unit}</span>}
+                    {!isSpeedComparison && <span className="text-xs font-medium ml-1 opacity-60">{hStat.unit}</span>}
                   </div>
                 </div>
               </div>
@@ -392,7 +392,7 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
           </div>
 
           <div className="bg-bg/30 border border-border p-6 space-y-4">
-            <h4 className="text-xs text-muted font-mono uppercase tracking-widest flex items-center gap-2">
+            <h4 className="text-xs text-muted font-medium uppercase tracking-widest flex items-center gap-2">
               <Zap className="w-3 h-3" /> 战术建议
             </h4>
             <ul className="space-y-3">
@@ -422,14 +422,14 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
 
         {/* Hunter Selection */}
         <div className="bg-card/30 border border-border p-6 space-y-2 relative">
-          <div className="flex items-center gap-2 text-primary font-mono text-xs uppercase tracking-widest mb-2">
+          <div className="flex items-center gap-2 text-primary font-medium text-xs uppercase tracking-widest mb-2">
             <Swords className="w-4 h-4" /> 选择监管者
           </div>
           
           <select 
             value={selectedHunterId}
             onChange={(e) => setSelectedHunterId(e.target.value)}
-            className="w-full bg-bg border border-border px-4 py-2 text-sm font-mono focus:border-primary outline-none mb-2"
+            className="w-full bg-bg border border-border px-4 py-2 text-sm font-medium focus:border-primary outline-none mb-2"
           >
             {hunters.map(h => (
               <option key={h.id} value={h.id}>{h.title} - {h.name}</option>
@@ -445,7 +445,7 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
               <div className="bg-bg/50 p-6 border border-border/50 relative">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted font-mono uppercase tracking-wider">{hunterLabel}</span>
+                    <span className="text-xs text-muted font-medium uppercase tracking-wider">{hunterLabel}</span>
                     <button 
                       onClick={() => setRankingOpen(rankingOpen === 'Hunter' ? null : 'Hunter')}
                       className={`transition-colors ${rankingOpen === 'Hunter' ? 'text-white' : 'text-primary hover:text-white'}`}
@@ -454,7 +454,7 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                       <Trophy className="w-4 h-4" />
                     </button>
                   </div>
-                  <span className="text-2xl font-serif text-primary cyber-glow-text">{hStat.value} <span className="text-xs font-mono opacity-60">{hStat.unit}</span></span>
+                  <span className="text-2xl font-sans font-bold tracking-tight text-primary ">{hStat.value} <span className="text-xs font-medium opacity-60">{hStat.unit}</span></span>
                 </div>
                 <div className="w-full bg-border h-2 rounded-full overflow-hidden">
                   <div 
@@ -473,7 +473,7 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                       className="absolute top-full left-0 right-0 z-20 bg-card border border-primary/30 shadow-2xl mt-1 max-h-[300px] overflow-y-auto custom-scrollbar"
                     >
                       <div className="p-2 border-b border-border bg-primary/10 flex justify-between items-center sticky top-0 z-10">
-                        <span className="text-[10px] font-mono text-primary uppercase tracking-widest">{hunterLabel} 排行</span>
+                        <span className="text-[10px] font-medium text-primary uppercase tracking-widest">{hunterLabel} 排行</span>
                         <button onClick={() => setRankingOpen(null)}><X className="w-3 h-3 text-muted" /></button>
                       </div>
                       {getRankedList('Hunter', hunterLabel).map((item, idx) => (
@@ -488,14 +488,14 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-mono text-muted w-4">{idx + 1}</span>
+                            <span className="text-[10px] font-medium text-muted w-4">{idx + 1}</span>
                             <img src={item.char.imageUrl} className="w-8 h-8 object-cover border border-border" referrerPolicy="no-referrer" />
                             <div className="text-left">
-                              <div className="text-xs font-serif text-text">{item.char.name}</div>
-                              <div className="text-[9px] text-muted font-mono uppercase">{item.char.title}</div>
+                              <div className="text-xs font-sans font-bold tracking-tight text-text">{item.char.name}</div>
+                              <div className="text-[9px] text-muted font-medium uppercase">{item.char.title}</div>
                             </div>
                           </div>
-                          <div className="text-xs font-mono text-primary">{item.stat.value} {item.stat.unit}</div>
+                          <div className="text-xs font-medium text-primary">{item.stat.value} {item.stat.unit}</div>
                         </button>
                       ))}
                     </motion.div>
@@ -511,8 +511,8 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60" />
                 <div className="absolute bottom-4 left-4">
-                  <div className="text-primary font-serif text-xl">{selectedHunter.name}</div>
-                  <div className="text-muted text-[10px] font-mono uppercase">{selectedHunter.title}</div>
+                  <div className="text-primary font-sans font-bold tracking-tight text-xl">{selectedHunter.name}</div>
+                  <div className="text-muted text-[10px] font-medium uppercase">{selectedHunter.title}</div>
                 </div>
               </div>
             </motion.div>
@@ -531,7 +531,7 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
               className="bg-card border border-border p-6 w-full max-w-md space-y-6 shadow-2xl"
             >
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-serif text-accent">添加对比预设</h3>
+                <h3 className="text-xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">添加对比预设</h3>
                 <button onClick={() => setShowAddModal(false)} className="text-muted hover:text-primary">
                   <X className="w-5 h-5" />
                 </button>
@@ -539,23 +539,23 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
               
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted font-mono uppercase">预设名称</label>
+                  <label className="text-[10px] text-muted font-medium uppercase">预设名称</label>
                   <input 
                     type="text" 
                     value={newPreset.name}
                     onChange={(e) => setNewPreset({ ...newPreset, name: e.target.value })}
-                    className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                    className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                     placeholder="例如: 翻窗博弈"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted font-mono uppercase">求生者数据项</label>
+                    <label className="text-[10px] text-muted font-medium uppercase">求生者数据项</label>
                     <select 
                       value={newPreset.survivorLabel}
                       onChange={(e) => setNewPreset({ ...newPreset, survivorLabel: e.target.value })}
-                      className="w-full bg-bg border border-border px-3 py-2 text-xs font-mono focus:border-accent outline-none"
+                      className="w-full bg-bg border border-border px-3 py-2 text-xs font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                     >
                       <option value="跑动速度">跑动速度</option>
                       <option value="快速翻窗时长">快速翻窗时长</option>
@@ -565,11 +565,11 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted font-mono uppercase">监管者数据项</label>
+                    <label className="text-[10px] text-muted font-medium uppercase">监管者数据项</label>
                     <select 
                       value={newPreset.hunterLabel}
                       onChange={(e) => setNewPreset({ ...newPreset, hunterLabel: e.target.value })}
-                      className="w-full bg-bg border border-border px-3 py-2 text-xs font-mono focus:border-accent outline-none"
+                      className="w-full bg-bg border border-border px-3 py-2 text-xs font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                     >
                       <option value="移动速度">移动速度</option>
                       <option value="跨过窗户时长">跨过窗户时长</option>
@@ -582,22 +582,22 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
 
                 {newPreset.survivorLabel === '跑动速度' && newPreset.hunterLabel === '移动速度' && (
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted font-mono uppercase">初始距离 (M)</label>
+                    <label className="text-[10px] text-muted font-medium uppercase">初始距离 (M)</label>
                     <input 
                       type="number" 
                       value={newPreset.distance}
                       onChange={(e) => setNewPreset({ ...newPreset, distance: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none"
+                      className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none"
                     />
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted font-mono uppercase">描述 (可选)</label>
+                  <label className="text-[10px] text-muted font-medium uppercase">描述 (可选)</label>
                   <textarea 
                     value={newPreset.description}
                     onChange={(e) => setNewPreset({ ...newPreset, description: e.target.value })}
-                    className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none min-h-[60px]"
+                    className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none min-h-[60px]"
                     placeholder="预设场景描述..."
                   />
                 </div>
@@ -606,13 +606,13 @@ export const CharacterComparison = ({ allCharacters }: CharacterComparisonProps)
               <div className="flex gap-3">
                 <button 
                   onClick={handleAddPreset}
-                  className="flex-1 bg-accent text-bg py-2 text-sm font-bold hover:bg-accent/80 transition-colors"
+                  className="flex-1 bg-slate-800 dark:bg-slate-200 text-bg py-2 text-sm font-bold hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-colors"
                 >
                   确认添加
                 </button>
                 <button 
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 border border-border text-muted py-2 text-sm font-mono hover:bg-border/30 transition-colors"
+                  className="flex-1 border border-border text-muted py-2 text-sm font-medium hover:bg-border/30 transition-colors"
                 >
                   取消
                 </button>

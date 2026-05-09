@@ -297,19 +297,19 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
             className="absolute bottom-16 right-0 w-96 h-[500px] bg-card border border-border shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden rounded-lg"
           >
             {/* Header */}
-            <div className="p-4 border-b border-border bg-accent/5 flex items-center justify-between">
+            <div className="p-4 border-b border-border bg-slate-800/5 dark:bg-slate-200/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-accent" />
+                <div className="w-8 h-8 rounded-full bg-slate-800 dark:bg-slate-200/20 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-slate-800 dark:text-slate-100" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-serif font-bold text-accent">庄园智能助手</h3>
-                  <div className="text-[10px] font-mono text-muted uppercase tracking-widest">ACTIVE SESSION_</div>
+                  <h3 className="text-sm font-sans font-bold tracking-tight font-bold text-slate-800 dark:text-slate-100">庄园智能助手</h3>
+                  <div className="text-[10px] font-medium text-muted uppercase tracking-widest">ACTIVE SESSION_</div>
                 </div>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="text-muted hover:text-accent transition-colors"
+                className="text-muted hover:text-slate-800 dark:text-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -326,19 +326,19 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                     <div className="flex items-center gap-2 mb-1">
                       {msg.role === 'user' ? (
                         <>
-                          <span className="text-[9px] font-mono text-muted uppercase">调查员</span>
+                          <span className="text-[9px] font-medium text-muted uppercase">调查员</span>
                           <User className="w-3 h-3 text-muted" />
                         </>
                       ) : (
                         <>
-                          <Bot className="w-3 h-3 text-accent" />
-                          <span className="text-[9px] font-mono text-accent uppercase">秘典核心</span>
+                          <Bot className="w-3 h-3 text-slate-800 dark:text-slate-100" />
+                          <span className="text-[9px] font-medium text-slate-800 dark:text-slate-100 uppercase">秘典核心</span>
                         </>
                       )}
                     </div>
                     <div className={`p-3 rounded-sm text-xs leading-relaxed ${
                       msg.role === 'user' 
-                        ? 'bg-accent text-bg font-bold' 
+                        ? 'bg-slate-800 dark:bg-slate-200 text-bg font-bold' 
                         : msg.role === 'system'
                         ? 'bg-bg border border-border text-muted italic'
                         : 'bg-card border border-border text-text'
@@ -347,8 +347,8 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
                       {msg.isProposedUpdate && (msg.proposedUpdateData || msg.proposedBatchUpdateData) && (
-                        <div className="mt-3 p-3 bg-bg/50 border border-accent/30 rounded-sm space-y-3">
-                          <div className="flex items-center gap-2 text-accent">
+                        <div className="mt-3 p-3 bg-bg/50 border border-slate-800 dark:border-slate-200/30 rounded-sm space-y-3">
+                          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
                             <Sparkles className="w-4 h-4" />
                             <span className="font-bold">{msg.proposedBatchUpdateData ? '批量修改建议' : '修改建议'}</span>
                           </div>
@@ -374,7 +374,7 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                                 <div className="max-h-32 overflow-y-auto custom-scrollbar pl-2 border-l border-border space-y-2">
                                   {msg.proposedBatchUpdateData.updates.map((item, idx) => (
                                     <div key={idx} className="space-y-1 pb-1 border-b border-border/10 last:border-0">
-                                      <div className="text-[9px] font-bold text-accent">{item.characterId}</div>
+                                      <div className="text-[9px] font-bold text-slate-800 dark:text-slate-100">{item.characterId}</div>
                                       {Object.entries(item.updates).map(([key, val]) => (
                                         <div key={key} className="text-[9px] flex items-start gap-1">
                                           <span className="text-secondary opacity-70 shrink-0">{key}:</span>
@@ -394,13 +394,13 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                                 if (msg.proposedBatchUpdateData) handleApplyBatchUpdate(msg.proposedBatchUpdateData);
                                 else if (msg.proposedUpdateData) handleApplyUpdate(msg.proposedUpdateData);
                               }}
-                              className="flex-1 py-1.5 bg-accent text-bg text-[10px] font-bold uppercase tracking-widest hover:bg-accent/80 transition-all flex items-center justify-center gap-2"
+                              className="flex-1 py-1.5 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all flex items-center justify-center gap-2"
                             >
                               <Check className="w-3 h-3" /> 确认修改
                             </button>
                             <button
                               onClick={() => setMessages(prev => [...prev, { role: 'system', content: '已取消修改。' }])}
-                              className="flex-1 py-1.5 border border-border text-muted text-[10px] font-mono uppercase tracking-widest hover:text-text transition-all"
+                              className="flex-1 py-1.5 border border-border text-muted text-[10px] font-medium uppercase tracking-widest hover:text-text transition-all"
                             >
                               取消
                             </button>
@@ -413,9 +413,9 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="flex items-center gap-2 text-accent animate-pulse">
+                  <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100 animate-pulse">
                     <RefreshCcw className="w-4 h-4 animate-spin" />
-                    <span className="text-[10px] font-mono uppercase">正在分析档案... ANALYZING_</span>
+                    <span className="text-[10px] font-medium uppercase">正在分析档案... ANALYZING_</span>
                   </div>
                 </div>
               )}
@@ -434,12 +434,12 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
                     }
                   }}
                   placeholder="指令：修改先知的背景故事..."
-                  className="w-full bg-bg border border-border p-3 pr-12 text-xs font-mono focus:border-accent outline-none min-h-[60px] max-h-[120px] resize-none"
+                  className="w-full bg-bg border border-border p-3 pr-12 text-xs font-medium focus:border-slate-800 dark:border-slate-200 outline-none min-h-[60px] max-h-[120px] resize-none"
                 />
                 <button
                   onClick={handleSend}
                   disabled={isLoading || !input.trim()}
-                  className="absolute bottom-3 right-3 p-2 bg-accent text-bg hover:bg-accent/80 transition-all disabled:opacity-50 disabled:grayscale"
+                  className="absolute bottom-3 right-3 p-2 bg-slate-800 dark:bg-slate-200 text-bg hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all disabled:opacity-50 disabled:grayscale"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -458,7 +458,7 @@ export function AIAssistant({ characters, onUpdateCharacter, userProfile }: AIAs
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
         className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all ${
-          isOpen ? 'bg-primary text-white rotate-90' : 'bg-accent text-bg'
+          isOpen ? 'bg-primary text-white rotate-90' : 'bg-slate-800 dark:bg-slate-200 text-bg'
         }`}
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}

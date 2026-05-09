@@ -1,0 +1,395 @@
+  if (!isEdit) return <h2 className={className}>{value}</h2>;
+      className={`${className} bg-transparent border-b-2 border-slate-100 focus:border-slate-300 outline-none w-full text-center resize-none p-0 overflow-hidden min-h-[1.5em]`}
+  if (!isEdit) return <p className={className}>{value}</p>;
+      className={`${className} bg-transparent border-2 border-dashed border-slate-100 focus:border-slate-300 rounded-xl outline-none w-full text-center resize-none p-4 min-h-[100px] font-medium transition-all`}
+          <div key={a.id} className="absolute inset-8 z-0 opacity-[0.05] pointer-events-none overflow-hidden rounded-3xl flex items-center justify-center mix-blend-multiply">
+                <img src={a.url} alt={a.alt} className="w-[50%] h-[50%] object-contain filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+              <img src={a.url} alt={a.alt} className="w-full h-full object-cover filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+        <div className="absolute bottom-10 right-10 z-10 flex gap-4 pointer-events-auto">
+            <div key={a.id} className="group relative flex items-center justify-center">
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 shadow-md"
+                  <X className="w-2.5 h-2.5" />
+                  <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+                <img src={a.url} alt={a.alt} className="w-16 h-16 object-contain filter grayscale border border-slate-200 rounded" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+      <div className="flex flex-wrap items-center justify-center gap-6 my-6 relative z-10 w-full shrink-0">
+          <div key={a.id} className="group relative flex flex-col items-center gap-3 animate-in fade-in zoom-in-95">
+                className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 shadow-md"
+                <X className="w-3 h-3" />
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-800 shrink-0">
+                  <img src={a.url} alt={a.alt} className="w-10 h-10 object-contain" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+               <img src={a.url} alt={a.alt} className="w-auto h-24 md:h-32 rounded-2xl shadow-sm border border-slate-100 object-contain bg-white p-2" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E"; }} />
+            <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">{a.name}</span>
+          <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
+            <div className="w-16 h-1 bg-slate-900 mb-4 relative z-10" />
+            <div className="relative z-10 w-full">
+                className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 leading-tight" 
+            <div className="relative z-10 w-full">
+                className="text-xl md:text-2xl text-slate-400 max-w-3xl font-light italic" 
+          <div className={`${baseClasses} items-center justify-center text-center bg-slate-900 text-white rounded-[2rem] m-4 gap-8`}>
+            <Sparkles className="w-12 h-12 text-white/20 relative z-10" />
+            <div className="relative z-10 w-full px-12">
+                className="text-4xl md:text-5xl font-bold tracking-tight leading-snug border-white/10 focus:border-white/30" 
+            <div className="h-px w-24 bg-white/20 relative z-10" />
+            <div className="relative z-10 w-full px-12">
+                className="text-xl text-white/50 max-w-2xl italic font-serif border-white/5 focus:border-white/20" 
+          <div className={`${baseClasses} items-center justify-center bg-slate-50/50`}>
+            <div className="relative z-10 w-full mb-12">
+                className="text-2xl md:text-3xl font-bold text-slate-400 tracking-[0.2em] uppercase text-center" 
+            <div className="relative z-10 w-full max-w-2xl px-6 flex-1 flex flex-col justify-center">
+              <div className="flex flex-col gap-4 md:gap-6 relative">
+                <div className="absolute left-[24px] top-4 bottom-4 w-px bg-slate-200 hidden md:block" />
+                  <div key={idx} className="flex items-center gap-4 md:gap-6 group/toc animate-in fade-in slide-in-from-left-4" style={{ animationDelay: `${idx * 100}ms` }}>
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm md:text-lg font-black shrink-0 z-10 shadow-lg border-4 border-white transition-transform group-hover/toc:scale-110">
+                    <div className="flex-1 py-1 border-b border-slate-100 group-hover/toc:border-slate-900 transition-colors">
+                        <div className="flex items-center gap-2">
+                              className="w-full bg-transparent outline-none text-lg md:text-2xl font-bold text-slate-800 py-2"
+                            className="opacity-0 group-hover/toc:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity"
+                            <X className="w-4 h-4" />
+                        <span className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight block hover:translate-x-1 transition-transform cursor-default py-2">
+                  <div className="flex justify-center mt-4 relative z-10 pl-12 md:pl-16">
+                      className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-900 p-2 transition-colors group"
+                      <Plus className="w-3 h-3 group-hover:scale-110 transition-transform" /> 添加目录项
+          <div className={`${baseClasses} gap-8`}>
+            <div className={`relative z-10 w-full ${isListView ? 'border-l-8 border-slate-900 pl-6' : ''}`}>
+                className={`text-3xl md:text-4xl font-bold text-slate-900 ${!isListView ? 'text-center' : ''}`} 
+            <div className={`flex-1 relative z-10 w-full ${isListView ? 'space-y-6' : 'flex items-center justify-center'}`}>
+                <div className="w-full">
+                    className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap mb-6 text-left" 
+                    <ul className="space-y-4">
+                        <li key={i} className="flex gap-4 text-lg text-slate-500 items-start group">
+                          <span className="text-slate-900 font-mono font-bold mt-1 shrink-0">{i + 1}.</span>
+                          <div className="flex-1 flex gap-2">
+                               className="flex-1 bg-transparent border-b border-transparent focus:border-slate-200 outline-none"
+                                 className="opacity-0 group-hover:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity"
+                                 <X className="w-3 h-3" />
+                          className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-900 p-2 mt-4 transition-colors"
+                          <Plus className="w-3 h-3" /> 添加要点
+                  className="text-2xl text-slate-700 leading-relaxed max-w-4xl text-center font-medium" 
+          <div className={`${baseClasses} gap-8 overflow-y-auto no-scrollbar`}>
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+              <Trophy className="w-8 h-8 text-amber-400" />
+              <div className="flex-1">
+                  className="text-3xl md:text-4xl font-bold text-slate-900 text-left" 
+                <span className="ml-auto px-3 py-1 bg-amber-100 text-amber-800 text-xs font-mono font-bold rounded-full">
+            <div className="flex-1 space-y-2 relative z-10">
+                  <div key={i} className="flex items-center py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md group/item">
+                    <div className="flex items-center gap-6">
+                      <span className="text-3xl font-mono font-black text-amber-200/50 w-8">{group.rank}</span>
+                      <div className="flex flex-wrap gap-2">
+                             <img key={c.id} src={c.imageUrl} alt={c.name} title={c.name} className="w-20 h-20 md:w-28 md:h-28 rounded-full object-cover shadow-sm border-[3px] border-white bg-slate-100" />
+                             <div key={c.id} className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-slate-200 flex items-center justify-center text-xl font-bold text-slate-500 border-[3px] border-white shadow-sm" title={c.name}>
+                    <span className="ml-auto text-3xl font-mono font-black text-slate-900">{group.value}</span>
+                        className="opacity-0 group-hover/item:opacity-100 ml-4 p-2 text-red-300 hover:text-red-500 transition-opacity"
+                        <Trash2 className="w-4 h-4" />
+                  className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap text-left" 
+          <div className={`${baseClasses} items-center justify-center bg-slate-50 overflow-hidden`}>
+            <div className="flex items-center gap-4 mb-4 relative z-10 shrink-0">
+               <h2 className="text-sm text-slate-400 font-bold tracking-widest uppercase">思维导图</h2>
+                   className="p-1 px-3 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:scale-105 transition-all flex items-center gap-1 shadow-sm"
+                   <Plus className="w-3 h-3" /> 添加分支
+            <div className="relative z-10 w-full flex items-center justify-center overflow-auto py-4 flex-1 no-scrollbar min-h-0">
+              <div className="flex items-center justify-center gap-8 w-max px-8">
+                  <div className="flex flex-col gap-4 relative items-end">
+                    <div className="absolute -right-8 top-[50%] bottom-[50%] w-8 border-t-2 border-slate-200 -translate-y-[1px]" />
+                    <div className="absolute -right-8 top-0 bottom-0 border-r-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (leftBranches.length - 1) * 2)}rem)`, top: '1rem' }} />
+                      <div key={branch.id} className="relative flex items-start pr-8 gap-6 flex-row-reverse group/branch">
+                        <div className="absolute right-0 w-8 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                        <div className="px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm z-20 whitespace-nowrap self-center relative max-w-[200px]">
+                            <div className="flex items-center gap-2">
+                               <button onClick={(e) => { e.stopPropagation(); handleAddChild(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-slate-400 hover:text-slate-900 transition-opacity" title="添加子节点">
+                                <Plus className="w-3 h-3" />
+                                className="text-base font-bold text-slate-800 bg-transparent border-none outline-none text-right w-full resize-none p-0"
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBranch(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity">
+                                <Trash2 className="w-3 h-3" />
+                            <span className="text-base font-bold text-slate-800 break-words whitespace-normal inline-block text-right">{branch.title}</span>
+                          <div className="flex flex-col gap-2 relative self-center items-end">
+                            <div className="absolute -right-6 top-[50%] bottom-[50%] w-6 border-t-2 border-slate-200 -translate-y-[1px]" />
+                            <div className="absolute -right-6 top-0 bottom-0 border-r-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (branch.children.length - 1) * 0.5)}rem)`, top: '0.4rem' }} />
+                              <div key={cIdx} className="relative flex items-center pr-6 group/child">
+                                <div className="absolute right-0 w-6 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                                <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl z-20 whitespace-normal text-slate-600 max-w-[150px]">
+                                    <div className="flex items-center gap-1">
+                                        className="text-xs font-medium bg-transparent border-none outline-none text-right w-full resize-none p-0"
+                                        className="opacity-0 group-hover/child:opacity-100 p-0.5 text-red-300 hover:text-red-500 transition-opacity"
+                                        <X className="w-2.5 h-2.5" />
+                                    <span className="text-xs font-medium">{child}</span>
+                <div className="px-6 py-4 bg-slate-900 text-white rounded-[2rem] shadow-xl z-20 relative min-w-[150px] max-w-[300px] text-center border-4 border-slate-50 flex-shrink-0">
+                      className="text-xl font-bold bg-transparent border-none outline-none text-center w-full resize-none p-0 text-white"
+                    <span className="text-xl font-bold block break-words whitespace-normal leading-snug">{slide.title}</span>
+                  <div className="flex flex-col gap-4 relative items-start">
+                    <div className="absolute -left-8 top-[50%] bottom-[50%] w-8 border-t-2 border-slate-200 -translate-y-[1px]" />
+                    <div className="absolute -left-8 top-0 bottom-0 border-l-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (rightBranches.length - 1) * 2)}rem)`, top: '1rem' }} />
+                      <div key={branch.id} className="relative flex items-start pl-8 gap-6 group/branch">
+                        <div className="absolute left-0 w-8 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                        <div className="px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm z-20 whitespace-nowrap self-center relative max-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBranch(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity">
+                                <Trash2 className="w-3 h-3" />
+                                className="text-base font-bold text-slate-800 bg-transparent border-none outline-none text-left w-full resize-none p-0"
+                              <button onClick={(e) => { e.stopPropagation(); handleAddChild(branch.id); }} className="opacity-0 group-hover/branch:opacity-100 p-1 text-slate-400 hover:text-slate-900 transition-opacity" title="添加子节点">
+                                <Plus className="w-3 h-3" />
+                            <span className="text-base font-bold text-slate-800 break-words whitespace-normal inline-block">{branch.title}</span>
+                          <div className="flex flex-col gap-2 relative self-center items-start">
+                            <div className="absolute -left-6 top-[50%] bottom-[50%] w-6 border-t-2 border-slate-200 -translate-y-[1px]" />
+                            <div className="absolute -left-6 top-0 bottom-0 border-l-2 border-slate-200 transform translate-y-1/2 -translate-y-1/2" style={{ height: `calc(100% - ${Math.max(0, (branch.children.length - 1) * 0.5)}rem)`, top: '0.4rem' }} />
+                              <div key={cIdx} className="relative flex items-center pl-6 group/child">
+                                <div className="absolute left-0 w-6 border-t-2 border-slate-200 top-1/2 -translate-y-[1px]" />
+                                <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl z-20 whitespace-normal text-slate-600 max-w-[150px]">
+                                    <div className="flex items-center gap-1">
+                                        className="opacity-0 group-hover/child:opacity-100 p-0.5 text-red-300 hover:text-red-500 transition-opacity"
+                                        <X className="w-2.5 h-2.5" />
+                                        className="text-xs font-medium bg-transparent border-none outline-none text-left w-full resize-none p-0"
+                                    <span className="text-xs font-medium">{child}</span>
+            {slide.body && <p className="mt-4 text-slate-500 max-w-2xl text-center relative z-10 shrink-0 text-xs">{slide.body}</p>}
+          <div className={`${baseClasses} items-center justify-center text-center gap-6`}>
+            <h2 className="text-4xl font-bold text-slate-900 relative z-10">{slide.title}</h2>
+            <p className="text-xl text-slate-500 whitespace-pre-wrap relative z-10">{slide.body}</p>
+    <div className={`flex flex-col gap-4 h-full min-h-[600px] text-slate-900 font-sans p-2 lg:p-0`}>
+      <div className="flex items-center justify-between bg-white px-6 py-4 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-6">
+          <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 flex items-center gap-2">
+            <Zap className="w-4 h-4" /> 理论演示工作台
+          <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-100">
+              { id: 'edit', label: '制作模式', icon: <Edit className="w-3 h-3" /> },
+              { id: 'presentation', label: '演示模式', icon: <Monitor className="w-3 h-3" /> },
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 mr-2">
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all disabled:opacity-50 min-w-[80px] justify-center"
+                <Monitor className="w-3 h-3" /> {isExportingPPT ? (exportStatus || '导出...') : '导PPT'}
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all"
+                <Monitor className="w-3 h-3" /> 导图
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all"
+                <FileText className="w-3 h-3" /> 导文
+              className="px-4 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2"
+              <Download className="w-3 h-3" /> 下载全稿 JSON
+      <div className="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
+          <aside className={`flex flex-col bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden gap-4 shrink-0 transition-all duration-300 ${isDraftCollapsed ? 'w-24 p-4 items-center' : 'w-full lg:w-80 p-6'}`}>
+            <div className="flex items-center justify-between w-full">
+                <div className="flex flex-col">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Edit className="w-3 h-3" /> 草稿箱
+                  <p className="text-[10px] text-slate-300 font-medium">输入原始内容自动识别</p>
+                <Edit className="w-5 h-5 text-slate-300" />
+              <div className={`flex items-center ${isDraftCollapsed ? 'flex-col gap-4' : 'gap-2'}`}>
+                  className="p-1.5 border border-slate-200 text-slate-400 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center shrink-0"
+                  {isDraftCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              <div className="flex flex-col flex-1 overflow-hidden gap-4">
+                <div className="flex-1 flex flex-col gap-2 min-h-0">
+                  <div className="relative group flex-1">
+                      className="w-full h-full bg-slate-50 rounded-2xl p-4 text-xs font-medium text-slate-700 border-2 border-transparent focus:border-slate-200 focus:bg-white outline-none transition-all resize-none leading-relaxed placeholder:text-slate-300"
+                      className="absolute bottom-3 right-3 p-1.5 bg-white shadow-sm border border-slate-100 text-slate-400 hover:text-slate-900 rounded-lg flex items-center gap-1.5"
+                      <Info className="w-3 h-3" />
+                      <span className="text-[9px] font-bold">识别指南</span>
+                    <div className="p-4 bg-slate-900 rounded-2xl text-white text-[10px] space-y-3 mb-2 animate-in fade-in slide-in-from-bottom-4">
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                        <span className="font-bold text-slate-400 uppercase tracking-widest">内容识别模板</span>
+                        <X className="w-3 h-3 cursor-pointer" onClick={() => setShowRecognitionGuide(false)} />
+                      <div className="space-y-2">
+                        <p><span className="text-blue-400 font-mono"># 页标题</span>：每段首行作为标题</p>
+                        <p><span className="text-blue-400 font-mono">---</span>：三个短横线实现强制分页</p>
+                        <p><span className="text-blue-400 font-mono">目录 [Contents]</span>：触发目录/结论版式</p>
+                        <p><span className="text-blue-400 font-mono">榜单 [Ranking]</span>：触发排名/权重榜单</p>
+                        <p><span className="text-blue-400 font-mono">导图 [Mindmap]</span>：由结构化短语触发思维导图</p>
+                        <p><span className="text-blue-400 font-mono">[备注：...]</span>：录制在页面背后的演说词</p>
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-30 transition-all shadow-lg active:scale-95 shrink-0"
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-xs font-bold tracking-widest">智能生成文稿</span>
+                <div className="h-px bg-slate-100" />
+                <div className="flex-1 space-y-2 overflow-y-auto no-scrollbar w-full py-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-400 px-1">历史草稿 ({articles.length})</span>
+                    <button onClick={() => setIsAddingArticle(true)} className="p-1 hover:bg-slate-100 rounded text-slate-400" title="手动导入"><FilePlus className="w-3 h-3" /></button>
+                <div key={article.id} className="group relative">
+                    className={`w-full text-left p-4 rounded-2xl transition-all ${isDraftCollapsed ? 'flex justify-center px-1' : ''} ${
+                        <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
+                        <span className="text-sm font-bold leading-tight line-clamp-2">{article.title}</span>
+                      <span className="text-sm font-bold truncate leading-tight w-full text-center">{article.title.slice(0, 2)}</span>
+                    <div className={`absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 ${isDraftCollapsed ? 'scale-110 translate-x-2 -translate-y-2' : ''}`}>
+                      className="p-1 px-2 bg-slate-800 backdrop-blur rounded-lg text-white/50 hover:text-white transition-all shadow-md"
+                      <Copy className="w-3.5 h-3.5" />
+                      className={`p-1 px-2 backdrop-blur rounded-lg transition-all shadow-md flex items-center justify-center ${
+                        <X className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" />
+        <div className={`flex-1 flex flex-col gap-4`}>
+          <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-3 rounded-[2rem] border border-white/40 shadow-sm shrink-0">
+             <div className="flex items-center gap-4 px-4 overflow-hidden">
+                <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-xs font-bold text-slate-600 truncate max-w-[120px] md:max-w-xs">{currentArticle.title}</span>
+                <span className="w-px h-3 bg-slate-200 shrink-0" />
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest shrink-0">
+             <div className="flex items-center gap-2">
+                  <div className="flex bg-slate-50 p-1 rounded-xl mr-2">
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === '16/9' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === '9/16' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === 'free' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                   <div className="hidden md:flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-100 mr-2">
+                      <button onClick={() => handleMoveSlide('up')} disabled={currentSlideIndex === 0} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20" title="上移"><ArrowUp className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleMoveSlide('down')} disabled={currentSlideIndex === currentArticle.slides.length - 1} className="p-2 hover:bg-slate-50 text-slate-400 disabled:opacity-20" title="下移"><ArrowDown className="w-3.5 h-3.5" /></button>
+                      <div className="w-px h-4 bg-slate-100 mx-1" />
+                        className={`p-2 transition-all rounded-lg overflow-hidden flex items-center gap-2 group/del-slide ${
+                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                        {slideDeleteConfirm && <span className="text-[10px] font-extrabold whitespace-nowrap">确认删除</span>}
+                      <button onClick={handleAddSlide} className="p-2 hover:bg-slate-50 text-slate-900 flex items-center gap-2 px-3" title="添加新页"><Plus className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">加页</span></button>
+                <div className="flex items-center gap-2">
+                     className="p-1.5 px-3 md:p-2 md:px-4 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
+                     <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                     <span className="hidden lg:inline text-[10px] font-bold tracking-widest">上一页</span>
+                     className="p-1.5 px-4 md:p-2 md:px-6 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg"
+                     <span className="hidden sm:inline text-xs font-bold tracking-widest">下一页</span>
+                     <ChevronRight className="w-5 h-5" />
+            className={`flex flex-col flex-1 gap-2 bg-[#f8fafc] w-full mx-auto relative ${viewMode === 'presentation' && aspectRatio === '9/16' ? 'max-w-[45vh]' : ''}`}
+            <div className={`flex-1 flex items-center justify-center w-full h-full relative`}>
+                <div className="absolute inset-y-0 left-[-4rem] flex flex-col items-center justify-center gap-4 z-40">
+                    className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-slate-900 shadow-lg transition-all"
+                    <ChevronLeft className="w-6 h-6" />
+                <div className="absolute inset-y-0 right-[-4rem] flex flex-col items-center justify-center gap-4 z-40">
+                    className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-slate-900 shadow-lg transition-all mb-4"
+                    <ChevronRight className="w-6 h-6" />
+                    className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-slate-900 shadow-lg transition-all"
+                    <Maximize2 className="w-6 h-6" />
+                className={`slide-content-capture-target relative bg-white ${aspectRatio === 'free' ? 'overflow-visible h-auto max-h-none' : 'overflow-hidden'} flex items-center justify-center transition-all duration-700 ease-in-out ${viewMode === 'presentation' ? 'shadow-2xl rounded-[1rem]' : 'w-full h-full rounded-[2.5rem] border border-slate-100 shadow-xl'} group`}
+              <div className={`w-full relative z-0 ${aspectRatio === 'free' ? 'min-h-full h-auto py-20' : 'h-full'}`}>
+                  <div className="absolute inset-0 z-10 p-8 flex flex-col pointer-events-none">
+                    <div className="mt-auto ml-auto pointer-events-auto">
+                        className="p-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-full transition-all shadow-sm flex items-center justify-center border border-red-500/20"
+                        <Trash2 className="w-4 h-4" />
+              <div className="absolute bottom-10 left-10 flex items-center gap-4 z-30 pointer-events-none">
+                <span className="px-4 py-2 bg-white/80 backdrop-blur shadow-sm border border-slate-100 rounded-2xl text-xs font-bold tracking-widest text-slate-400">
+                <div className="absolute top-10 right-10 flex items-center gap-2 z-30 pointer-events-auto">
+                    className="p-4 bg-white/80 hover:bg-white backdrop-blur shadow-sm rounded-full text-slate-400 hover:text-slate-900 transition-all border border-slate-100"
+                    <Maximize2 className="w-5 h-5" />
+          <aside className="w-full lg:w-96 flex flex-col gap-6 overflow-y-auto no-scrollbar">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Edit className="w-3 h-3" /> 环节编辑器
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">版式类型</label>
+                    <div className="grid grid-cols-2 lg:grid-cols-2 gap-2">
+                          className={`px-2 py-3 rounded-xl text-xs font-bold transition-all border flex flex-col items-center gap-2 ${
+                          <type.icon className="w-4 h-4" />
+                  <div className="space-y-1 mt-4">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">{currentSlide.type === 'mindmap' ? '中心主题' : '环节标题'}</label>
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">思维导图结构 (1级分支及子节点)</label>
+                          <button onClick={handleAddBranch} className="p-1 px-2 text-xs bg-slate-900 text-white rounded-lg font-bold flex items-center gap-1 hover:bg-slate-800 transition-colors">
+                            <Plus className="w-3 h-3" /> 一级分支
+                        <div className="space-y-3 bg-slate-50 border border-slate-100 rounded-xl p-3">
+                            <div key={branch.id} className="bg-white border border-slate-200 rounded-xl p-3 space-y-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                                  className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none border-b border-transparent focus:border-slate-300"
+                                <button onClick={() => handleAddChild(branch.id)} className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors" title="添加二级节点">
+                                  <Plus className="w-3 h-3" />
+                                <button onClick={() => handleRemoveBranch(branch.id)} className="p-1.5 bg-red-50 hover:bg-red-100 rounded text-red-500 transition-colors" title="删除">
+                                  <Trash2 className="w-3 h-3" />
+                                <div className="pl-4 space-y-2 relative">
+                                  <div className="absolute left-[3px] top-0 bottom-0 border-l border-slate-200" />
+                                    <div key={cIdx} className="flex items-center gap-2 relative pl-3">
+                                      <div className="absolute left-0 top-1/2 w-3 border-t border-slate-200" />
+                                        className="flex-1 bg-slate-50 text-xs text-slate-600 px-2 py-1 rounded focus:outline-none border border-transparent focus:border-slate-300 focus:bg-white"
+                                      <button onClick={() => handleRemoveChild(branch.id, cIdx)} className="p-1 text-slate-400 hover:text-red-500 transition-colors" title="删除节点">
+                                        <X className="w-3 h-3" />
+                            <div className="text-center py-6 text-xs text-slate-400 font-bold tracking-widest uppercase">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">正文内容 / 数据列表</label>
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
+            <div className="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-auto flex flex-col gap-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Sparkles className="w-3 h-3" /> 研究资产引用
+              <div className="flex flex-col gap-2">
+                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs font-bold text-slate-600 outline-none focus:border-blue-300"
+                <div className="flex items-center justify-between px-1 mt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">导入排序</span>
+                  <div className="flex bg-slate-100 rounded-lg p-0.5">
+                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'asc' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'desc' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              <div className="space-y-4">
+                  <div key={`${tag.id}-${matchKey}`} className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <TagIcon className="w-3 h-3 text-blue-400" />
+                        <span className="text-xs font-bold text-blue-900">{tag.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-blue-300 font-mono">TAG</span>
+                          className="text-blue-300 hover:text-red-500 transition-colors"
+                          <X className="w-3 h-3" />
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => handleInsertTag(tag, 'summary')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                      <button onClick={() => handleInsertTag(tag, 'characters')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                      <button onClick={() => handleInsertTag(tag, 'talents')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                  <div key={`${trait.id}-${matchKey}`} className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-3 h-3 text-amber-400" />
+                        <span className="text-xs font-bold text-amber-900">{trait.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
+                          className="text-amber-300 hover:text-red-500 transition-colors"
+                          <X className="w-3 h-3" />
+                    <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'asc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', importSortOrder)} className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-[10px] font-bold text-white rounded shadow-sm transition-all border border-amber-500">
+                  <div key={`${metric.id}-${matchKey}`} className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100 relative overflow-hidden group">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="w-3 h-3 text-purple-400" />
+                        <span className="text-xs font-bold text-purple-900">{metric.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-purple-300 font-mono">{metric.role}</span>
+                          className="text-purple-300 hover:text-red-500 transition-colors"
+                          <X className="w-3 h-3" />
+                    <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => handleInsertLeaderboard(metric.name, metric.role as 'Survivor' | 'Hunter', 'desc', 5, metric.id)} className="flex-1 py-1.5 bg-white hover:bg-purple-100 text-[10px] font-bold text-purple-700 rounded drop-shadow-sm transition-all border border-purple-200">
+                        <button onClick={() => handleInsertLeaderboard(metric.name, metric.role as 'Survivor' | 'Hunter', 'asc', 5, metric.id)} className="flex-1 py-1.5 bg-white hover:bg-purple-100 text-[10px] font-bold text-purple-700 rounded drop-shadow-sm transition-all border border-purple-200">
+                      <button onClick={() => handleInsertLeaderboard(metric.name, metric.role as 'Survivor' | 'Hunter', importSortOrder, undefined, metric.id)} className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 text-[10px] font-bold text-white rounded shadow-sm transition-all border border-purple-500">
+                  <div className="py-8 flex flex-col items-center justify-center text-slate-300 border-2 border-dashed border-slate-50 rounded-2xl gap-2">
+                    <span className="text-[9px] uppercase font-bold tracking-widest">无关联系统数据</span>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-8 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-200">
+                  <FilePlus className="w-6 h-6" />
+                  <h3 className="text-lg font-black text-slate-900">文档实验室 (Doc Lab)</h3>
+                  <p className="text-sm text-slate-400 font-medium">智能解析文稿并关联研究素材</p>
+                className="p-3 hover:bg-slate-50 rounded-2xl transition-all group"
+                <X className="w-6 h-6 text-slate-300 group-hover:text-slate-900" />
+            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">演示课题名称</label>
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-bold transition-all"
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">所属研究系列</label>
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-bold transition-all"
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 flex justify-between">
+                    <span className="text-slate-400 font-medium normal-case">使用 "---" 或 "[画面：...]" 分隔环节</span>
+                    className="w-full h-[400px] px-6 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-mono leading-relaxed resize-none transition-all"
+              <div className="flex flex-col gap-10">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <TagIcon className="w-3 h-3" /> 引用系统标签 (Tag Assets)
+                  <div className="flex flex-wrap gap-2.5 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] max-h-60 overflow-y-auto no-scrollbar">
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Trophy className="w-3 h-3" /> 引用关键指标 (Metrics Assets)
+                  <div className="flex flex-wrap gap-2.5 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] max-h-60 overflow-y-auto no-scrollbar">
+                        className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${
+                <div className="mt-auto bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                  <div className="flex items-center gap-3 text-blue-900 font-bold text-sm mb-2">
+                    <Sparkles className="w-5 h-5 text-blue-400" />
+                  <p className="text-blue-700/60 text-xs leading-relaxed">
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-6 items-center">
+              <span className="text-xs text-slate-400 font-medium">准备好开始你的创作了吗？</span>
+                className="px-10 py-4 bg-slate-900 text-white font-black text-sm rounded-2xl shadow-2xl shadow-slate-300 hover:bg-slate-800 hover:-translate-y-0.5 transition-all flex items-center gap-3"
+                <Save className="w-5 h-5" /> 生成并进入工作台

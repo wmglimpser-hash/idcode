@@ -107,24 +107,24 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
     }
   };
 
-  if (loading) return <div className="py-20 text-center text-accent font-mono">正在调取档案数据...</div>;
+  if (loading) return <div className="py-20 text-center text-slate-800 dark:text-slate-100 font-medium">正在调取档案数据...</div>;
 
   if (!entry.currentRevisionId) {
     return (
-      <div className="bg-card/50 cyber-border p-12 text-center space-y-6 animate-in fade-in duration-700">
+      <div className="bg-card/50 rounded-2xl shadow-sm p-12 text-center space-y-6 animate-in fade-in duration-700">
         <div className="w-16 h-16 bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto rotate-45">
           <Book className="text-primary w-8 h-8 -rotate-45" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-serif text-accent">档案尚未同步</h3>
-          <p className="text-muted text-sm font-mono max-w-md mx-auto">
+          <h3 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">档案尚未同步</h3>
+          <p className="text-muted text-sm font-medium max-w-md mx-auto">
             该词条已在系统中创建，但具体内容正在等待管理员审核。请稍后再试，或提交您的版本。
           </p>
         </div>
         {isContributor && onEdit && (
           <button 
             onClick={onEdit}
-            className="px-8 py-3 bg-accent/10 border border-accent/50 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all tracking-widest"
+            className="px-8 py-3 bg-slate-800/10 dark:bg-slate-200/10 border border-slate-800 dark:border-slate-200/50 text-slate-800 dark:text-slate-100 text-[10px] font-medium hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all tracking-widest"
           >
             提交新版本_REVISE
           </button>
@@ -141,24 +141,24 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-border pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-mono border border-primary/30 uppercase tracking-widest">
+            <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-medium border border-primary/30 uppercase tracking-widest">
               {entry.type}
             </span>
             {entry.talentId && (
-              <span className="px-2 py-0.5 bg-accent/20 text-accent text-[10px] font-mono border border-accent/30 flex items-center gap-1">
+              <span className="px-2 py-0.5 bg-slate-800 dark:bg-slate-200/20 text-slate-800 dark:text-slate-100 text-[10px] font-medium border border-slate-800 dark:border-slate-200/30 flex items-center gap-1">
                 <Network className="w-3 h-3" /> 天赋: {talentName || entry.talentId}
               </span>
             )}
-            <span className="text-muted text-[10px] font-mono flex items-center gap-1">
+            <span className="text-muted text-[10px] font-medium flex items-center gap-1">
               <Clock className="w-3 h-3" /> 最后更新: {new Date(entry.lastUpdated?.seconds * 1000).toLocaleDateString()}
             </span>
           </div>
-          <h1 className="text-5xl font-serif font-bold text-accent">{entry.title}</h1>
+          <h1 className="text-5xl font-sans font-bold tracking-tight font-bold text-slate-800 dark:text-slate-100">{entry.title}</h1>
         </div>
         {isContributor && (
           <button 
             onClick={onEdit}
-            className="flex items-center gap-2 px-6 py-2 border border-accent text-accent hover:bg-accent hover:text-bg transition-all font-mono text-xs tracking-widest cyber-border"
+            className="flex items-center gap-2 px-6 py-2 border border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all font-medium text-xs tracking-widest rounded-2xl shadow-sm"
           >
             <Edit3 className="w-4 h-4" /> 编辑词条_EDIT
           </button>
@@ -169,18 +169,18 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
       {entry.contentMode === 'text' ? (
         <div className="space-y-4">
           {error && (
-            <div className="p-3 bg-primary/10 border border-primary/50 text-primary text-[10px] font-mono flex items-center gap-2">
+            <div className="p-3 bg-primary/10 border border-primary/50 text-primary text-[10px] font-medium flex items-center gap-2">
               <Zap className="w-3 h-3" /> {error}
             </div>
           )}
           
           {!isEditing ? (
-            <div className="prose prose-invert max-w-none font-mono text-sm leading-relaxed">
-              <div className="bg-card/30 p-8 cyber-border relative group">
+            <div className="prose prose-invert max-w-none font-medium text-sm leading-relaxed">
+              <div className="bg-card/30 p-8 rounded-2xl shadow-sm relative group">
                 {isContributor && (
                   <button 
                     onClick={() => setIsEditing(true)}
-                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-accent/10 border border-accent/30 text-accent hover:bg-accent hover:text-bg"
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-slate-800/10 dark:bg-slate-200/10 border border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 hover:bg-slate-800/20 dark:hover:bg-slate-200/20"
                     title="快速编辑"
                   >
                     <Edit3 className="w-4 h-4" />
@@ -194,20 +194,20 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
               <textarea
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
-                className="w-full bg-card/30 border border-accent/30 text-text p-8 font-mono text-sm leading-relaxed min-h-[400px] outline-none focus:border-accent transition-colors"
+                className="w-full bg-card/30 border border-slate-800 dark:border-slate-200/30 text-text p-8 font-medium text-sm leading-relaxed min-h-[400px] outline-none focus:border-slate-800 dark:border-slate-200 transition-colors"
                 placeholder="在此输入 Markdown 内容..."
               />
               <div className="flex justify-end gap-4">
                 <button 
                   onClick={() => setIsEditing(false)}
-                  className="px-6 py-2 text-muted font-mono text-xs hover:text-text transition-colors"
+                  className="px-6 py-2 text-muted font-medium text-xs hover:text-text transition-colors"
                 >
                   取消_CANCEL
                 </button>
                 <button 
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-8 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="px-8 py-2 bg-slate-800 dark:bg-slate-200 text-bg font-bold font-medium text-xs hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all flex items-center gap-2 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" /> {saving ? '正在保存...' : '保存更改_SAVE'}
                 </button>
@@ -219,7 +219,7 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Template Mode: Character Example */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-card cyber-border overflow-hidden relative group bg-bg/30 flex items-center justify-center">
+            <div className="bg-card rounded-2xl shadow-sm overflow-hidden relative group bg-bg/30 flex items-center justify-center">
               <img 
                 src={content?.imageUrl || 'https://picsum.photos/seed/idv/400/600'} 
                 className="w-full h-auto object-contain grayscale hover:grayscale-0 transition-all duration-700" 
@@ -228,21 +228,21 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
               <div className="absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent opacity-60" />
             </div>
             
-            <div className="bg-card/50 border border-border p-6 cyber-border space-y-4">
+            <div className="bg-card/50 border border-border p-6 rounded-2xl shadow-sm space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-muted uppercase text-[10px] font-mono tracking-widest">定位 TYPE</span>
-                <span className="text-accent font-bold font-mono">{content?.type || '未知'}</span>
+                <span className="text-muted uppercase text-[10px] font-medium tracking-widest">定位 TYPE</span>
+                <span className="text-slate-800 dark:text-slate-100 font-bold font-medium">{content?.type || '未知'}</span>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-8 space-y-8">
-            <section className="bg-card/30 border border-border p-8 cyber-border relative overflow-hidden">
-              <h2 className="text-2xl font-serif text-accent mb-8 flex items-center gap-3">
+            <section className="bg-card/30 border border-border p-8 rounded-2xl shadow-sm relative overflow-hidden">
+              <h2 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 mb-8 flex items-center gap-3">
                 <Activity className="w-6 h-6" /> 核心档案解析
               </h2>
               <div className="space-y-6">
-                <p className="text-text/80 leading-relaxed font-mono text-sm border-l-2 border-primary pl-4 py-2 bg-primary/5">
+                <p className="text-text/80 leading-relaxed font-medium text-sm border-l-2 border-primary pl-4 py-2 bg-primary/5">
                   {content?.description || '暂无描述数据。'}
                 </p>
                 {content?.traits && content.traits.length > 0 && (
@@ -260,7 +260,7 @@ export const WikiEntryView = ({ entry, onEdit, userProfile, user }: Props) => {
                           <div className="text-[10px] text-primary font-bold mb-2 uppercase">{cat.category}</div>
                           <div className="space-y-1">
                             {filteredItems.map((item: any, j: number) => (
-                              <div key={j} className="flex justify-between text-[10px] font-mono">
+                              <div key={j} className="flex justify-between text-[10px] font-medium">
                                 <span className="text-muted">{item.label}</span>
                                 <span className="text-text">{item.value}</span>
                               </div>

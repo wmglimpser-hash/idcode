@@ -331,8 +331,10 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
   const [slideDeleteConfirm, setSlideDeleteConfirm] = useState(false);
   
   const [isDraftCollapsed, setIsDraftCollapsed] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<'16/9' | '9/16'>('16/9');
+  const [aspectRatio, setAspectRatio] = useState<'16/9' | '9/16' | 'free'>('aspectRatio' in localStorage ? (localStorage.getItem('aspectRatio') as any) : '16/9');
   const [importSortOrder, setImportSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [isExportingPPT, setIsExportingPPT] = useState(false);
+  const [exportStatus, setExportStatus] = useState('');
 
   const [newArticleDoc, setNewArticleDoc] = useState({
     title: '',
@@ -350,6 +352,10 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
       setCurrentArticle(fresh || articles[0]);
     }
   }, [articles, currentArticle?.id]);
+
+  useEffect(() => {
+    localStorage.setItem('aspectRatio', aspectRatio);
+  }, [aspectRatio]);
   
   const presentationContainerRef = useRef<HTMLDivElement>(null);
 
@@ -642,11 +648,86 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
     a.click();
   };
 
+  const exportPPT = async () => {
+    if (!presentationContainerRef.current) return;
+    if (isExportingPPT) return;
+    
+    setIsExportingPPT(true);
+    setExportStatus('加载依赖...');
+    let pptxgen;
+    try {
+      pptxgen = (await import('pptxgenjs')).default;
+    } catch (err) {
+      console.error('Failed to load pptxgenjs', err);
+      alert('导出依赖加载失败，请刷新页面重试');
+      setIsExportingPPT(false);
+      setExportStatus('');
+      return;
+    }
+
+    try {
+      const pptx = new pptxgen();
+      
+      // Determine layout based on aspect ratio
+      if (aspectRatio === '16/9') pptx.layout = 'LAYOUT_16x9';
+      else if (aspectRatio === '9/16') pptx.layout = 'LAYOUT_16x9'; // Fallback or could define custom layout
+      else pptx.layout = 'LAYOUT_16x9';
+      
+      const originalSlideIndex = currentSlideIndex;
+      const originalViewMode = viewMode;
+      
+      if (viewMode !== 'presentation') setViewMode('presentation');
+      
+      for (let i = 0; i < currentArticle.slides.length; i++) {
+        setExportStatus(`生成 ${i + 1}/${currentArticle.slides.length}`);
+        setCurrentSlideIndex(i);
+        // Wait for React to render the slide and images to load
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        const slideElement = presentationContainerRef.current.querySelector('.slide-content-capture-target');
+        if (!slideElement) continue;
+        
+        try {
+          const dataUrl = await Promise.race([
+            toPng(slideElement as HTMLElement, { 
+              pixelRatio: 1.5,
+              backgroundColor: '#ffffff',
+              style: {
+                transition: 'none' // Try to avoid capturing during transition
+              }
+            }),
+            new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+          ]);
+          
+          const pptSlide = pptx.addSlide();
+          // Adding the entire exported image into the slide.
+          // Adjust padding if needed. We'll fill it to stretch.
+          pptSlide.addImage({ data: dataUrl, x: 0, y: 0, w: '100%', h: '100%' });
+        } catch (e) {
+          console.error(`Export slide ${i} failed`, e);
+        }
+      }
+      
+      setExportStatus('保存中...');
+      setCurrentSlideIndex(originalSlideIndex);
+      if (originalViewMode !== 'presentation') setViewMode(originalViewMode);
+      
+      const fileName = `${currentArticle.title.replace(/[\\/:*?"<>|]/g, '_')}.pptx`;
+      await pptx.writeFile({ fileName });
+    } catch (e) {
+      console.error('PPT Export failed', e);
+      alert('PPT导出失败，请稍后重试');
+    } finally {
+      setIsExportingPPT(false);
+      setExportStatus('');
+    }
+  };
+
   const exportCurrentSlideImage = async () => {
     if (!presentationContainerRef.current) return;
     
     // Find the actual slide container (the one with the background and content)
-    const slideElement = presentationContainerRef.current.querySelector('.relative.bg-white.overflow-hidden');
+    const slideElement = presentationContainerRef.current.querySelector('.slide-content-capture-target');
     if (!slideElement) return;
 
     try {
@@ -840,7 +921,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
             <div className="h-px w-24 bg-white/20 relative z-10" />
             <div className="relative z-10 w-full px-12">
               <EditableBody 
-                className="text-xl text-white/50 max-w-2xl italic font-serif border-white/5 focus:border-white/20" 
+                className="text-xl text-white/50 max-w-2xl italic font-sans font-bold tracking-tight border-white/5 focus:border-white/20" 
                 value={slide.body || ''}
                 onChange={(v) => handleUpdateSlide({...slide, body: v})}
                 isEdit={isEdit}
@@ -849,7 +930,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           </div>
         );
       case 'conclusion':
-        const tocLines = slide.body ? slide.body.split('\n').map(l => l.trim()).filter(Boolean) : ['请输入目录项...'];
+        const rawLines = slide.body ? slide.body.split('\n').map(l => l.trim()) : [];
+        const tocLines = isEdit ? (rawLines.length > 0 ? rawLines : ['']) : rawLines.filter(Boolean);
+        if (!isEdit && tocLines.length === 0) {
+          tocLines.push('请输入目录项...');
+        }
+        
         return (
           <div className={`${baseClasses} items-center justify-center bg-slate-50/50`}>
             {renderAssets(slide)}
@@ -873,33 +959,64 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       {(idx + 1).toString().padStart(2, '0')}
                     </div>
                     <div className="flex-1 py-1 border-b border-slate-100 group-hover/toc:border-slate-900 transition-colors">
-                      {isEdit && idx === 0 ? (
-                        <textarea
-                          value={slide.body || ''}
-                          onChange={(e) => handleUpdateSlide({...slide, body: e.target.value})}
-                          onKeyDown={e => e.stopPropagation()}
-                          className="w-full bg-transparent outline-none text-lg md:text-2xl font-bold text-slate-800 resize-none py-2"
-                          placeholder="每行一个目录项..."
-                          rows={1}
-                        />
+                      {isEdit ? (
+                        <div className="flex items-center gap-2">
+                            <input
+                              value={line}
+                              onChange={(e) => {
+                                const newLines = [...tocLines];
+                                newLines[idx] = e.target.value;
+                                handleUpdateSlide({...slide, body: newLines.join('\n')});
+                              }}
+                              onKeyDown={e => {
+                                e.stopPropagation();
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const newLines = [...tocLines];
+                                  newLines.splice(idx + 1, 0, '');
+                                  handleUpdateSlide({...slide, body: newLines.join('\n')});
+                                }
+                              }}
+                              className="w-full bg-transparent outline-none text-lg md:text-2xl font-bold text-slate-800 py-2"
+                              placeholder="目录项..."
+                            />
+                          <button 
+                            onClick={() => {
+                              const newLines = tocLines.filter((_, i) => i !== idx);
+                              handleUpdateSlide({...slide, body: newLines.join('\n')});
+                            }}
+                            className="opacity-0 group-hover/toc:opacity-100 p-1 text-red-300 hover:text-red-500 transition-opacity"
+                            title="移除此项"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       ) : (
-                        <span className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight block hover:translate-x-1 transition-transform cursor-default">
+                        <span className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight block hover:translate-x-1 transition-transform cursor-default py-2">
                           {line}
                         </span>
                       )}
                     </div>
                   </div>
                 ))}
+
+                {isEdit && (
+                  <div className="flex justify-center mt-4 relative z-10 pl-12 md:pl-16">
+                    <button 
+                      onClick={() => {
+                        const newLines = [...tocLines, ''];
+                        handleUpdateSlide({...slide, body: newLines.join('\n')});
+                      }}
+                      className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-900 p-2 transition-colors group"
+                    >
+                      <Plus className="w-3 h-3 group-hover:scale-110 transition-transform" /> 添加目录项
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
             {renderInlineAssets(slide)}
-            {/* Batch Edit Helper */}
-            {isEdit && (
-               <div className="mt-8 text-center opacity-40 hover:opacity-100 transition-opacity">
-                  <p className="text-[10px] text-slate-400 mb-1 font-bold">在该页正文输入多行内容以生成目录</p>
-               </div>
-            )}
           </div>
         );
       case 'content':
@@ -932,7 +1049,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     <ul className="space-y-4">
                       {slide.bullets!.map((b, i) => (
                         <li key={i} className="flex gap-4 text-lg text-slate-500 items-start group">
-                          <span className="text-slate-900 font-mono font-bold mt-1 shrink-0">{i + 1}.</span>
+                          <span className="text-slate-900 font-medium font-bold mt-1 shrink-0">{i + 1}.</span>
                           <div className="flex-1 flex gap-2">
                              <input 
                                value={b}
@@ -984,7 +1101,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className={`${baseClasses} gap-8 overflow-y-auto no-scrollbar`}>
             {renderAssets(slide)}
             <div className="flex items-center gap-4 mb-6 relative z-10">
-              <Trophy className="w-8 h-8 text-amber-400" />
+              <Trophy className="w-8 h-8 text-amber-500" />
               <div className="flex-1">
                 <EditableTitle 
                   className="text-3xl md:text-4xl font-bold text-slate-900 text-left" 
@@ -994,7 +1111,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 />
               </div>
               {slide.sourceData?.metricLabel && (
-                <span className="ml-auto px-3 py-1 bg-amber-100 text-amber-800 text-xs font-mono font-bold rounded-full">
+                <span className="ml-auto px-3 py-1 bg-slate-100 text-slate-800 text-xs font-medium font-bold rounded-full">
                   {slide.sourceData.metricLabel} {slide.sourceData.sortOrder === 'asc' ? '↑' : '↓'}
                 </span>
               )}
@@ -1005,7 +1122,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 slide.sourceData.groups.map((group: any, i: number) => (
                   <div key={i} className="flex items-center py-2 px-6 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm transition-all hover:bg-white hover:shadow-md group/item">
                     <div className="flex items-center gap-6">
-                      <span className="text-3xl font-mono font-black text-amber-200/50 w-8">{group.rank}</span>
+                      <span className="text-3xl font-medium font-black text-slate-/50 w-8">{group.rank}</span>
                       <div className="flex flex-wrap gap-2">
                         {group.characters.map((c: any) => (
                            c.imageUrl ? (
@@ -1018,7 +1135,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         ))}
                       </div>
                     </div>
-                    <span className="ml-auto text-3xl font-mono font-black text-slate-900">{group.value}</span>
+                    <span className="ml-auto text-3xl font-medium font-black text-slate-900">{group.value}</span>
                     {isEdit && (
                       <button 
                         onClick={() => {
@@ -1344,6 +1461,14 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100 mr-2">
               <button 
+                onClick={exportPPT}
+                disabled={isExportingPPT}
+                className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all disabled:opacity-50 min-w-[80px] justify-center"
+                title="导出整个文稿为PPT"
+              >
+                <Monitor className="w-3 h-3" /> {isExportingPPT ? (exportStatus || '导出...') : '导PPT'}
+              </button>
+              <button 
                 onClick={exportCurrentSlideImage}
                 className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center gap-2 hover:bg-white rounded-lg transition-all"
                 title="导出当前页为图片"
@@ -1420,12 +1545,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <X className="w-3 h-3 cursor-pointer" onClick={() => setShowRecognitionGuide(false)} />
                       </div>
                       <div className="space-y-2">
-                        <p><span className="text-blue-400 font-mono"># 页标题</span>：每段首行作为标题</p>
-                        <p><span className="text-blue-400 font-mono">---</span>：三个短横线实现强制分页</p>
-                        <p><span className="text-blue-400 font-mono">目录 [Contents]</span>：触发目录/结论版式</p>
-                        <p><span className="text-blue-400 font-mono">榜单 [Ranking]</span>：触发排名/权重榜单</p>
-                        <p><span className="text-blue-400 font-mono">导图 [Mindmap]</span>：由结构化短语触发思维导图</p>
-                        <p><span className="text-blue-400 font-mono">[备注：...]</span>：录制在页面背后的演说词</p>
+                        <p><span className="text-slate-700 font-medium"># 页标题</span>：每段首行作为标题</p>
+                        <p><span className="text-slate-700 font-medium">---</span>：三个短横线实现强制分页</p>
+                        <p><span className="text-slate-700 font-medium">目录 [Contents]</span>：触发目录/结论版式</p>
+                        <p><span className="text-slate-700 font-medium">榜单 [Ranking]</span>：触发排名/权重榜单</p>
+                        <p><span className="text-slate-700 font-medium">导图 [Mindmap]</span>：由结构化短语触发思维导图</p>
+                        <p><span className="text-slate-700 font-medium">[备注：...]</span>：录制在页面背后的演说词</p>
                       </div>
                     </div>
                   )}
@@ -1463,7 +1588,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   >
                     {!isDraftCollapsed ? (
                       <>
-                        <span className="block text-[10px] opacity-70 font-mono mb-1">{article.series}</span>
+                        <span className="block text-[10px] opacity-70 font-medium mb-1">{article.series}</span>
                         <span className="text-sm font-bold leading-tight line-clamp-2">{article.title}</span>
                       </>
                     ) : (
@@ -1515,7 +1640,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
                 <span className="text-xs font-bold text-slate-600 truncate max-w-[120px] md:max-w-xs">{currentArticle.title}</span>
                 <span className="w-px h-3 bg-slate-200 shrink-0" />
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest shrink-0">
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest shrink-0">
                   {currentSlideIndex + 1} / {currentArticle.slides.length}
                 </span>
              </div>
@@ -1531,6 +1656,11 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       onClick={() => setAspectRatio('9/16')}
                       className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === '9/16' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >9:16</button>
+                    <button
+                      onClick={() => setAspectRatio('free')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${aspectRatio === 'free' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      title="自由比例，适应内容高度"
+                    >自由</button>
                   </div>
                 )}
                 
@@ -1616,11 +1746,11 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 </div>
               )}
               <div 
-                className={`relative bg-white overflow-hidden flex items-center justify-center transition-all duration-700 ease-in-out ${viewMode === 'presentation' ? 'shadow-2xl rounded-[1rem]' : 'w-full h-full rounded-[2.5rem] border border-slate-100 shadow-xl'} group`}
-                style={viewMode === 'presentation' ? { aspectRatio: aspectRatio === '16/9' ? '16/9' : '9/16', width: '100%', maxHeight: '100%' } : {}}
+                className={`slide-content-capture-target relative bg-white ${aspectRatio === 'free' ? 'overflow-visible h-auto max-h-none' : 'overflow-hidden'} flex items-center justify-center transition-all duration-700 ease-in-out ${viewMode === 'presentation' ? 'shadow-2xl rounded-[1rem]' : 'w-full h-full rounded-[2.5rem] border border-slate-100 shadow-xl'} group`}
+                style={viewMode === 'presentation' ? (aspectRatio === 'free' ? { width: '100%', minHeight: '100%' } : { aspectRatio: aspectRatio === '16/9' ? '16/9' : '9/16', width: '100%', maxHeight: '100%' }) : {}}
               >
               {/* The actual slide content */}
-              <div className="w-full h-full relative z-0">
+              <div className={`w-full relative z-0 ${aspectRatio === 'free' ? 'min-h-full h-auto py-20' : 'h-full'}`}>
                 {renderSlideContent(currentSlide)}
               </div>
 
@@ -1838,10 +1968,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
               
               <div className="flex flex-col gap-2">
                 <select
-                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs font-bold text-slate-600 outline-none focus:border-blue-300"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs font-bold text-slate-600 outline-none focus:border-slate-800"
                   onChange={(e) => {
                     if (!e.target.value) return;
-                    const [type, id] = e.target.value.split(':');
+                    const firstColon = e.target.value.indexOf(':');
+                    if (firstColon === -1) return;
+                    const type = e.target.value.substring(0, firstColon);
+                    const id = e.target.value.substring(firstColon + 1);
                     const updatedArticle = { ...currentArticle };
                     if (type === 'tag') {
                        updatedArticle.relatedTags = Array.from(new Set([...(updatedArticle.relatedTags || []), id]));
@@ -1849,6 +1982,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                        updatedArticle.relatedMetrics = Array.from(new Set([...(updatedArticle.relatedMetrics || []), id]));
                     }
                     setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                    setCurrentArticle(updatedArticle);
                     e.target.value = '';
                   }}
                   value=""
@@ -1876,13 +2010,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   <div className="flex bg-slate-100 rounded-lg p-0.5">
                     <button 
                       onClick={() => setImportSortOrder('asc')}
-                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'asc' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'asc' ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       升序
                     </button>
                     <button 
                       onClick={() => setImportSortOrder('desc')}
-                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'desc' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-3 py-0.5 text-[10px] font-bold rounded-md transition-all ${importSortOrder === 'desc' ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       降序
                     </button>
@@ -1892,20 +2026,21 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
               
               <div className="space-y-4">
                 {getSelectedTagData().map(({ tag, matchKey }) => (
-                  <div key={`${tag.id}-${matchKey}`} className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 relative overflow-hidden group">
+                  <div key={`${tag.id}-${matchKey}`} className="bg-slate-50/50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <TagIcon className="w-3 h-3 text-blue-400" />
-                        <span className="text-xs font-bold text-blue-900">{tag.name}</span>
+                        <TagIcon className="w-3 h-3 text-amber-500" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{tag.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-blue-300 font-mono">TAG</span>
+                        <span className="text-[10px] text-slate-700 font-medium">TAG</span>
                         <button 
                           onClick={() => {
                             const updatedArticle = { ...currentArticle, relatedTags: (currentArticle.relatedTags || []).filter(k => k !== matchKey) };
                             setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                            setCurrentArticle(updatedArticle);
                           }}
-                          className="text-blue-300 hover:text-red-500 transition-colors"
+                          className="text-slate-400 hover:text-red-500 transition-colors"
                           title="移除资产"
                         >
                           <X className="w-3 h-3" />
@@ -1913,13 +2048,13 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                       </div>
                     </div>
                     <div className="flex gap-2 mt-3">
-                      <button onClick={() => handleInsertTag(tag, 'summary')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                      <button onClick={() => handleInsertTag(tag, 'summary')} className="flex-1 py-1.5 bg-white hover:bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-bold text-slate-600 rounded drop-shadow-sm transition-all border border-slate-200">
                         插入摘要
                       </button>
-                      <button onClick={() => handleInsertTag(tag, 'characters')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                      <button onClick={() => handleInsertTag(tag, 'characters')} className="flex-1 py-1.5 bg-white hover:bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-bold text-slate-600 rounded drop-shadow-sm transition-all border border-slate-200">
                         插入角色
                       </button>
-                      <button onClick={() => handleInsertTag(tag, 'talents')} className="flex-1 py-1.5 bg-white hover:bg-blue-50 text-[10px] font-bold text-blue-600 rounded drop-shadow-sm transition-all border border-blue-100">
+                      <button onClick={() => handleInsertTag(tag, 'talents')} className="flex-1 py-1.5 bg-white hover:bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-bold text-slate-600 rounded drop-shadow-sm transition-all border border-slate-200">
                         插入天赋
                       </button>
                     </div>
@@ -1927,20 +2062,21 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                 ))}
 
                 {getSelectedMetricData().map(({ trait, matchKey }) => (
-                  <div key={`${trait.id}-${matchKey}`} className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 relative overflow-hidden group">
+                  <div key={`${trait.id}-${matchKey}`} className="bg-slate-50/50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Trophy className="w-3 h-3 text-amber-400" />
-                        <span className="text-xs font-bold text-amber-900">{trait.label}</span>
+                        <Trophy className="w-3 h-3 text-amber-500" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{trait.label}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-amber-300 font-mono">{trait.role}</span>
+                        <span className="text-[10px] text-slate-700 font-medium">{trait.role}</span>
                         <button 
                           onClick={() => {
                             const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(k => k !== matchKey) };
                             setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                            setCurrentArticle(updatedArticle);
                           }}
-                          className="text-amber-300 hover:text-red-500 transition-colors"
+                          className="text-slate-400 hover:text-red-500 transition-colors"
                           title="移除资产"
                         >
                           <X className="w-3 h-3" />
@@ -1949,14 +2085,14 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     </div>
                     <div className="flex flex-col gap-2 mt-3">
                       <div className="flex gap-2">
-                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'desc', 5)} className="flex-1 py-1.5 bg-white hover:bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-bold text-slate-600 rounded drop-shadow-sm transition-all border border-slate-200">
                           前5降序
                         </button>
-                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'asc', 5)} className="flex-1 py-1.5 bg-white hover:bg-amber-50 text-[10px] font-bold text-amber-700 rounded drop-shadow-sm transition-all border border-amber-100">
+                        <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', 'asc', 5)} className="flex-1 py-1.5 bg-white hover:bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-bold text-slate-600 rounded drop-shadow-sm transition-all border border-slate-200">
                           前5升序
                         </button>
                       </div>
-                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', importSortOrder)} className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-[10px] font-bold text-white rounded shadow-sm transition-all border border-amber-500">
+                      <button onClick={() => handleInsertLeaderboard(trait.label, trait.role as 'Survivor' | 'Hunter', importSortOrder)} className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-white rounded shadow-sm transition-all border border-slate-800">
                         {`导入完整排行榜 (${importSortOrder === 'asc' ? '升序' : '降序'})`}
                       </button>
                     </div>
@@ -1971,11 +2107,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                         <span className="text-xs font-bold text-purple-900">{metric.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-purple-300 font-mono">{metric.role}</span>
+                        <span className="text-[10px] text-purple-300 font-medium">{metric.role}</span>
                         <button 
                           onClick={() => {
                             const updatedArticle = { ...currentArticle, relatedMetrics: (currentArticle.relatedMetrics || []).filter(k => k !== matchKey) };
                             setArticles(articles.map(a => a.id === currentArticle.id ? updatedArticle : a));
+                            setCurrentArticle(updatedArticle);
                           }}
                           className="text-purple-300 hover:text-red-500 transition-colors"
                           title="移除资产"
@@ -2067,7 +2204,7 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                     value={newArticleDoc.content}
                     onChange={e => setNewArticleDoc({...newArticleDoc, content: e.target.value})}
                     placeholder="[画面：开场标题]&#10;这是第一页的内容...&#10;[备注：这里语速要慢]&#10;&#10;---&#10;&#10;[画面：核心数据]&#10;这是第二页的内容..."
-                    className="w-full h-[400px] px-6 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-mono leading-relaxed resize-none transition-all"
+                    className="w-full h-[400px] px-6 py-5 bg-slate-50 border border-slate-100 rounded-[2rem] focus:outline-none focus:ring-4 focus:ring-slate-900/5 text-sm font-medium leading-relaxed resize-none transition-all"
                   />
                 </div>
               </div>
@@ -2131,12 +2268,12 @@ export const TheoryPresentation: React.FC<TheoryPresentationProps> = ({ characte
                   </div>
                 </div>
 
-                <div className="mt-auto bg-blue-50 p-6 rounded-3xl border border-blue-100">
-                  <div className="flex items-center gap-3 text-blue-900 font-bold text-sm mb-2">
-                    <Sparkles className="w-5 h-5 text-blue-400" />
+                <div className="mt-auto bg-slate-50/50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-800">
+                  <div className="flex items-center gap-3 text-slate-800 font-bold text-sm mb-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
                     智能解析提示
                   </div>
-                  <p className="text-blue-700/60 text-xs leading-relaxed">
+                  <p className="text-slate-/60 text-xs leading-relaxed">
                     系统将自动识别标题、列表、公式等不同版式。在文本中直接输入所需内容，暂不支持口播稿及备注。
                   </p>
                 </div>

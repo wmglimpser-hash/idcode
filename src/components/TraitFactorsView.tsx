@@ -298,7 +298,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
               onChange={() => toggleFactor(f.id)}
             />
             <div className="flex flex-col">
-              <span className={`text-sm font-bold transition-colors ${activeFactors.has(f.id) ? 'text-accent' : 'text-text/80 group-hover:text-text'}`}>
+              <span className={`text-sm font-bold transition-colors ${activeFactors.has(f.id) ? 'text-slate-800 dark:text-slate-100' : 'text-text/80 group-hover:text-text'}`}>
                 {f.name}
               </span>
               <span className="text-xs text-muted leading-relaxed mt-1">{f.modifier ? `[${f.modifier}] ` : ''}{f.effect}</span>
@@ -340,7 +340,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
               console.error("Error quick-adding factor:", err);
             }
           }}
-          className="text-[11px] bg-bg/50 border border-border/50 px-2 py-1 font-mono text-muted hover:text-accent hover:border-accent outline-none transition-colors w-full"
+          className="text-[11px] bg-bg/50 border border-border/50 px-2 py-1 font-medium text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 outline-none transition-colors w-full"
         >
           <option value="">+ 添加{type === 'external_trait' ? '特质' : type === 'talent' ? '天赋' : '因素'}</option>
           {availableTags.filter(t => (type === 'other' ? t.type === 'other' : t.type === type)).map(t => (
@@ -367,30 +367,30 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       <div className="flex items-center justify-between border-b border-border pb-4">
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-muted hover:text-accent transition-colors font-mono text-sm uppercase tracking-widest"
+          className="flex items-center gap-2 text-muted hover:text-slate-800 dark:text-slate-100 transition-colors font-medium text-sm uppercase tracking-widest"
         >
           <ArrowLeft className="w-4 h-4" /> 返回详情_BACK
         </button>
         <div className="text-right">
-          <h2 className="text-xl font-serif text-accent">{category}</h2>
-          <p className="text-xs text-muted font-mono uppercase tracking-tighter">影响因素分析_FACTORS FOR {characterName}</p>
+          <h2 className="text-xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">{category}</h2>
+          <p className="text-xs text-muted font-medium uppercase tracking-tighter">影响因素分析_FACTORS FOR {characterName}</p>
         </div>
       </div>
 
       {/* Dynamic Modifiers Table */}
-      <section className="bg-card/30 border border-border p-8 cyber-border overflow-x-auto">
-        <h3 className="text-lg font-bold text-primary font-mono mb-8 flex items-center gap-3 uppercase tracking-widest">
+      <section className="bg-card/30 border border-border p-8 rounded-2xl shadow-sm overflow-x-auto">
+        <h3 className="text-lg font-bold text-primary font-medium mb-8 flex items-center gap-3 uppercase tracking-widest">
           <Zap className="w-5 h-5" /> 动态修正预览_DYNAMIC_MODIFIERS
         </h3>
         <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead>
-            <tr className="border-b border-border/50 text-xs text-muted font-mono uppercase tracking-widest">
+            <tr className="border-b border-border/50 text-xs text-muted font-medium uppercase tracking-widest">
               <th className="p-4 font-normal w-[15%]">特质项目</th>
               <th className="p-4 font-normal w-[10%]">基础数值</th>
               <th className="p-4 font-normal w-[20%]">外在特质</th>
               <th className="p-4 font-normal w-[20%]">天赋因素</th>
               <th className="p-4 font-normal w-[20%]">监管者辅助特质</th>
-              <th className="p-4 font-normal w-[15%] text-accent">影响后的数值</th>
+              <th className="p-4 font-normal w-[15%] text-slate-800 dark:text-slate-100">影响后的数值</th>
             </tr>
           </thead>
           <tbody>
@@ -424,23 +424,23 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-text uppercase tracking-widest">{item.label}</span>
                       {isBaseDifferent && baseItem && (
-                        <span className="text-[10px] text-muted font-mono line-through opacity-50">标准: {baseItem.value}</span>
+                        <span className="text-[10px] text-muted font-medium line-through opacity-50">标准: {baseItem.value}</span>
                       )}
                     </div>
                   </td>
                   <td className="p-4 align-top">
-                    <span className={`text-sm font-mono ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>{item.value}</span>
+                    <span className={`text-sm font-medium ${isBaseDifferent ? 'text-primary' : 'text-muted'}`}>{item.value}</span>
                   </td>
                   <td className="p-4 align-top border-l border-border/20">{renderFactorCell(externalTraits, item.label, 'external_trait')}</td>
                   <td className="p-4 align-top border-l border-border/20">{renderFactorCell(talentFactors, item.label, 'talent')}</td>
                   <td className="p-4 align-top border-l border-border/20">{renderFactorCell(auxiliaryTraits, item.label, 'auxiliary_trait')}</td>
-                  <td className="p-4 align-top border-l border-border/20 bg-accent/5">
+                  <td className="p-4 align-top border-l border-border/20 bg-slate-800/5 dark:bg-slate-200/5">
                     <div className="flex flex-col gap-2">
-                      <span className={`text-lg font-bold font-mono ${hasChange ? 'text-accent' : 'text-text'}`}>
+                      <span className={`text-lg font-bold font-medium ${hasChange ? 'text-slate-800 dark:text-slate-100' : 'text-text'}`}>
                         {modifiedValue}
                       </span>
                       {hasChange && (
-                        <span className="text-xs text-accent/70 font-mono">
+                        <span className="text-xs text-slate-800 dark:text-slate-100/70 font-medium">
                           ({item.value} → {modifiedValue})
                         </span>
                       )}
@@ -454,39 +454,39 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
       </section>
 
       {/* Add Form */}
-      <section className="bg-card/30 border border-border p-6 cyber-border">
-        <h3 className="text-sm font-bold text-text font-mono mb-6 flex items-center gap-2 uppercase tracking-widest">
+      <section className="bg-card/30 border border-border p-6 rounded-2xl shadow-sm">
+        <h3 className="text-sm font-bold text-text font-medium mb-6 flex items-center gap-2 uppercase tracking-widest">
           <Plus className="w-4 h-4" /> 录入新因素_INPUT_NEW_FACTOR
         </h3>
         <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">因素名称 NAME</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">因素名称 NAME</label>
             <input 
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="例如：庄园老友"
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">影响效果 EFFECT</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">影响效果 EFFECT</label>
             <input 
               type="text"
               value={newEffect}
               onChange={(e) => setNewEffect(e.target.value)}
               placeholder="例如：受击加速延长2秒"
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源类型 SOURCE TYPE</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">来源类型 SOURCE TYPE</label>
             <select 
               value={newSourceType}
               onChange={(e) => setNewSourceType(e.target.value as any)}
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
             >
               <option value="external_trait">外在特质</option>
               <option value="talent">天赋因素</option>
@@ -495,7 +495,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">来源 SOURCE (下拉选择标签)</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">来源 SOURCE (下拉选择标签)</label>
             <div className="relative group">
               <select 
                 value={newSource}
@@ -506,7 +506,7 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
                     setNewSourceType(selectedTag.type as any);
                   }
                 }}
-                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors appearance-none"
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors appearance-none"
               >
                 <option value="">-- 选择特质/天赋标签 --</option>
                 <optgroup label="统一标签 UNIFIED_TAGS">
@@ -535,21 +535,21 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">或手动输入来源 (MANUAL)</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">或手动输入来源 (MANUAL)</label>
             <input 
               type="text"
               value={newSource}
               onChange={(e) => setNewSource(e.target.value)}
               placeholder="例如：破窗理论"
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">目标属性 TARGET_STAT</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">目标属性 TARGET_STAT</label>
             <select 
               value={newTargetStat}
               onChange={(e) => setNewTargetStat(e.target.value)}
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
             >
               <option value="">自动匹配 (模糊搜索)</option>
               {baseItems.map(item => (
@@ -558,22 +558,22 @@ export const TraitFactorsView = ({ characterId, characterName, category, allChar
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-muted uppercase font-mono tracking-widest">修正值 MODIFIER (e.g. +10%, -2, x1.1)</label>
+            <label className="text-[10px] text-muted uppercase font-medium tracking-widest">修正值 MODIFIER (e.g. +10%, -2, x1.1)</label>
             <input 
               type="text"
               value={newModifier}
               onChange={(e) => setNewModifier(e.target.value)}
               placeholder="例如：+2 或 -10% 或 x1.1"
-              className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+              className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
             />
           </div>
           <div className="flex gap-2 items-end lg:col-span-2">
             <div className="flex-1 space-y-2">
-              <label className="text-[10px] text-muted uppercase font-mono tracking-widest">类型 TYPE</label>
+              <label className="text-[10px] text-muted uppercase font-medium tracking-widest">类型 TYPE</label>
               <select 
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as any)}
-                className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-accent outline-none transition-colors"
+                className="w-full bg-bg border border-border px-3 py-2 text-sm font-medium focus:border-slate-800 dark:border-slate-200 outline-none transition-colors"
               >
                 <option value="positive">正面 (+)</option>
                 <option value="negative">负面 (-)</option>

@@ -106,7 +106,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
     <div className="relative w-full max-w-2xl mx-auto">
       <div className="relative group">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className={`w-5 h-5 transition-colors ${loading ? 'text-accent' : 'text-muted'}`} />
+          <Search className={`w-5 h-5 transition-colors ${loading ? 'text-slate-800 dark:text-slate-100' : 'text-muted'}`} />
         </div>
         <input
           type="text"
@@ -116,12 +116,12 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
             setShowAll(false);
           }}
           placeholder="搜索庄园秘典词条或角色称号..."
-          className="w-full bg-card/50 border border-border text-text pl-12 pr-4 py-4 rounded-none focus:border-accent outline-none transition-all cyber-border"
+          className="w-full bg-card/50 border border-border text-text pl-12 pr-4 py-4 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-all rounded-2xl shadow-sm"
         />
         {searchTerm.trim().length === 0 && !showAll && (
           <button
             onClick={handleBrowseAll}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-mono text-accent hover:text-white transition-colors uppercase tracking-widest border border-accent/30 px-3 py-1 bg-accent/5"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-800 dark:text-slate-100 hover:text-white transition-colors uppercase tracking-widest border border-slate-800 dark:border-slate-200/30 px-3 py-1 bg-slate-800/5 dark:bg-slate-200/5"
           >
             浏览全部_BROWSE_ALL
           </button>
@@ -131,7 +131,7 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
       {(results.length > 0 || showAll) && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-300 max-h-[400px] overflow-y-auto">
           {searchTerm.trim().length === 0 && !showAll && (
-            <div className="px-4 py-2 bg-bg/50 border-b border-border text-[10px] font-mono text-muted uppercase tracking-widest">
+            <div className="px-4 py-2 bg-bg/50 border-b border-border text-[10px] font-medium text-muted uppercase tracking-widest">
               最近更新_RECENTLY_UPDATED
             </div>
           )}
@@ -145,13 +145,13 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
                   setShowAll(false);
                   setAllEntries([]);
                 }}
-                className="w-full text-left p-4 hover:bg-accent/10 border-b border-border/50 last:border-0 flex items-center gap-4 group transition-colors"
+                className="w-full text-left p-4 hover:bg-slate-800/10 dark:bg-slate-200/10 border-b border-border/50 last:border-0 flex items-center gap-4 group transition-colors"
               >
-                <div className="w-10 h-10 bg-bg border border-border flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                <div className="w-10 h-10 bg-bg border border-border flex items-center justify-center text-slate-800 dark:text-slate-100 group-hover:scale-110 transition-transform">
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-accent">{entry.title}</div>
+                  <div className="text-sm font-bold text-slate-800 dark:text-slate-100">{entry.title}</div>
                   <div className="text-[10px] text-muted uppercase tracking-widest flex items-center gap-3 mt-1">
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {entry.type}</span>
                   </div>
@@ -194,13 +194,13 @@ export const WikiSearch = ({ onSelect, onSelectCharacter }: Props) => {
                     setSearchTerm('');
                     setResults([]);
                   }}
-                  className="w-full text-left p-4 hover:bg-accent/10 border-b border-border/50 last:border-0 flex items-center gap-4 group transition-colors"
+                  className="w-full text-left p-4 hover:bg-slate-800/10 dark:bg-slate-200/10 border-b border-border/50 last:border-0 flex items-center gap-4 group transition-colors"
                 >
-                  <div className="w-10 h-10 bg-bg border border-border flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 bg-bg border border-border flex items-center justify-center text-slate-800 dark:text-slate-100 group-hover:scale-110 transition-transform">
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-accent">{entry.title}</div>
+                    <div className="text-sm font-bold text-slate-800 dark:text-slate-100">{entry.title}</div>
                     <div className="text-[10px] text-muted uppercase tracking-widest flex items-center gap-3 mt-1">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {entry.type}</span>
                       <span className="flex items-center gap-1"><User className="w-3 h-3" /> {entry.authorId.slice(0, 6)}</span>

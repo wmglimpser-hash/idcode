@@ -321,22 +321,22 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-b border-border pb-8">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="flex items-center gap-4">
-            <h2 className="text-4xl font-serif font-bold text-accent cyber-glow-text flex items-center gap-4">
+            <h2 className="text-4xl font-sans font-bold tracking-tight font-bold text-slate-800 dark:text-slate-100  flex items-center gap-4">
               <Trophy className="w-10 h-10 text-gold" /> 庄园能力排行榜
             </h2>
             <button
               onClick={() => setShowComparison(!showComparison)}
-              className={`flex items-center gap-2 px-4 py-2 border transition-all font-mono text-xs font-bold uppercase tracking-widest ${
+              className={`flex items-center gap-2 px-4 py-2 border transition-all font-medium text-xs font-bold uppercase tracking-widest ${
                 showComparison 
-                  ? 'bg-accent text-bg border-accent shadow-[0_0_15px_rgba(255,0,60,0.4)]' 
-                  : 'bg-card/50 border-border text-muted hover:text-accent hover:border-accent'
+                  ? 'bg-slate-800 dark:bg-slate-200 text-bg border-slate-800 dark:border-slate-200' 
+                  : 'bg-card/50 border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200'
               }`}
             >
               <Zap className={`w-4 h-4 ${showComparison ? 'animate-pulse' : ''}`} />
               {showComparison ? '返回排行榜_BACK' : 'VS 对比系统_VS_COMPARE'}
             </button>
           </div>
-          <p className="text-muted text-xs font-mono mt-2 uppercase tracking-widest md:ml-4">Neural Leaderboard System v2.1</p>
+          <p className="text-muted text-xs font-medium mt-2 uppercase tracking-widest md:ml-4">Neural Leaderboard System v2.1</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -344,22 +344,22 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className={`p-2 border border-border bg-card/50 text-muted hover:text-accent hover:border-accent transition-all group ${isRefreshing ? 'opacity-50' : ''}`}
+              className={`p-2 border border-border bg-card/50 text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all group ${isRefreshing ? 'opacity-50' : ''}`}
               title="同步并刷新排序"
             >
               <RefreshCcw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
             </button>
           )}
-          <div className="flex bg-card border border-border p-1 cyber-border">
+          <div className="flex bg-card border border-border p-1 rounded-2xl shadow-sm">
             <button
               onClick={() => { setRole('Survivor'); setSelectedTrait(null); }}
-              className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Survivor' ? 'bg-primary text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]' : 'text-muted hover:text-text'}`}
+              className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Survivor' ? 'bg-primary text-white dark:text-slate-900' : 'text-muted hover:text-text'}`}
             >
               求生者 SURVIVORS
             </button>
             <button
               onClick={() => { setRole('Hunter'); setSelectedTrait(null); }}
-              className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Hunter' ? 'bg-primary text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]' : 'text-muted hover:text-text'}`}
+              className={`px-8 py-2 text-xs font-bold tracking-widest transition-all ${role === 'Hunter' ? 'bg-primary text-white dark:text-slate-900' : 'text-muted hover:text-text'}`}
             >
               监管者 HUNTERS
             </button>
@@ -375,19 +375,19 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Base Info Section */}
           <div className={`${isFullScreen ? 'hidden' : 'lg:col-span-4'} space-y-6`}>
-            <div className="bg-card/30 border border-border p-6 cyber-border relative overflow-hidden flex flex-col h-[800px]">
+            <div className="bg-card/30 border border-border p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col h-[800px]">
               <div className="absolute top-0 right-0 p-2 opacity-10 pointer-events-none">
                 <Activity className="w-24 h-24" />
               </div>
               <div className="flex justify-between items-center mb-6 flex-shrink-0">
-                <h3 className="text-xl font-serif text-accent flex items-center gap-2">
+                <h3 className="text-xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <Shield className="w-5 h-5" /> 阵营基础数值概览
                 </h3>
                 <div className="flex items-center gap-2">
                   {isAdmin && (
                     <button 
                       onClick={() => setIsEditingConfig(!isEditingConfig)}
-                      className={`p-1.5 border transition-all ${isEditingConfig ? 'bg-accent border-accent text-bg shadow-[0_0_10px_rgba(0,243,255,0.3)]' : 'border-accent/30 text-accent hover:bg-accent/10'}`}
+                      className={`p-1.5 border transition-all ${isEditingConfig ? 'bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200 text-bg' : 'border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 hover:bg-slate-800/10 dark:bg-slate-200/10'}`}
                       title="管理概览项目"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -395,7 +395,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   )}
                   <button 
                     onClick={() => setShowMetricForm(prev => !prev)}
-                    className={`p-1.5 border transition-all ${showMetricForm ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(255,0,60,0.3)]' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
+                    className={`p-1.5 border transition-all ${showMetricForm ? 'bg-primary border-primary text-white' : 'border-primary/30 text-primary hover:bg-primary/10'}`}
                     title="创建自定义计算项"
                   >
                     <Calculator className="w-4 h-4" />
@@ -404,10 +404,10 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
               </div>
 
               {isEditingConfig && isAdmin && (
-                <div className="mb-6 p-4 bg-accent/5 border border-accent/30 space-y-4 animate-in slide-in-from-top-2">
+                <div className="mb-6 p-4 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/30 space-y-4 animate-in slide-in-from-top-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono text-accent uppercase font-bold">管理概览项目</span>
-                    <button onClick={() => setIsEditingConfig(false)} className="text-muted hover:text-accent"><X className="w-3 h-3" /></button>
+                    <span className="text-[10px] font-medium text-slate-800 dark:text-slate-100 uppercase font-bold">管理概览项目</span>
+                    <button onClick={() => setIsEditingConfig(false)} className="text-muted hover:text-slate-800 dark:text-slate-100"><X className="w-3 h-3" /></button>
                   </div>
                   <div className="flex gap-2">
                     <input 
@@ -415,11 +415,11 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                       placeholder="新分类名称..."
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      className="flex-1 bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-accent"
+                      className="flex-1 bg-bg/50 border border-border p-2 text-xs font-medium outline-none focus:border-slate-800 dark:border-slate-200"
                     />
                     <button 
                       onClick={handleAddCategory}
-                      className="px-3 py-2 bg-accent text-bg text-[10px] font-mono font-bold hover:bg-accent/80"
+                      className="px-3 py-2 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-medium font-bold hover:bg-slate-800/20 dark:hover:bg-slate-200/20"
                     >
                       添加分类
                     </button>
@@ -430,7 +430,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
               {showMetricForm && (
                 <div className="mb-6 p-4 bg-primary/5 border border-primary/30 space-y-4 animate-in slide-in-from-top-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono text-primary uppercase">创建自定义计算项</span>
+                    <span className="text-[10px] font-medium text-primary uppercase">创建自定义计算项</span>
                     <button onClick={() => setShowMetricForm(false)} className="text-muted hover:text-primary"><X className="w-3 h-3" /></button>
                   </div>
                   <input 
@@ -438,11 +438,11 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                     placeholder="计算项名称 (如: 综合生存力)"
                     value={newMetric.name}
                     onChange={(e) => setNewMetric({ ...newMetric, name: e.target.value })}
-                    className="w-full bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-primary"
+                    className="w-full bg-bg/50 border border-border p-2 text-xs font-medium outline-none focus:border-primary"
                   />
                   <div className="max-h-40 overflow-y-auto border border-border/30 p-2 space-y-1 bg-bg/20">
                     {currentTraits?.flatMap(t => t.items).map(item => (
-                      <label key={item.label} className="flex items-center gap-2 text-[10px] font-mono text-muted hover:text-text cursor-pointer">
+                      <label key={item.label} className="flex items-center gap-2 text-[10px] font-medium text-muted hover:text-text cursor-pointer">
                         <input 
                           type="checkbox"
                           checked={newMetric.traitLabels.includes(item.label)}
@@ -461,7 +461,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                   <button 
                     onClick={handleCreateMetric}
                     disabled={!newMetric.name || newMetric.traitLabels.length === 0}
-                    className="w-full py-2 bg-primary text-white text-[10px] font-mono hover:bg-primary/80 disabled:opacity-50"
+                    className="w-full py-2 bg-primary text-white dark:text-slate-900 text-[10px] font-medium hover:bg-primary/80 disabled:opacity-50"
                   >
                     保存计算项_SAVE
                   </button>
@@ -472,7 +472,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                 {/* Custom Metrics Section */}
                 {customMetrics.length > 0 && (
                   <div className="space-y-3">
-                    <div className="text-xs text-accent font-bold uppercase tracking-widest border-b border-accent/20 pb-1 flex items-center gap-2">
+                    <div className="text-xs text-slate-800 dark:text-slate-100 font-bold uppercase tracking-widest border-b border-slate-800 dark:border-slate-200/20 pb-1 flex items-center gap-2">
                       <Calculator className="w-3 h-3" /> 自定义计算项
                     </div>
                     <div className="grid grid-cols-1 gap-1">
@@ -485,12 +485,12 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                           }}
                           className={`flex justify-between items-center p-3 border transition-all cursor-pointer group ${
                             selectedCustomMetric?.id === metric.id 
-                              ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
-                              : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
+                              ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
+                              : 'bg-bg/20 border-border/30 text-text/80 hover:border-slate-800 dark:border-slate-200/50 hover:bg-bg/40'
                           }`}
                         >
                           <div className="flex flex-col">
-                            <span className="text-sm font-mono font-bold">{metric.name}</span>
+                            <span className="text-sm font-medium font-bold">{metric.name}</span>
                             <span className="text-[8px] text-muted uppercase tracking-tighter">
                               {metric.traitLabels.join(' + ')}
                             </span>
@@ -504,7 +504,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                                 <Trash2 className="w-3 h-3" />
                               </button>
                             )}
-                            {selectedCustomMetric?.id === metric.id && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                            {selectedCustomMetric?.id === metric.id && <Activity className="w-4 h-4 text-slate-800 dark:text-slate-100 animate-pulse" />}
                           </div>
                         </div>
                       ))}
@@ -522,7 +522,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                             <div className="flex items-center gap-2">
                               <button 
                                 onClick={() => setActiveCategoryIndex(activeCategoryIndex === i ? null : i)}
-                                className="text-accent hover:text-accent/80"
+                                className="text-slate-800 dark:text-slate-100 hover:text-slate-800 dark:text-slate-100/80"
                                 title="添加项目"
                               >
                                 <Plus className="w-3 h-3" />
@@ -539,18 +539,18 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                         </div>
 
                         {isEditingConfig && isAdmin && activeCategoryIndex === i && (
-                          <div className="flex gap-2 p-2 bg-accent/5 border border-accent/20 animate-in slide-in-from-top-1">
+                          <div className="flex gap-2 p-2 bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/20 animate-in slide-in-from-top-1">
                             <input 
                               type="text"
                               placeholder="新项目名称..."
                               value={newItemLabel}
                               onChange={(e) => setNewItemLabel(e.target.value)}
-                              className="flex-1 bg-bg/50 border border-border p-1 text-[10px] font-mono outline-none focus:border-accent"
+                              className="flex-1 bg-bg/50 border border-border p-1 text-[10px] font-medium outline-none focus:border-slate-800 dark:border-slate-200"
                               autoFocus
                             />
                             <button 
                               onClick={() => handleAddItem(i)}
-                              className="px-2 py-1 bg-accent text-bg text-[10px] font-mono font-bold"
+                              className="px-2 py-1 bg-slate-800 dark:bg-slate-200 text-bg text-[10px] font-medium font-bold"
                             >
                               添加
                             </button>
@@ -569,11 +569,11 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                               }}
                               className={`flex justify-between items-center p-3 border transition-all group ${
                                 selectedTrait?.label === item.label 
-                                  ? 'bg-accent/20 border-accent text-accent shadow-[0_0_10px_rgba(255,0,60,0.2)]' 
-                                  : 'bg-bg/20 border-border/30 text-text/80 hover:border-accent/50 hover:bg-bg/40'
+                                  ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
+                                  : 'bg-bg/20 border-border/30 text-text/80 hover:border-slate-800 dark:border-slate-200/50 hover:bg-bg/40'
                               } ${isEditingConfig ? 'cursor-default' : 'cursor-pointer'}`}
                             >
-                              <span className="text-sm font-mono font-bold">{item.label}</span>
+                              <span className="text-sm font-medium font-bold">{item.label}</span>
                               <div className="flex items-center gap-2">
                                 {isEditingConfig && isAdmin ? (
                                   <button 
@@ -584,14 +584,14 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                                   </button>
                                 ) : (
                                   <>
-                                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-sm border ${
+                                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-sm border ${
                                       selectedTrait?.label === item.label 
-                                        ? 'bg-accent/20 border-accent/50 text-accent' 
+                                        ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200/50 text-slate-800 dark:text-slate-100' 
                                         : 'bg-bg/50 border-border/50 text-muted group-hover:text-text/80'
                                     }`}>
                                       {traitCounts[item.label] || 0} 项
                                     </span>
-                                    {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-accent animate-pulse" />}
+                                    {selectedTrait?.label === item.label && <Activity className="w-4 h-4 text-slate-800 dark:text-slate-100 animate-pulse" />}
                                   </>
                                 )}
                               </div>
@@ -602,7 +602,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                     ))}
                   </>
                 ) : (
-                  <div className="py-12 text-center text-muted font-mono text-sm">
+                  <div className="py-12 text-center text-muted font-medium text-sm">
                     暂无基础数值数据。
                   </div>
                 )}
@@ -615,17 +615,17 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
             {selectedTrait || selectedCustomMetric ? (
               <div 
                 ref={screenshotRef}
-                className={`flex flex-col ${isCapturing ? 'bg-white p-8 h-auto min-h-screen text-slate-900 border-none' : (isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 cyber-border')}`}
+                className={`flex flex-col ${isCapturing ? 'bg-white p-8 h-auto min-h-screen text-slate-500900 border-none' : (isFullScreen ? 'fixed inset-0 z-[9999] bg-bg p-4 md:p-8 overflow-hidden' : 'bg-card/30 border border-border h-[800px] p-6 rounded-2xl shadow-sm')}`}
               >
                 <div className={`flex justify-between items-start mb-4 border-b border-border pb-4 flex-shrink-0 ${isFullScreen ? 'max-w-7xl mx-auto w-full' : ''} ${isCapturing ? 'border-slate-200' : ''}`}>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 ${isCapturing ? 'bg-slate-900' : 'bg-accent animate-pulse'}`} />
-                      <div className={`text-[10px] font-bold uppercase tracking-[0.1em] ${isCapturing ? 'text-slate-400' : 'text-primary'}`}>
+                      <div className={`w-1.5 h-1.5 ${isCapturing ? 'bg-slate-900' : 'bg-slate-800 dark:bg-slate-200 animate-pulse'}`} />
+                      <div className={`text-[10px] font-bold uppercase tracking-[0.1em] ${isCapturing ? 'text-slate-500400' : 'text-primary'}`}>
                         {selectedCustomMetric ? '自定义计算' : selectedTrait?.category}
                       </div>
                     </div>
-                    <h3 className={`${isFullScreen ? 'text-4xl' : 'text-2xl'} font-serif ${isCapturing ? 'text-slate-900' : 'text-accent cyber-glow-text'}`}>
+                    <h3 className={`${isFullScreen ? 'text-4xl' : 'text-2xl'} font-sans font-bold tracking-tight ${isCapturing ? 'text-slate-500900' : 'text-slate-800 dark:text-slate-100 '}`}>
                       {selectedCustomMetric ? selectedCustomMetric.name : selectedTrait?.label} 排行榜
                     </h3>
                   </div>
@@ -646,7 +646,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                           );
                           alert(`排行榜数据卡导出成功！\n- 指标: ${traitName}\n- 角色总数: ${factionCharacters.length}\n- 文件名: ${fileName}`);
                         }}
-                        className="flex items-center gap-2 px-3 py-1 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all"
+                        className="flex items-center gap-2 px-3 py-1 bg-slate-800/10 dark:bg-slate-200/10 border border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 text-[10px] font-medium hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all"
                         title="导出 Markdown 数据卡"
                       >
                         <Download className="w-3.5 h-3.5" /> 导出数据卡
@@ -655,9 +655,9 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                       <button
                         onClick={handleExportImage}
                         disabled={isCapturing}
-                        className={`flex items-center gap-2 px-3 py-1 border text-[10px] font-mono transition-all ${
+                        className={`flex items-center gap-2 px-3 py-1 border text-[10px] font-medium transition-all ${
                           isCapturing 
-                            ? 'bg-slate-800 border-slate-700 text-slate-500' 
+                            ? 'bg-slate-800 border-slate-700 text-slate-500500' 
                             : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-white'
                         }`}
                         title="导出完整排名截图"
@@ -668,17 +668,17 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
 
                       <button
                         onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                        className="flex items-center gap-2 px-3 py-1 bg-bg/50 border border-border hover:border-accent group transition-all"
+                        className="flex items-center gap-2 px-3 py-1 bg-bg/50 border border-border hover:border-slate-800 dark:border-slate-200 group transition-all"
                       >
-                        {sortOrder === 'desc' ? <ArrowDown className="w-3.5 h-3.5 text-accent" /> : <ArrowUp className="w-3.5 h-3.5 text-accent" />}
-                        <span className="text-[10px] font-mono text-muted group-hover:text-accent">{sortOrder === 'desc' ? '降序' : '升序'}</span>
+                        {sortOrder === 'desc' ? <ArrowDown className="w-3.5 h-3.5 text-slate-800 dark:text-slate-100" /> : <ArrowUp className="w-3.5 h-3.5 text-slate-800 dark:text-slate-100" />}
+                        <span className="text-[10px] font-medium text-muted group-hover:text-slate-800 dark:text-slate-100">{sortOrder === 'desc' ? '降序' : '升序'}</span>
                       </button>
-                      <div className="text-[9px] font-mono text-muted uppercase opacity-60">TOTAL: {factionCharacters.length}</div>
+                      <div className="text-[9px] font-medium text-muted uppercase opacity-60">TOTAL: {factionCharacters.length}</div>
                     </div>
                     
                     <button
                       onClick={() => setIsFullScreen(!isFullScreen)}
-                      className="p-2 border border-accent/50 bg-accent/5 text-accent hover:bg-accent hover:text-bg transition-all flex items-center justify-center"
+                      className="p-2 border border-slate-800 dark:border-slate-200/50 bg-slate-800/5 dark:bg-slate-200/5 text-slate-800 dark:text-slate-100 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all flex items-center justify-center"
                       title={isFullScreen ? "退出全屏" : "全屏模式"}
                     >
                       {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
@@ -692,19 +692,14 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                       <div 
                         key={group.rank} 
                         className={`flex items-center gap-3 p-2 border transition-all rank-group-row ${
-                          isCapturing ? 'bg-white border-slate-100 text-slate-800' : (
-                            group.rank === 1 ? 'bg-gold/10 border-gold/50' : 
-                            group.rank === 2 ? 'bg-accent/5 border-accent/20' :
-                            group.rank === 3 ? 'bg-primary/5 border-primary/30' :
-                            'bg-bg/40 border-border/30'
-                          )
+                          isCapturing ? 'bg-white border-slate-100 text-slate-800' : 'bg-card/40 border-border/30'
                         }`}
                       >
                         {/* Rank */}
-                        <div className="w-10 text-center font-mono font-bold flex-shrink-0">
-                          {group.rank === 1 ? <span className={`${isCapturing ? 'text-amber-500' : 'text-gold'} text-xl`}>1</span> :
-                           group.rank === 2 ? <span className={`${isCapturing ? 'text-slate-400' : 'text-accent'} text-lg`}>2</span> :
-                           group.rank === 3 ? <span className={`${isCapturing ? 'text-amber-700' : 'text-primary'} text-base`}>3</span> :
+                        <div className="w-10 text-center font-medium font-bold flex-shrink-0">
+                          {group.rank === 1 ? <span className="text-xl">1</span> :
+                           group.rank === 2 ? <span className={`${isCapturing ? 'text-slate-600' : 'text-slate-300'} text-lg`}>2</span> :
+                           group.rank === 3 ? <span className={`${isCapturing ? 'text-slate-500' : 'text-slate-400'} text-base`}>3</span> :
                            <span className="text-muted text-sm">{group.rank}</span>}
                         </div>
                         
@@ -719,7 +714,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                             return (
                               <div key={`${char.id}-${idx}`} className={`flex flex-col items-center gap-1 group relative ${isFullScreen || isCapturing ? 'w-28' : 'w-20'}`}>
                                 <div 
-                                  className={`aspect-square w-full cyber-border overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isCapturing ? 'border-slate-200' : (isAdmin ? 'hover:ring-1 hover:ring-accent' : '')}`}
+                                  className={`aspect-square w-full rounded-2xl shadow-sm overflow-hidden flex-shrink-0 cursor-pointer transition-all ${isCapturing ? 'border-slate-200' : (isAdmin ? 'hover:ring-1 hover:ring-accent' : '')}`}
                                   onClick={() => {
                                     if (isAdmin && !isCapturing) {
                                       setEditingRemark({ 
@@ -745,17 +740,17 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                                           if (e.key === 'Enter') handleSaveRemark();
                                           if (e.key === 'Escape') setEditingRemark(null);
                                         }}
-                                        className="w-full bg-bg border border-accent text-[10px] px-1 py-0.5 outline-none font-mono"
+                                        className="w-full bg-bg border border-slate-800 dark:border-slate-200 text-[10px] px-1 py-0.5 outline-none font-medium"
                                         placeholder="..."
                                       />
                                     </div>
                                   ) : (
                                     <div className="flex flex-col overflow-hidden leading-tight">
-                                      <div className={`${isFullScreen || isCapturing ? 'text-xs' : 'text-[10px]'} font-bold ${isCapturing ? 'text-slate-900' : 'text-accent group-hover:text-primary'} transition-colors truncate w-full tracking-tighter uppercase rank-character-title`}>
+                                      <div className={`${isFullScreen || isCapturing ? 'text-xs' : 'text-[10px]'} font-bold ${isCapturing ? 'text-slate-500900' : 'text-slate-800 dark:text-slate-100 group-hover:text-primary'} transition-colors truncate w-full tracking-tighter uppercase rank-character-title`}>
                                         {char.title}
                                       </div>
                                       {remark && (
-                                        <div className={`${isFullScreen || isCapturing ? 'text-[10px]' : 'text-[8px]'} ${isCapturing ? 'text-blue-500' : 'text-primary'} font-mono opacity-80 truncate w-full tracking-tighter rank-character-remark`}>
+                                        <div className={`${isFullScreen || isCapturing ? 'text-[10px]' : 'text-[8px]'} ${isCapturing ? 'text-slate-' : 'text-primary'} font-medium opacity-80 truncate w-full tracking-tighter rank-character-remark`}>
                                           [{remark}]
                                         </div>
                                       )}
@@ -769,7 +764,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
 
                         {/* Value */}
                         <div className="text-right flex-shrink-0 min-w-[80px]">
-                          <div className={`text-lg font-mono font-bold leading-none ${isCapturing ? 'text-slate-900' : 'text-accent'}`}>
+                          <div className={`text-lg font-medium font-bold leading-none ${isCapturing ? 'text-slate-500900' : 'text-slate-800 dark:text-slate-100'}`}>
                             {group.value.split(/[（(]/)[0].trim()}
                           </div>
                           {group.value && (group.value.includes('(') || group.value.includes('（')) && (
@@ -777,7 +772,7 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                               {group.value.substring(group.value.search(/[（(]/))}
                             </div>
                           )}
-                          {group.rank === 1 && <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${isCapturing ? 'text-amber-500' : 'text-gold'}`}>TOP RANK</div>}
+                          {group.rank === 1 && <div className="text-[8px] font-bold uppercase tracking-widest mt-1">TOP RANK</div>}
                         </div>
                       </div>
                     ))}
@@ -785,13 +780,13 @@ export const Leaderboard = ({ characters, onRefresh, isAdmin, initialTrait, onUp
                 </div>
               </div>
             ) : (
-              <div className="bg-card/20 border border-dashed border-border p-12 cyber-border flex flex-col items-center justify-center text-center space-y-4 min-h-[600px]">
+              <div className="bg-card/20 border border-dashed border-border p-12 rounded-2xl shadow-sm flex flex-col items-center justify-center text-center space-y-4 min-h-[600px]">
                 <div className="w-16 h-16 bg-border/20 flex items-center justify-center rotate-45">
                   <Search className="text-muted w-8 h-8 -rotate-45" />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-xl font-serif text-muted">等待选择数据项</h4>
-                  <p className="text-muted text-xs font-mono max-w-xs">
+                  <h4 className="text-xl font-sans font-bold tracking-tight text-muted">等待选择数据项</h4>
+                  <p className="text-muted text-xs font-medium max-w-xs">
                     请从左侧的基础数值概览中选择一个具体项目，以查看全角色的实时能力排名。
                   </p>
                 </div>

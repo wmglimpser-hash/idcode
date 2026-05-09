@@ -52,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {errorMessage}
             </p>
             {isFirestoreError && (
-              <div className="mb-8 p-4 bg-slate-900/50 rounded-lg text-left text-xs font-mono text-red-400 overflow-auto max-h-40">
+              <div className="mb-8 p-4 bg-slate-900/50 rounded-lg text-left text-xs font-medium text-red-400 overflow-auto max-h-40">
                 {this.state.error?.message}
               </div>
             )}

@@ -39,7 +39,8 @@ export const exportLeaderboardToMarkdown = (
   content += `- **阵营**: ${role === 'Survivor' ? '求生者' : '监管者'}\n`;
   content += `- **指标项**: ${traitLabel}\n`;
   content += `- **排序方向**: ${sortOrder === 'desc' ? '降序' : '升序'}\n`;
-  content += `- **有效角色总数**: ${characterCount}\n\n`;
+  content += `- **有效角色总数**: ${characterCount}\n`;
+  content += `- **排名分组数**: ${groupedData.length}\n\n`;
   
   content += `## 排名分布\n\n`;
   

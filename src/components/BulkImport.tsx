@@ -346,21 +346,21 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
 
   return (
     <div className="fixed inset-0 bg-bg/95 z-[100] flex items-start justify-center p-6 overflow-y-auto custom-scrollbar">
-      <div className="bg-card w-full max-w-5xl cyber-border p-8 shadow-2xl space-y-6 my-8 animate-in zoom-in-95 duration-300">
+      <div className="bg-card w-full max-w-5xl rounded-2xl shadow-sm p-8 shadow-2xl space-y-6 my-8 animate-in zoom-in-95 duration-300">
         <div className="flex justify-between items-center border-b border-border pb-4">
           <div className="flex items-center gap-3">
-            <FileJson className="text-accent w-6 h-6" />
-            <h3 className="text-2xl font-serif text-accent">
+            <FileJson className="text-slate-800 dark:text-slate-100 w-6 h-6" />
+            <h3 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">
               批量导入{mode === 'wiki' ? '百科词条' : mode === 'talent' ? '天赋定义' : '角色档案'}
             </h3>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-accent transition-colors">
+          <button onClick={onClose} className="text-muted hover:text-slate-800 dark:text-slate-100 transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="bg-accent/5 border border-accent/20 p-4 text-xs font-mono text-muted leading-relaxed">
-          <p className="text-accent font-bold mb-2">操作说明：</p>
+        <div className="bg-slate-800/5 dark:bg-slate-200/5 border border-slate-800 dark:border-slate-200/20 p-4 text-xs font-medium text-muted leading-relaxed">
+          <p className="text-slate-800 dark:text-slate-100 font-bold mb-2">操作说明：</p>
           <ul className="list-disc list-inside space-y-1">
             <li>{inputMode === 'json' ? '请粘贴符合 JSON 数组格式的数据。' : '请粘贴包含多个项目描述的原始文本，AI 将自动解析。'}</li>
             {mode === 'wiki' ? (
@@ -383,7 +383,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
         </div>
 
         {error && (
-          <div className="p-4 bg-primary/10 border border-primary/50 text-primary text-xs flex items-center gap-3 font-mono">
+          <div className="p-4 bg-primary/10 border border-primary/50 text-primary text-xs flex items-center gap-3 font-medium">
             <AlertTriangle className="w-4 h-4" /> {error}
           </div>
         )}
@@ -392,13 +392,13 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
           <div className="flex gap-4 border-b border-border">
             <button 
               onClick={() => setInputMode('json')}
-              className={`pb-2 px-4 text-[10px] font-mono uppercase tracking-widest transition-colors ${inputMode === 'json' ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-text'}`}
+              className={`pb-2 px-4 text-[10px] font-medium uppercase tracking-widest transition-colors ${inputMode === 'json' ? 'text-slate-800 dark:text-slate-100 border-b-2 border-slate-800 dark:border-slate-200' : 'text-muted hover:text-text'}`}
             >
               JSON 模式
             </button>
             <button 
               onClick={() => setInputMode('natural')}
-              className={`pb-2 px-4 text-[10px] font-mono uppercase tracking-widest transition-colors flex items-center gap-2 ${inputMode === 'natural' ? 'text-accent border-b-2 border-accent' : 'text-muted hover:text-text'}`}
+              className={`pb-2 px-4 text-[10px] font-medium uppercase tracking-widest transition-colors flex items-center gap-2 ${inputMode === 'natural' ? 'text-slate-800 dark:text-slate-100 border-b-2 border-slate-800 dark:border-slate-200' : 'text-muted hover:text-text'}`}
             >
               <Sparkles className="w-3 h-3" /> 自然语言识别 (AI)
             </button>
@@ -407,10 +407,10 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
           {inputMode === 'json' ? (
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-mono">JSON 数据输入</label>
+                <label className="text-[10px] text-muted uppercase tracking-widest font-medium">JSON 数据输入</label>
                 <button 
                   onClick={() => setJsonInput(JSON.stringify(getTemplate(), null, 2))}
-                  className="text-[10px] text-accent hover:underline font-mono"
+                  className="text-[10px] text-slate-800 dark:text-slate-100 hover:underline font-medium"
                 >
                   使用模板示例
                 </button>
@@ -419,18 +419,18 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
                 rows={16}
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
-                className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs leading-relaxed custom-scrollbar"
+                className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium text-xs leading-relaxed custom-scrollbar"
                 placeholder="在此粘贴 JSON 数组..."
               />
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-mono">原始文本输入</label>
+                <label className="text-[10px] text-muted uppercase tracking-widest font-medium">原始文本输入</label>
                 <button 
                   onClick={handleAIParse}
                   disabled={isParsing || !naturalInput.trim()}
-                  className="flex items-center gap-2 px-4 py-1 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono uppercase tracking-widest hover:bg-accent hover:text-bg transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-1 bg-slate-800/10 dark:bg-slate-200/10 border border-slate-800 dark:border-slate-200/30 text-slate-800 dark:text-slate-100 text-[10px] font-medium uppercase tracking-widest hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-all disabled:opacity-50"
                 >
                   {isParsing ? <RefreshCcw className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
                   {isParsing ? '正在解析...' : '开始 AI 解析_SMART_PARSE'}
@@ -440,7 +440,7 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
                 rows={16}
                 value={naturalInput}
                 onChange={(e) => setNaturalInput(e.target.value)}
-                className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs leading-relaxed custom-scrollbar"
+                className="w-full bg-bg border border-border text-text p-4 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium text-xs leading-relaxed custom-scrollbar"
                 placeholder={mode === 'character' ? "在此粘贴角色描述，例如：\n艾玛·伍兹，称号园丁，求生者阵营。背景故事是...\n外在特质包括巧手成蹄..." : "在此粘贴包含多个项目的文本..."}
               />
             </div>
@@ -449,13 +449,13 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
 
         {loading && (
           <div className="space-y-2">
-            <div className="flex justify-between text-[10px] font-mono text-muted">
+            <div className="flex justify-between text-[10px] font-medium text-muted">
               <span>正在处理数据流...</span>
               <span>{progress.current} / {progress.total}</span>
             </div>
             <div className="h-1 bg-border overflow-hidden">
               <div 
-                className="h-full bg-accent transition-all duration-300" 
+                className="h-full bg-slate-800 dark:bg-slate-200 transition-all duration-300" 
                 style={{ width: `${(progress.current / progress.total) * 100}%` }}
               />
             </div>
@@ -466,14 +466,14 @@ export const BulkImport = ({ mode, role, onClose, onSuccess, allCharacters }: Pr
           <button 
             onClick={onClose} 
             disabled={loading}
-            className="px-8 py-2 text-muted font-mono text-xs hover:text-text transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-8 py-2 text-muted font-medium text-xs hover:text-text transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             退出页面_EXIT
           </button>
           <button 
             onClick={handleImport}
             disabled={loading || !jsonInput}
-            className="px-10 py-2 bg-accent text-bg font-bold font-mono text-xs hover:bg-accent/80 disabled:opacity-50 flex items-center gap-3 transition-all"
+            className="px-10 py-2 bg-slate-800 dark:bg-slate-200 text-bg font-bold font-medium text-xs hover:bg-slate-800/20 dark:hover:bg-slate-200/20 disabled:opacity-50 flex items-center gap-3 transition-all"
           >
             <Save className="w-4 h-4" /> {loading ? '正在同步...' : '开始批量导入_START_IMPORT'}
           </button>

@@ -621,10 +621,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div 
-        className="min-h-screen bg-bg text-text font-sans selection:bg-primary selection:text-white relative bg-cover bg-center bg-fixed bg-no-repeat transition-all duration-500 overflow-x-hidden flex flex-col"
-        style={{ backgroundImage: 'var(--bg-overlay), var(--bg-image)' }}
+        className="min-h-screen bg-bg text-text font-sans selection:bg-slate-200 selection:text-slate-900 transition-all duration-500 flex flex-col"
       >
-        <div className="scanline" />
         
         {/* Header */}
         <header className="border-b border-border bg-card/80 sticky top-0 z-50 shrink-0 backdrop-blur-md">
@@ -640,10 +638,10 @@ export default function App() {
                 />
               </div>
               <div>
-                <h1 className="text-2xl font-serif font-bold tracking-tighter text-accent cyber-glow-text">
-                  庄园秘典 <span className="text-primary">CODEX</span>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  庄园秘典 <span className="text-amber-500">CODEX</span>
                 </h1>
-                <div className="text-[11px] font-mono text-muted tracking-[0.5em] uppercase">神经连接接口 v5.0.0</div>
+                <div className="text-[11px] font-medium text-slate-500 tracking-[0.2em] uppercase">Knowledge Base v5.0.0</div>
               </div>
             </div>
             
@@ -652,7 +650,7 @@ export default function App() {
                 <WallpaperManager user={user} userProfile={userProfile} />
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-2 border border-border bg-bg/50 text-muted hover:text-accent hover:border-accent transition-all"
+                  className="p-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl shadow-sm transition-all"
                   title={isDarkMode ? '切换至明亮模式' : '切换至黑暗模式'}
                 >
                   {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -664,18 +662,18 @@ export default function App() {
                   {isAdminUser && (
                     <button 
                       onClick={handleSyncCharacterOrders}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 text-accent text-[10px] font-mono hover:bg-accent hover:text-bg transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs rounded-lg shadow-sm hover:bg-slate-50 transition-all font-medium"
                       title="同步角色档案排序 ID"
                     >
                       <RefreshCcw className="w-3.5 h-3.5" /> 同步排序
                     </button>
                   )}
-                  <div className="flex items-center gap-4 bg-bg/50 border border-border px-4 py-2">
+                  <div className="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 shadow-sm">
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-bold text-accent">{userProfile?.displayName}</span>
-                    <span className="text-[10px] text-muted uppercase tracking-widest">{userProfile?.role}</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{userProfile?.displayName}</span>
+                    <span className="text-[10px] text-slate-400 font-medium tracking-wide">{userProfile?.role}</span>
                   </div>
-                  <button onClick={handleLogout} className="text-muted hover:text-primary transition-colors">
+                  <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition-colors">
                     <LogOut className="w-4 h-4" />
                   </button>
                 </div>
@@ -683,16 +681,16 @@ export default function App() {
               ) : (
                 <button 
                   onClick={handleLogin}
-                  className="flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/50 text-accent text-xs font-mono hover:bg-accent hover:text-bg transition-all"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold rounded-xl hover:scale-105 transition-all shadow-md"
                 >
-                  <LogIn className="w-4 h-4" /> 接入系统_LOGIN
+                  <LogIn className="w-4 h-4" /> 登录系统
                 </button>
               )}
             </div>
           </div>
 
           <nav className="hidden md:flex items-center gap-2 overflow-x-auto max-w-full no-scrollbar">
-            <div className="flex items-center gap-1 bg-bg/50 p-1 border border-border shrink-0">
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl shrink-0">
               {navItems.map((item) => (
                 <button
                   key={item.id}
@@ -704,19 +702,16 @@ export default function App() {
                     setViewingFactors(null);
                     setViewingExtension(null);
                   }}
-                  className={`px-3 lg:px-4 xl:px-6 py-2 flex items-center gap-2 transition-all duration-300 relative group overflow-hidden shrink-0 ${
+                  className={`px-4 lg:px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-300 relative group overflow-hidden shrink-0 ${
                     activeTab === item.id 
-                      ? 'text-accent' 
-                      : 'text-muted hover:text-text'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
                   }`}
                 >
-                  {activeTab === item.id && (
-                    <div className="absolute inset-0 bg-accent/10 border-b-2 border-accent" />
-                  )}
-                  <div className={`${activeTab === item.id ? 'text-accent' : 'text-muted group-hover:text-primary'} transition-colors`}>
+                  <div className={`${activeTab === item.id ? 'text-amber-500' : 'text-slate-400 group-hover:text-amber-400'} transition-colors`}>
                     {item.icon}
                   </div>
-                  <span className="text-sm font-bold tracking-widest">{item.label}</span>
+                  <span className="text-sm font-semibold tracking-wide">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -727,15 +722,14 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 relative">
         <div className="max-w-[1600px] mx-auto px-6 py-12 min-h-full">
-          <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: 'radial-gradient(var(--color-border) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
         {activeTab === 'wiki' && (
           <div className="space-y-12 relative z-10">
             {!selectedWikiEntry && !isEditingWiki && (
               <div className="max-w-4xl mx-auto text-center space-y-8 py-12">
                 <div className="space-y-4">
-                  <h2 className="text-4xl font-serif font-bold text-accent cyber-glow-text">探索庄园的终极真相</h2>
-                  <p className="text-muted text-sm font-mono max-w-xl mx-auto">
+                  <h2 className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">探索庄园的终极真相</h2>
+                  <p className="text-slate-500 text-sm max-w-xl mx-auto">
                     这里是欧利蒂丝庄园的知识库。从角色技巧到地图点位，所有攻略均由社区共同维护。
                   </p>
                 </div>
@@ -756,15 +750,15 @@ export default function App() {
                     <div className="flex gap-4">
                       <button 
                         onClick={() => setIsEditingWiki(true)}
-                        className="flex items-center gap-2 px-8 py-3 bg-primary text-white font-mono text-sm tracking-widest hover:scale-105 transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 border border-slate-900 text-white font-semibold text-sm rounded-xl hover:scale-105 transition-all shadow-md"
                       >
-                        <Plus className="w-4 h-4" /> 创建新词条_NEW
+                        <Plus className="w-4 h-4" /> 创建新词条
                       </button>
                       <button 
                         onClick={() => setIsBulkImportingWiki(true)}
-                        className="flex items-center gap-2 px-8 py-3 bg-card border border-border text-muted font-mono text-sm tracking-widest hover:text-accent hover:border-accent transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl hover:bg-slate-50 transition-all shadow-sm"
                       >
-                        <FileJson className="w-4 h-4" /> 批量导入_BULK
+                        <FileJson className="w-4 h-4" /> 批量导入
                       </button>
                     </div>
                   )}
@@ -804,9 +798,9 @@ export default function App() {
               <div className="space-y-6">
                 <button 
                   onClick={() => setSelectedWikiEntry(null)}
-                  className="text-muted hover:text-accent flex items-center gap-2 text-xs font-mono tracking-widest transition-colors"
+                  className="text-muted hover:text-slate-800 dark:text-slate-100 flex items-center gap-2 text-xs font-medium tracking-widest transition-colors"
                 >
-                  ← 返回搜索_BACK
+                  ← 返回搜索
                 </button>
                 <WikiEntryView 
                   entry={selectedWikiEntry} 
@@ -852,8 +846,8 @@ export default function App() {
           <div className="space-y-12 relative z-10">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-4">
-                <h3 className="text-sm font-mono text-accent/70 uppercase tracking-widest">
-                  {activeTab === 'survivors' ? '求生者名录_SURVIVORS' : '监管者名录_HUNTERS'}
+                <h3 className="text-sm font-medium text-slate-800 dark:text-slate-100/70 uppercase tracking-widest">
+                  {activeTab === 'survivors' ? '求生者名录' : '监管者名录'}
                 </h3>
                 {isAdminUser && (
                   <div className="flex items-center gap-2">
@@ -862,13 +856,13 @@ export default function App() {
                         setIsBatchMode(!isBatchMode);
                         setSelectedCharacterIds([]);
                       }}
-                      className={`text-[10px] font-mono px-2 py-1 border transition-all ${
+                      className={`text-[10px] font-medium px-2 py-1 border transition-all ${
                         isBatchMode 
                           ? 'bg-primary border-primary text-white' 
-                          : 'border-border text-muted hover:text-accent hover:border-accent'
+                          : 'border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200'
                       }`}
                     >
-                      {isBatchMode ? '取消选择_CANCEL' : '批量管理_BATCH'}
+                      {isBatchMode ? '取消选择' : '批量管理_BATCH'}
                     </button>
                     {isBatchMode && (
                       <button 
@@ -880,9 +874,9 @@ export default function App() {
                             setSelectedCharacterIds(currentList.map(c => c.id));
                           }
                         }}
-                        className="text-[10px] font-mono px-2 py-1 border border-border text-muted hover:text-accent hover:border-accent transition-all"
+                        className="text-[10px] font-medium px-2 py-1 border border-border text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all"
                       >
-                        {selectedCharacterIds.length === (activeTab === 'survivors' ? survivors : hunters).filter(c => !c.id.startsWith('base_')).length ? '取消全选_DESELECT' : '全选_SELECT_ALL'}
+                        {selectedCharacterIds.length === (activeTab === 'survivors' ? survivors : hunters).filter(c => !c.id.startsWith('base_')).length ? '取消全选' : '全选'}
                       </button>
                     )}
                   </div>
@@ -891,12 +885,12 @@ export default function App() {
               
               {isBatchMode && selectedCharacterIds.length > 0 && (
                 <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4">
-                  <span className="text-[10px] font-mono text-accent">已选择 {selectedCharacterIds.length} 个角色</span>
+                  <span className="text-[10px] font-medium text-slate-800 dark:text-slate-100">已选择 {selectedCharacterIds.length} 个角色</span>
                   <button 
                     onClick={handleBatchDelete}
-                    className="flex items-center gap-1 px-3 py-1 bg-primary/20 border border-primary text-primary text-[10px] font-mono hover:bg-primary hover:text-white transition-all"
+                    className="flex items-center gap-1 px-3 py-1 bg-primary/20 border border-primary text-primary text-[10px] font-medium hover:bg-primary hover:text-white transition-all"
                   >
-                    <Trash2 className="w-3 h-3" /> 批量删除_DELETE
+                    <Trash2 className="w-3 h-3" /> 批量删除
                   </button>
                 </div>
               )}
@@ -905,7 +899,7 @@ export default function App() {
             <div className="relative group/nav pb-8">
               <button 
                 onClick={() => scroll('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all opacity-0 group-hover/nav:opacity-100"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -940,13 +934,13 @@ export default function App() {
                   >
                     <div className={`absolute inset-0 border bg-transparent transition-colors duration-200 ${
                       (isBatchMode && selectedCharacterIds.includes(char.id)) || (!isBatchMode && selectedCharacter?.id === char.id && !showForm && !isEditingCharacter)
-                        ? 'border-accent shadow-[0_0_15px_rgba(0,243,255,0.3)]' 
+                        ? 'border-slate-800 dark:border-slate-200 shadow-[0_0_15px_rgba(212,175,55,0.2)]' 
                         : 'border-border/20'
                     }`} />
                     
                     {isBatchMode && (
                       <div className={`absolute top-1 right-1 w-4 h-4 border flex items-center justify-center z-30 transition-colors ${
-                        selectedCharacterIds.includes(char.id) ? 'bg-accent border-accent' : 'bg-black/50 border-white/30'
+                        selectedCharacterIds.includes(char.id) ? 'bg-slate-800 dark:bg-slate-200 border-slate-800 dark:border-slate-200' : 'bg-black/50 border-white/30'
                       }`}>
                         {selectedCharacterIds.includes(char.id) && <ShieldCheck className="w-3 h-3 text-bg" />}
                       </div>
@@ -963,7 +957,7 @@ export default function App() {
                         referrerPolicy="no-referrer" 
                       />
                     </div>
-                    <div className="absolute -bottom-5 left-0 right-0 text-[9px] font-mono font-bold text-muted group-hover:text-accent transition-colors text-center truncate uppercase tracking-tighter">
+                    <div className="absolute -bottom-5 left-0 right-0 text-[9px] font-medium font-bold text-muted group-hover:text-slate-800 dark:text-slate-100 transition-colors text-center truncate uppercase tracking-tighter">
                       {char.title}
                     </div>
                   </button>
@@ -973,7 +967,7 @@ export default function App() {
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     <button 
                       onClick={() => setShowForm(true)}
-                      className={`w-20 h-20 border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted hover:text-accent hover:border-accent transition-all ${showForm ? 'border-accent text-accent bg-accent/5' : ''}`}
+                      className={`w-20 h-20 border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all ${showForm ? 'border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100 bg-slate-800/5 dark:bg-slate-200/5' : ''}`}
                     >
                       <Plus className="w-6 h-6" />
                       <span className="text-xs font-bold">添加{activeTab === 'survivors' ? '求生者' : '监管者'}</span>
@@ -981,7 +975,7 @@ export default function App() {
                     {activeTab === 'survivors' && (
                       <button 
                         onClick={handleSyncSurvivorTraits}
-                        className="text-[9px] font-mono text-accent/50 hover:text-accent transition-colors uppercase tracking-tighter text-center"
+                        className="text-[9px] font-medium text-slate-800 dark:text-slate-100/50 hover:text-slate-800 dark:text-slate-100 transition-colors uppercase tracking-tighter text-center"
                       >
                         [同步标准特质]
                       </button>
@@ -992,7 +986,7 @@ export default function App() {
 
               <button 
                 onClick={() => scroll('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all opacity-0 group-hover/nav:opacity-100"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-30 w-10 h-10 bg-card border border-border flex items-center justify-center text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all opacity-0 group-hover/nav:opacity-100"
               >
                 <ChevronRight className="w-6 h-6" />
               </button>
@@ -1090,24 +1084,24 @@ export default function App() {
     <footer className="border-t border-border py-16 bg-card/50 relative mt-auto backdrop-blur-sm">
       <div className="max-w-[1600px] mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
         <div className="space-y-4">
-          <h3 className="text-accent font-serif font-bold text-xl cyber-glow-text">庄园秘典 CODEX</h3>
-          <p className="text-muted text-xs leading-relaxed">
-            为庄园求生者与监管者提供的高级神经接口。
+          <h3 className="text-slate-900 dark:text-white font-bold text-xl tracking-tight">庄园秘典 CODEX</h3>
+          <p className="text-slate-500 text-xs leading-relaxed">
+            为庄园求生者与监管者提供的高级秘典指南。
             自2018年起持续破解欧利蒂丝庄园的秘密。
           </p>
         </div>
         <div className="flex flex-col gap-3 text-xs">
           <span className="text-primary uppercase tracking-widest mb-2">快速访问</span>
-          <a href="#" className="text-muted hover:text-accent transition-colors">官方网站</a>
-          <a href="#" className="text-muted hover:text-accent transition-colors">数据库 V4</a>
-          <a href="#" className="text-muted hover:text-accent transition-colors">地图侦察</a>
+          <a href="#" className="text-muted hover:text-slate-800 dark:text-slate-100 transition-colors">官方网站</a>
+          <a href="#" className="text-muted hover:text-slate-800 dark:text-slate-100 transition-colors">数据库 V4</a>
+          <a href="#" className="text-muted hover:text-slate-800 dark:text-slate-100 transition-colors">地图侦察</a>
         </div>
         <div className="text-right space-y-4">
-          <div className="inline-block px-4 py-2 border border-primary text-primary text-xs font-mono cyber-glitch">
+          <div className="inline-block px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs rounded-lg font-medium">
             系统状态: 正常运行
           </div>
-          <p className="text-xs text-muted font-mono uppercase tracking-[0.2em]">
-            © 2026 NEURAL_MANOR_OS. 保留所有权利。
+          <p className="text-xs text-slate-400 font-medium tracking-wide">
+            © 2026 MANOR_CODEX. 保留所有权利。
           </p>
         </div>
       </div>
@@ -1118,10 +1112,10 @@ export default function App() {
       <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
         <div className="w-full max-w-md bg-card border border-border shadow-2xl p-6 space-y-6">
           <div className="space-y-2">
-            <h3 className={`text-xl font-serif font-bold ${confirmModal.type === 'danger' ? 'text-primary' : 'text-accent'}`}>
+            <h3 className={`text-xl font-sans font-bold ${confirmModal.type === 'danger' ? 'text-primary' : 'text-slate-800 dark:text-slate-100'}`}>
               {confirmModal.title}
             </h3>
-            <p className="text-sm text-muted font-mono leading-relaxed">
+            <p className="text-sm text-muted font-medium leading-relaxed">
               {confirmModal.message}
             </p>
           </div>
@@ -1129,14 +1123,14 @@ export default function App() {
           <div className="flex justify-end gap-4 pt-4">
             <button 
               onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
-              className="px-6 py-2 border border-border text-muted text-xs font-mono hover:text-text transition-colors"
+              className="px-6 py-2 border border-border text-muted text-xs font-medium hover:text-text transition-colors"
             >
-              取消_CANCEL
+              取消
             </button>
             <button 
               onClick={confirmModal.onConfirm}
-              className={`px-6 py-2 font-mono text-xs text-white transition-all hover:scale-105 ${
-                confirmModal.type === 'danger' ? 'bg-primary' : 'bg-accent text-bg'
+              className={`px-6 py-2 font-medium text-xs text-white transition-all hover:scale-105 ${
+                confirmModal.type === 'danger' ? 'bg-primary' : 'bg-slate-800 dark:bg-slate-200 text-bg'
               }`}
             >
               确认_CONFIRM
@@ -1147,13 +1141,13 @@ export default function App() {
     )}
 
     {/* Mobile Nav */}
-    <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-accent/30 rounded-none p-2 flex justify-around z-50">
+    <div className="md:hidden fixed bottom-6 left-4 right-4 bg-card/90 border border-slate-800 dark:border-slate-200/30 rounded-none p-2 flex justify-around z-50">
       {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => setActiveTab(item.id as Tab)}
           className={`p-4 transition-all ${
-            activeTab === item.id ? 'text-accent scale-110' : 'text-muted'
+            activeTab === item.id ? 'text-amber-500 scale-110' : 'text-slate-400'
           }`}
         >
           {item.icon}

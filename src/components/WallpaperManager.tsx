@@ -116,7 +116,7 @@ export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) =
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 border border-border bg-bg/50 text-muted hover:text-accent hover:border-accent transition-all"
+        className="p-2 border border-border bg-bg/50 text-muted hover:text-slate-800 dark:text-slate-100 hover:border-slate-800 dark:border-slate-200 transition-all"
         title="切换壁纸"
       >
         <ImageIcon className="w-4 h-4" />
@@ -125,7 +125,7 @@ export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) =
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border z-50 p-4 animate-in fade-in slide-in-from-top-2">
           <div className="flex justify-between items-center mb-4 border-b border-border pb-2">
-            <h3 className="text-sm font-bold text-accent font-mono tracking-widest">壁纸设置_WALLPAPER</h3>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 font-medium tracking-widest">壁纸设置_WALLPAPER</h3>
             <button onClick={() => setIsOpen(false)} className="text-muted hover:text-primary">
               <X className="w-4 h-4" />
             </button>
@@ -135,11 +135,11 @@ export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) =
             <button
               onClick={() => setCurrentWallpaper(null)}
               className={`relative aspect-video border flex flex-col items-center justify-center gap-1 transition-all ${
-                currentWallpaper === null ? 'border-accent text-accent' : 'border-border text-muted hover:border-accent/50 hover:text-accent/50'
+                currentWallpaper === null ? 'border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' : 'border-border text-muted hover:border-slate-800 dark:border-slate-200/50 hover:text-slate-800 dark:text-slate-100/50'
               }`}
             >
               <RefreshCcw className="w-5 h-5" />
-              <span className="text-[10px] font-mono">默认壁纸</span>
+              <span className="text-[10px] font-medium">默认壁纸</span>
             </button>
             
             {wallpapers.map(wp => (
@@ -152,7 +152,7 @@ export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) =
                   referrerPolicy="no-referrer"
                 />
                 {currentWallpaper === wp.url && (
-                  <div className="absolute inset-0 border-2 border-accent pointer-events-none" />
+                  <div className="absolute inset-0 border-2 border-slate-800 dark:border-slate-200 pointer-events-none" />
                 )}
                 {wp.isCustom && (
                   <button
@@ -176,17 +176,17 @@ export const WallpaperManager = ({ user, userProfile }: WallpaperManagerProps) =
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
                 placeholder="输入图片 URL..."
-                className="flex-1 bg-bg border border-border text-xs p-2 text-text outline-none focus:border-accent font-mono"
+                className="flex-1 bg-bg border border-border text-xs p-2 text-text outline-none focus:border-slate-800 dark:border-slate-200 font-medium"
               />
               <button
                 onClick={handleAddWallpaper}
                 disabled={!newUrl.trim()}
-                className="px-3 py-2 bg-accent/10 text-accent border border-accent/50 hover:bg-accent hover:text-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 bg-slate-800/10 dark:bg-slate-200/10 text-slate-800 dark:text-slate-100 border border-slate-800 dark:border-slate-200/50 hover:bg-slate-800/20 dark:hover:bg-slate-200/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[10px] text-muted font-mono">推荐壁纸比例为 16:9 (如 1920x1080)</p>
+            <p className="text-[10px] text-muted font-medium">推荐壁纸比例为 16:9 (如 1920x1080)</p>
           </div>
         </div>
       )}

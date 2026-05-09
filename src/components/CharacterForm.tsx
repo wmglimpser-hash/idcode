@@ -536,14 +536,14 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
   };
 
   return (
-    <div className="max-w-5xl mx-auto bg-card/50 cyber-border p-8 shadow-2xl animate-in zoom-in-95 duration-500">
+    <div className="max-w-5xl mx-auto bg-card/50 rounded-2xl shadow-sm p-8 shadow-2xl animate-in zoom-in-95 duration-500">
       <div className="flex justify-between items-center mb-8 border-b border-border pb-4">
-        <h2 className="text-3xl font-serif text-accent">
+        <h2 className="text-3xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">
           {initialData ? '修改档案_UPDATE' : '录入新档案_CREATE'}
         </h2>
         <button 
           onClick={onBulkImport}
-          className="flex items-center gap-2 text-[10px] font-mono text-accent hover:text-primary transition-colors uppercase tracking-widest"
+          className="flex items-center gap-2 text-[10px] font-medium text-slate-800 dark:text-slate-100 hover:text-primary transition-colors uppercase tracking-widest"
         >
           <Upload className="w-4 h-4" />
           文档一键导入_IMPORT
@@ -556,22 +556,22 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-muted uppercase tracking-widest font-mono">角色姓名</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-medium">角色姓名</label>
                   <input 
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
                     placeholder="艾玛·伍兹"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-muted uppercase tracking-widest font-mono">职业称号</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-medium">职业称号</label>
                   <input 
                     type="text" 
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
                     placeholder="园丁"
                   />
                 </div>
@@ -579,22 +579,22 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-muted uppercase tracking-widest font-mono">角色 ID</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-medium">角色 ID</label>
                   <input 
                     type="number" 
                     value={formData.order}
                     onChange={(e) => setFormData({...formData, order: parseInt(e.target.value) || 0})}
-                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
                     placeholder="1"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-muted uppercase tracking-widest font-mono">定位类型</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-medium">定位类型</label>
                   <input 
                     type="text" 
                     value={formData.type}
                     onChange={(e) => setFormData({...formData, type: e.target.value})}
-                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
                     placeholder="牵制/辅助"
                   />
                 </div>
@@ -602,11 +602,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-muted uppercase tracking-widest font-mono">阵营</label>
+                  <label className="text-xs text-muted uppercase tracking-widest font-medium">阵营</label>
                   <select 
                     value={formData.role}
                     onChange={(e) => setFormData({...formData, role: e.target.value as 'Survivor' | 'Hunter'})}
-                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono"
+                    className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium"
                   >
                     <option value="Survivor">求生者</option>
                     <option value="Hunter">监管者</option>
@@ -615,13 +615,13 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-muted uppercase tracking-widest font-mono">头像 URL</label>
+                <label className="text-xs text-muted uppercase tracking-widest font-medium">头像 URL</label>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                    className="flex-1 bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors font-mono text-xs"
+                    className="flex-1 bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors font-medium text-xs"
                     placeholder="https://..."
                   />
                   <div className="w-12 h-12 bg-transparent border border-border flex items-center justify-center text-muted">
@@ -632,12 +632,12 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
             </div>
 
             <div className="space-y-4">
-              <label className="text-xs text-muted uppercase tracking-widest font-mono">角色描述 (SUMMARY)</label>
+              <label className="text-xs text-muted uppercase tracking-widest font-medium">角色描述 (SUMMARY)</label>
               <textarea 
                 rows={6}
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-accent outline-none transition-colors resize-none font-mono text-sm"
+                className="w-full bg-bg border border-border text-text p-3 rounded-none focus:border-slate-800 dark:border-slate-200 outline-none transition-colors resize-none font-medium text-sm"
                 placeholder="输入角色的核心玩法或背景摘要..."
               />
             </div>
@@ -646,11 +646,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
           {/* Trait Details */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">特质详情 (TRAITS)</h3>
+              <h3 className="text-slate-800 dark:text-slate-100 font-medium text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">特质详情 (TRAITS)</h3>
               <button 
                 type="button"
                 onClick={addTraitCategory}
-                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-100 hover:text-primary"
               >
                 <Plus className="w-3 h-3" /> 添加分类
               </button>
@@ -671,12 +671,12 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                       value={cat.category}
                       onChange={(e) => updateTraitCategoryName(catIndex, e.target.value)}
                       placeholder="分类名称（如：移动 MOVEMENT）"
-                      className="flex-1 bg-transparent border-b border-border text-accent font-bold outline-none focus:border-accent py-1 font-mono text-sm"
+                      className="flex-1 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 font-bold outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-sm"
                     />
                     <button 
                       type="button"
                       onClick={() => addTraitItem(catIndex)}
-                      className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                      className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-100 hover:text-primary"
                     >
                       <Plus className="w-3 h-3" /> 添加属性
                     </button>
@@ -703,7 +703,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                           value={item.value}
                           onChange={(e) => updateTraitItem(catIndex, item.originalIdx, 'value', e.target.value)}
                           placeholder="数值"
-                          className="flex-1 bg-transparent text-xs text-accent outline-none"
+                          className="flex-1 bg-transparent text-xs text-slate-800 dark:text-slate-100 outline-none"
                         />
                         <button 
                           type="button"
@@ -724,11 +724,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
+                <h3 className="text-slate-800 dark:text-slate-100 font-medium text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">外在特质 (EXTERNAL TRAITS)</h3>
                 <button 
                   type="button"
                   onClick={() => setSkillsImportMode(!skillsImportMode)}
-                  className="flex items-center gap-1 text-[10px] font-mono text-primary hover:text-accent transition-colors"
+                  className="flex items-center gap-1 text-[10px] font-medium text-primary hover:text-slate-800 dark:text-slate-100 transition-colors"
                 >
                   <FileText className="w-3 h-3" /> {skillsImportMode ? '取消识别' : '智能识别导入'}
                 </button>
@@ -736,7 +736,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
               <button 
                 type="button"
                 onClick={addSkill}
-                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-100 hover:text-primary"
               >
                 <Plus className="w-3 h-3" /> 添加特质
               </button>
@@ -744,7 +744,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
 
             {skillsImportMode && (
               <div className="p-4 bg-primary/5 border border-primary/20 space-y-3 animate-in fade-in slide-in-from-top-2">
-                <p className="text-[10px] font-mono text-muted">
+                <p className="text-[10px] font-medium text-muted">
                   格式：[图标URL] 特质名称：描述内容 #标签1 #标签2 (每行一个特质)
                 </p>
                 <textarea 
@@ -752,13 +752,13 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                   value={skillsImportText}
                   onChange={(e) => setSkillsImportText(e.target.value)}
                   placeholder="[http://...] 巧手成蹄：描述内容 #辅助 #修机"
-                  className="w-full bg-bg/50 border border-border p-2 text-xs font-mono outline-none focus:border-primary"
+                  className="w-full bg-bg/50 border border-border p-2 text-xs font-medium outline-none focus:border-primary"
                 />
                 <div className="flex justify-end">
                   <button 
                     type="button"
                     onClick={handleSkillsSmartImport}
-                    className="px-4 py-1 bg-primary text-white text-[10px] font-mono hover:bg-primary/80"
+                    className="px-4 py-1 bg-primary text-white text-[10px] font-medium hover:bg-primary/80"
                   >
                     确认导入_CONFIRM
                   </button>
@@ -792,7 +792,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                           value={skill.icon || ''}
                           onChange={(e) => updateSkill(index, 'icon', e.target.value)}
                           placeholder="图标URL"
-                          className="w-full bg-transparent text-[8px] text-accent outline-none text-center"
+                          className="w-full bg-transparent text-[8px] text-slate-800 dark:text-slate-100 outline-none text-center"
                         />
                       </div>
                     </div>
@@ -802,30 +802,30 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                         value={skill.name}
                         onChange={(e) => updateSkill(index, 'name', e.target.value)}
                         placeholder="特质名称"
-                        className="w-full bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1"
+                        className="w-full bg-transparent border-b border-border text-text font-bold outline-none focus:border-slate-800 dark:border-slate-200 py-1"
                       />
                     </div>
                   </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                        <span className="text-[10px] text-muted font-medium uppercase">冷却:</span>
                         <input 
                           type="text"
                           value={skill.cooldown || ''}
                           onChange={(e) => updateSkill(index, 'cooldown', e.target.value)}
                           placeholder="如: 120s"
-                          className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                          className="flex-1 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-xs"
                         />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted font-mono uppercase">消耗:</span>
+                        <span className="text-[10px] text-muted font-medium uppercase">消耗:</span>
                         <input 
                           type="text"
                           value={skill.cost || ''}
                           onChange={(e) => updateSkill(index, 'cost', e.target.value)}
                           placeholder="如: 1层"
-                          className="flex-1 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                          className="flex-1 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-xs"
                         />
                       </div>
                     </div>
@@ -857,10 +857,10 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                               }
                               setFormData({ ...formData, skills: newSkills });
                             }}
-                            className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                            className={`px-2 py-0.5 text-[10px] font-medium border transition-all flex items-center gap-1 ${
                               isSelected 
-                                ? 'bg-accent/20 border-accent text-accent' 
-                                : 'bg-bg border-border text-muted hover:border-accent/50'
+                                ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
+                                : 'bg-bg border-border text-muted hover:border-slate-800 dark:border-slate-200/50'
                             }`}
                             style={tag.color ? { 
                               borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
@@ -879,7 +879,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                       <input 
                         type="text"
                         placeholder="添加自定义标签 (回车确认)"
-                        className="flex-1 bg-bg/30 border border-border/50 px-2 py-1 text-[10px] font-mono outline-none focus:border-primary/50"
+                        className="flex-1 bg-bg/30 border border-border/50 px-2 py-1 text-[10px] font-medium outline-none focus:border-primary/50"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -906,7 +906,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
           {/* Mechanics or Presence */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">
+              <h3 className="text-slate-800 dark:text-slate-100 font-medium text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">
                 {formData.role === 'Hunter' ? '存在感阶级 (PRESENCE)' : '进阶机制 (MECHANICS)'}
               </h3>
               <div className="flex gap-2">
@@ -919,7 +919,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                         presence: [...prev.presence, { tier: 0, name: '', description: '', tags: [] }]
                       }));
                     }}
-                    className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                    className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-100 hover:text-primary"
                   >
                     <Plus className="w-3 h-3" /> 添加阶级项目
                   </button>
@@ -928,7 +928,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                   <button 
                     type="button"
                     onClick={addMechanic}
-                    className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                    className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-100 hover:text-primary"
                   >
                     <Plus className="w-3 h-3" /> 添加机制
                   </button>
@@ -953,7 +953,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                         <Trash2 className="w-3 h-3" />
                       </button>
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-mono relative group/icon">
+                        <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center text-primary font-bold font-medium relative group/icon">
                           {p.icon ? (
                             <img src={p.icon} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           ) : (
@@ -976,17 +976,17 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                               value={p.icon || ''}
                               onChange={(e) => updatePresence(index, 'icon', e.target.value)}
                               placeholder="图标URL"
-                              className="w-full bg-transparent text-[8px] text-accent outline-none text-center"
+                              className="w-full bg-transparent text-[8px] text-slate-800 dark:text-slate-100 outline-none text-center"
                             />
                           </div>
                         </div>
                         <div className="flex-1 flex flex-col gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted font-mono uppercase">阶段:</span>
+                            <span className="text-[10px] text-muted font-medium uppercase">阶段:</span>
                             <select 
                               value={p.tier}
                               onChange={(e) => updatePresence(index, 'tier' as any, e.target.value)}
-                              className="bg-bg border border-border text-primary px-2 py-0.5 text-[10px] font-mono outline-none focus:border-primary"
+                              className="bg-bg border border-border text-primary px-2 py-0.5 text-[10px] font-medium outline-none focus:border-primary"
                             >
                               <option value={0}>0阶</option>
                               <option value={1}>1阶</option>
@@ -997,18 +997,18 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                               value={p.name}
                               onChange={(e) => updatePresence(index, 'name', e.target.value)}
                               placeholder="阶级名称"
-                              className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-accent py-1 font-mono"
+                              className="flex-1 bg-transparent border-b border-border text-text font-bold outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium"
                             />
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted font-mono uppercase">冷却:</span>
+                          <span className="text-[10px] text-muted font-medium uppercase">冷却:</span>
                           <input 
                             type="text"
                             value={p.cooldown || ''}
                             onChange={(e) => updatePresence(index, 'cooldown', e.target.value)}
                             placeholder="如: 15s"
-                            className="w-20 bg-transparent border-b border-border text-accent outline-none focus:border-accent py-1 font-mono text-xs"
+                            className="w-20 bg-transparent border-b border-border text-slate-800 dark:text-slate-100 outline-none focus:border-slate-800 dark:border-slate-200 py-1 font-medium text-xs"
                           />
                         </div>
                       </div>
@@ -1017,7 +1017,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                         value={p.description}
                         onChange={(e) => updatePresence(index, 'description', e.target.value)}
                         placeholder="阶级能力描述..."
-                        className="w-full bg-transparent text-xs text-muted outline-none resize-none font-mono"
+                        className="w-full bg-transparent text-xs text-muted outline-none resize-none font-medium"
                       />
                       
                       {/* Tag Selection */}
@@ -1029,10 +1029,10 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                               key={tag.id}
                               type="button"
                               onClick={() => updatePresenceTags(index, tag.name)}
-                              className={`px-2 py-0.5 text-[10px] font-mono border transition-all flex items-center gap-1 ${
+                              className={`px-2 py-0.5 text-[10px] font-medium border transition-all flex items-center gap-1 ${
                                 isSelected 
-                                  ? 'bg-accent/20 border-accent text-accent' 
-                                  : 'bg-bg border-border text-muted hover:border-accent/50'
+                                  ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
+                                  : 'bg-bg border-border text-muted hover:border-slate-800 dark:border-slate-200/50'
                               }`}
                               style={tag.color ? { 
                                 borderColor: isSelected ? `${tag.color}CC` : `${tag.color}40`, 
@@ -1071,7 +1071,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                           value={mech.icon || ''}
                           onChange={(e) => updateMechanic(index, 'icon', e.target.value)}
                           placeholder="图标URL"
-                          className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-mono p-1 outline-none transition-opacity"
+                          className="absolute inset-0 opacity-0 group-hover/icon:opacity-100 bg-bg/90 text-[8px] font-medium p-1 outline-none transition-opacity"
                         />
                       </div>
                       <div className="flex-1">
@@ -1080,7 +1080,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                           value={mech.title}
                           onChange={(e) => updateMechanic(index, 'title', e.target.value)}
                           placeholder="机制标题（如：博弈技巧）"
-                          className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-accent py-1"
+                          className="w-full bg-transparent border-b border-border text-text font-bold mb-2 outline-none focus:border-slate-800 dark:border-slate-200 py-1"
                         />
                         <textarea 
                           rows={2}
@@ -1100,11 +1100,11 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
           {/* Linked Mechanics */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-accent font-mono text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">关联其他角色机制 (LINKED_MECHANICS)</h3>
+              <h3 className="text-slate-800 dark:text-slate-100 font-medium text-sm border-l-2 border-primary pl-3 uppercase tracking-widest">关联其他角色机制 (LINKED_MECHANICS)</h3>
               <button 
                 type="button"
                 onClick={addLinkedMechanic}
-                className="flex items-center gap-1 text-xs font-mono text-accent hover:text-primary"
+                className="flex items-center gap-1 text-xs font-medium text-slate-800 dark:text-slate-100 hover:text-primary"
               >
                 <Plus className="w-3 h-3" /> 添加关联
               </button>
@@ -1115,7 +1115,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                   <select
                     value={link.characterId}
                     onChange={(e) => updateLinkedMechanic(index, 'characterId', e.target.value)}
-                    className="flex-1 bg-bg border border-border text-text text-xs p-2 outline-none focus:border-accent font-mono"
+                    className="flex-1 bg-bg border border-border text-text text-xs p-2 outline-none focus:border-slate-800 dark:border-slate-200 font-medium"
                   >
                     <option value="">选择角色...</option>
                     <optgroup label="求生者 SURVIVORS">
@@ -1134,7 +1134,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                     <select
                       value={link.mechanicIndex}
                       onChange={(e) => updateLinkedMechanic(index, 'mechanicIndex', parseInt(e.target.value))}
-                      className="flex-1 bg-bg border border-border text-text text-xs p-2 outline-none focus:border-accent font-mono"
+                      className="flex-1 bg-bg border border-border text-text text-xs p-2 outline-none focus:border-slate-800 dark:border-slate-200 font-medium"
                     >
                       <option value={0}>选择机制...</option>
                       {allCharacters?.find(c => c.id === link.characterId)?.mechanics?.map((m, i) => (
@@ -1161,7 +1161,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                 <button 
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-6 py-2 text-primary hover:text-white hover:bg-primary/20 border border-primary/30 transition-all font-mono text-xs tracking-widest flex items-center gap-2"
+                  className="px-6 py-2 text-primary hover:text-white hover:bg-primary/20 border border-primary/30 transition-all font-medium text-xs tracking-widest flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" /> 删除档案_DELETE
                 </button>
@@ -1171,14 +1171,14 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
               <button 
                 type="button"
                 onClick={onCancel}
-                className="px-8 py-2 text-muted hover:text-text transition-colors font-mono text-xs tracking-widest"
+                className="px-8 py-2 text-muted hover:text-text transition-colors font-medium text-xs tracking-widest"
               >
                 取消_CANCEL
               </button>
               <button 
                 type="submit"
                 disabled={saving}
-                className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 font-mono text-xs tracking-widest disabled:opacity-50"
+                className="px-10 py-2 bg-primary text-white hover:bg-primary/80 transition-all flex items-center gap-3 font-medium text-xs tracking-widest disabled:opacity-50"
               >
                 <Save className="w-4 h-4" /> {saving ? '正在同步...' : '写入数据_SAVE'}
               </button>
@@ -1188,17 +1188,17 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
 
       {showDeleteConfirm && initialData && (
         <div className="fixed inset-0 bg-bg/90 z-[100] flex items-center justify-center p-6">
-          <div className="bg-card border border-primary p-8 max-w-md w-full cyber-border animate-in zoom-in-95 duration-300">
-            <h3 className="text-xl font-serif text-primary mb-4 flex items-center gap-3">
+          <div className="bg-card border border-primary p-8 max-w-md w-full rounded-2xl shadow-sm animate-in zoom-in-95 duration-300">
+            <h3 className="text-xl font-sans font-bold tracking-tight text-primary mb-4 flex items-center gap-3">
               <Trash2 className="w-6 h-6" /> 确认删除档案？
             </h3>
-            <p className="text-muted text-sm font-mono mb-8 leading-relaxed">
-              您正在尝试删除角色 <span className="text-accent font-bold">{initialData.title} ({initialData.name})</span> 的档案。此操作不可逆，所有关联数据将被永久移除。
+            <p className="text-muted text-sm font-medium mb-8 leading-relaxed">
+              您正在尝试删除角色 <span className="text-slate-800 dark:text-slate-100 font-bold">{initialData.title} ({initialData.name})</span> 的档案。此操作不可逆，所有关联数据将被永久移除。
             </p>
             <div className="flex gap-4">
               <button 
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-3 border border-border text-muted hover:text-text hover:border-text transition-all font-mono text-xs tracking-widest"
+                className="flex-1 py-3 border border-border text-muted hover:text-text hover:border-text transition-all font-medium text-xs tracking-widest"
               >
                 取消_CANCEL
               </button>
@@ -1207,7 +1207,7 @@ export const CharacterForm = ({ onSave, onCancel, onDelete, onBulkImport, initia
                   onDelete?.(initialData);
                   setShowDeleteConfirm(false);
                 }}
-                className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-mono text-xs tracking-widest shadow-[0_0_20px_rgba(255,0,60,0.3)]"
+                className="flex-1 py-3 bg-primary text-white hover:bg-primary/80 transition-all font-medium text-xs tracking-widest shadow-[0_0_20px_rgba(212,175,55,0.2)]"
               >
                 确认删除_CONFIRM
               </button>

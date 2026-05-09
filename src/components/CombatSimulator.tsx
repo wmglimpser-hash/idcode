@@ -132,14 +132,14 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
-          <h2 className="text-2xl font-serif font-bold text-accent flex items-center gap-3">
+          <h2 className="text-2xl font-sans font-bold tracking-tight font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
             <Swords className="w-6 h-6" /> 实战模拟器_COMBAT_SIM
           </h2>
-          <p className="text-xs font-mono text-muted mt-1 uppercase tracking-widest">动态特质演算系统 v1.2</p>
+          <p className="text-xs font-medium text-muted mt-1 uppercase tracking-widest">动态特质演算系统 v1.2</p>
         </div>
         <div className="flex items-center gap-4 bg-card/50 px-4 py-2 border border-border">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] text-muted uppercase font-mono">当前演算目标</span>
+            <span className="text-[10px] text-muted uppercase font-medium">当前演算目标</span>
             <span className="text-sm font-bold text-primary">{selfCharacter?.title || '未选择'}</span>
           </div>
           <div className="w-10 h-10 bg-bg border border-primary/30 flex items-center justify-center">
@@ -157,15 +157,15 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
         <div className="lg:col-span-4 space-y-6">
           {/* Character Selection */}
           <section className="bg-card/30 border border-border p-6 space-y-6">
-            <h3 className="text-sm font-bold text-text font-mono uppercase tracking-widest border-l-2 border-primary pl-3">
+            <h3 className="text-sm font-bold text-text font-medium uppercase tracking-widest border-l-2 border-primary pl-3">
               角色配置_UNITS
             </h3>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase font-mono">监管者 HUNTER</label>
+                <label className="text-[10px] text-muted uppercase font-medium">监管者 HUNTER</label>
                 <select 
-                  className="w-full bg-bg border border-border text-sm p-2 outline-none focus:border-accent"
+                  className="w-full bg-bg border border-border text-sm p-2 outline-none focus:border-slate-800 dark:border-slate-200"
                   value={selectedHunter?.id || ''}
                   onChange={(e) => setSelectedHunter(hunters.find(h => h.id === e.target.value) || null)}
                 >
@@ -175,11 +175,11 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] text-muted uppercase font-mono">求生者队伍 SURVIVORS</label>
+                <label className="text-[10px] text-muted uppercase font-medium">求生者队伍 SURVIVORS</label>
                 {survivorSlots.map((slot, i) => (
-                  <div key={i} className={`p-3 border ${slot.isSelf ? 'border-accent/50 bg-accent/5' : 'border-border bg-bg/20'} space-y-2`}>
+                  <div key={i} className={`p-3 border ${slot.isSelf ? 'border-slate-800 dark:border-slate-200/50 bg-slate-800/5 dark:bg-slate-200/5' : 'border-border bg-bg/20'} space-y-2`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-muted">{slot.isSelf ? '本人 (SELF)' : `队友 ${i} (TEAMMATE)`}</span>
+                      <span className="text-[10px] font-medium text-muted">{slot.isSelf ? '本人 (SELF)' : `队友 ${i} (TEAMMATE)`}</span>
                       <div className="flex gap-1">
                         {(['healthy', 'wounded', 'downed', 'chaired', 'eliminated'] as SurvivorStatus[]).map(s => (
                           <button
@@ -202,7 +202,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                       </div>
                     </div>
                     <select 
-                      className="w-full bg-bg border border-border text-xs p-1 outline-none focus:border-accent"
+                      className="w-full bg-bg border border-border text-xs p-1 outline-none focus:border-slate-800 dark:border-slate-200"
                       value={slot.character?.id || ''}
                       onChange={(e) => updateSurvivor(i, e.target.value)}
                     >
@@ -217,15 +217,15 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
 
           {/* Game State */}
           <section className="bg-card/30 border border-border p-6 space-y-6">
-            <h3 className="text-sm font-bold text-text font-mono uppercase tracking-widest border-l-2 border-accent pl-3">
+            <h3 className="text-sm font-bold text-text font-medium uppercase tracking-widest border-l-2 border-slate-800 dark:border-slate-200 pl-3">
               局内状态_GAME_STATE
             </h3>
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-mono text-muted">
+                <div className="flex justify-between text-[10px] font-medium text-muted">
                   <span>局内时间 TIMELINE</span>
-                  <span className="text-accent">{Math.floor(gameTime / 60)}:{(gameTime % 60).toString().padStart(2, '0')}</span>
+                  <span className="text-slate-800 dark:text-slate-100">{Math.floor(gameTime / 60)}:{(gameTime % 60).toString().padStart(2, '0')}</span>
                 </div>
                 <input 
                   type="range" 
@@ -238,7 +238,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-mono text-muted">
+                <div className="flex justify-between text-[10px] font-medium text-muted">
                   <span>破译总进度 DECODING</span>
                   <span className="text-primary">{decodingProgress}%</span>
                 </div>
@@ -253,13 +253,13 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase font-mono">监管者存在感 PRESENCE</label>
+                <label className="text-[10px] text-muted uppercase font-medium">监管者存在感 PRESENCE</label>
                 <div className="flex gap-2">
                   {[0, 1, 2].map(p => (
                     <button
                       key={p}
                       onClick={() => setHunterPresence(p as 0 | 1 | 2)}
-                      className={`flex-1 py-1 border font-mono text-xs transition-all ${
+                      className={`flex-1 py-1 border font-medium text-xs transition-all ${
                         hunterPresence === p 
                           ? 'bg-primary border-primary text-white' 
                           : 'border-border text-muted hover:border-primary'
@@ -272,13 +272,13 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase font-mono">终极天赋 TALENTS</label>
+                <label className="text-[10px] text-muted uppercase font-medium">终极天赋 TALENTS</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setHasBorrowedTime(!hasBorrowedTime)}
-                    className={`py-1 border font-mono text-[10px] transition-all ${
+                    className={`py-1 border font-medium text-[10px] transition-all ${
                       hasBorrowedTime 
-                        ? 'bg-accent/20 border-accent text-accent' 
+                        ? 'bg-slate-800 dark:bg-slate-200/20 border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-100' 
                         : 'border-border text-muted'
                     }`}
                   >
@@ -286,7 +286,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                   </button>
                   <button
                     onClick={() => setHasDetention(!hasDetention)}
-                    className={`py-1 border font-mono text-[10px] transition-all ${
+                    className={`py-1 border font-medium text-[10px] transition-all ${
                       hasDetention 
                         ? 'bg-primary/20 border-primary text-primary' 
                         : 'border-border text-muted'
@@ -303,10 +303,10 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
         {/* Right: Dynamic Results */}
         <div className="lg:col-span-8 space-y-6">
           <div className="bg-card/40 border border-border p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-2 text-[10px] font-mono text-muted opacity-20">实时演算结果_LIVE_CALC</div>
+            <div className="absolute top-0 right-0 p-2 text-[10px] font-medium text-muted opacity-20">实时演算结果_LIVE_CALC</div>
             
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 bg-bg border border-accent/30 p-1">
+              <div className="w-16 h-16 bg-bg border border-slate-800 dark:border-slate-200/30 p-1">
                 {selfCharacter ? (
                   <img src={selfCharacter.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -316,10 +316,10 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                 )}
               </div>
               <div>
-                <h2 className="text-2xl font-serif text-accent">{selfCharacter?.title || '请选择演算目标'}</h2>
+                <h2 className="text-2xl font-sans font-bold tracking-tight text-slate-800 dark:text-slate-100">{selfCharacter?.title || '请选择演算目标'}</h2>
                 <div className="flex items-center gap-4 mt-1">
-                  <span className="text-[10px] font-mono text-muted uppercase tracking-widest">{selfCharacter?.role === 'Survivor' ? '求生者' : '监管者'}</span>
-                  <span className="text-[10px] font-mono text-primary uppercase tracking-widest">{selfCharacter?.type}</span>
+                  <span className="text-[10px] font-medium text-muted uppercase tracking-widest">{selfCharacter?.role === 'Survivor' ? '求生者' : '监管者'}</span>
+                  <span className="text-[10px] font-medium text-primary uppercase tracking-widest">{selfCharacter?.type}</span>
                 </div>
               </div>
             </div>
@@ -328,7 +328,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {dynamicTraits.map((cat, i) => (
                   <div key={i} className="space-y-4">
-                    <h3 className="text-primary font-bold mb-2 border-b border-primary/30 pb-1 font-mono text-sm">
+                    <h3 className="text-primary font-bold mb-2 border-b border-primary/30 pb-1 font-medium text-sm">
                       {cat.category}
                     </h3>
                     <div className="space-y-2">
@@ -338,13 +338,13 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                         
                         return (
                           <div key={j} className={`flex justify-between items-center py-1 border-b border-border/30 last:border-0 ${isModified ? 'bg-primary/5 px-2 -mx-2' : ''}`}>
-                            <span className="text-muted text-xs font-mono">{item.label}</span>
+                            <span className="text-muted text-xs font-medium">{item.label}</span>
                             <div className="text-right">
-                              <span className={`font-bold text-xs font-mono ${isModified ? 'text-accent' : 'text-text'}`}>
+                              <span className={`font-bold text-xs font-medium ${isModified ? 'text-slate-800 dark:text-slate-100' : 'text-text'}`}>
                                 {item.value}
                               </span>
                               {isModified && baseItem && (
-                                <div className="text-[9px] text-muted font-mono line-through opacity-50">
+                                <div className="text-[9px] text-muted font-medium line-through opacity-50">
                                   原值: {baseItem.value}
                                 </div>
                               )}
@@ -359,7 +359,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
             ) : (
               <div className="flex flex-col items-center justify-center py-24 text-muted space-y-4">
                 <Timer className="w-12 h-12 opacity-10" />
-                <p className="text-sm font-mono uppercase tracking-widest">等待选择演算目标...</p>
+                <p className="text-sm font-medium uppercase tracking-widest">等待选择演算目标...</p>
               </div>
             )}
           </div>
@@ -367,7 +367,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
           {/* Active Modifiers Panel */}
           {selfCharacter && (
             <div className="bg-card/20 border border-border p-6">
-              <h3 className="text-xs font-bold text-muted font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-muted font-medium uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Zap className="w-4 h-4" /> 当前生效修正_ACTIVE_MODIFIERS
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -377,16 +377,16 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                     <AlertTriangle className="w-4 h-4 text-primary mt-0.5" />
                     <div>
                       <div className="text-xs font-bold text-primary">胆怯 (Debuff)</div>
-                      <div className="text-[10px] text-muted font-mono mt-1">每有一名队友受伤/倒地/在椅上，破译速度降低45%</div>
+                      <div className="text-[10px] text-muted font-medium mt-1">每有一名队友受伤/倒地/在椅上，破译速度降低45%</div>
                     </div>
                   </div>
                 )}
                 {gameTime > 180 && (
-                  <div className="p-3 bg-accent/10 border border-accent/30 flex items-start gap-3">
-                    <Clock className="w-4 h-4 text-accent mt-0.5" />
+                  <div className="p-3 bg-slate-800/10 dark:bg-slate-200/10 border border-slate-800 dark:border-slate-200/30 flex items-start gap-3">
+                    <Clock className="w-4 h-4 text-slate-800 dark:text-slate-100 mt-0.5" />
                     <div>
-                      <div className="text-xs font-bold text-accent">对局加速 (System)</div>
-                      <div className="text-[10px] text-muted font-mono mt-1">对局进行至3分钟后，全员破译速度提升10%</div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-100">对局加速 (System)</div>
+                      <div className="text-[10px] text-muted font-medium mt-1">对局进行至3分钟后，全员破译速度提升10%</div>
                     </div>
                   </div>
                 )}
@@ -395,7 +395,7 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                     <Zap className="w-4 h-4 text-primary mt-0.5" />
                     <div>
                       <div className="text-xs font-bold text-primary">存在感提升 (Buff)</div>
-                      <div className="text-[10px] text-muted font-mono mt-1">监管者移动速度随存在感阶级提升</div>
+                      <div className="text-[10px] text-muted font-medium mt-1">监管者移动速度随存在感阶级提升</div>
                     </div>
                   </div>
                 )}
@@ -404,16 +404,16 @@ export const CombatSimulator = ({ allCharacters }: Props) => {
                     <Skull className="w-4 h-4 text-primary mt-0.5" />
                     <div>
                       <div className="text-xs font-bold text-primary">挽留 (Active)</div>
-                      <div className="text-[10px] text-muted font-mono mt-1">大门通电后，监管者普通攻击造成双倍伤害，移速+5%</div>
+                      <div className="text-[10px] text-muted font-medium mt-1">大门通电后，监管者普通攻击造成双倍伤害，移速+5%</div>
                     </div>
                   </div>
                 )}
                 {selfCharacter.role === 'Survivor' && hasBorrowedTime && decodingProgress >= 500 && (
-                  <div className="p-3 bg-accent/20 border border-accent/50 flex items-start gap-3">
-                    <Zap className="w-4 h-4 text-accent mt-0.5" />
+                  <div className="p-3 bg-slate-800 dark:bg-slate-200/20 border border-slate-800 dark:border-slate-200/50 flex items-start gap-3">
+                    <Zap className="w-4 h-4 text-slate-800 dark:text-slate-100 mt-0.5" />
                     <div>
-                      <div className="text-xs font-bold text-accent">回光返照 (Active)</div>
-                      <div className="text-[10px] text-muted font-mono mt-1">大门通电后，求生者恢复一格健康值并获得50%加速</div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-100">回光返照 (Active)</div>
+                      <div className="text-[10px] text-muted font-medium mt-1">大门通电后，求生者恢复一格健康值并获得50%加速</div>
                     </div>
                   </div>
                 )}
